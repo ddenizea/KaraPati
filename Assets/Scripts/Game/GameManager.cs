@@ -533,7 +533,7 @@ namespace KaraPati
             if (ch < Story.Chapters.Length - 1) TasksDone = Story.ChapterStart(ch + 1);
             else TasksDone = Mathf.Max(TasksDone, Story.TotalTasks - 1);
             Save();
-            if (!OnBoard) home.ShowChapter(Story.CurrentChapter(TasksDone));
+            if (!OnBoard) { home.ShowChapter(Story.CurrentChapter(TasksDone)); home.PlayChapterIntro(Story.CurrentChapter(TasksDone)); }
             home.Refresh(false);
             Toast(Story.Chapters[Story.CurrentChapter(TasksDone)].name, UIKit.Orange);
         }
@@ -637,7 +637,7 @@ namespace KaraPati
                             if (chapter + 1 < Story.Chapters.Length)
                             {
                                 home.ShowChapter(chapter + 1);
-                                Toast(Story.Chapters[chapter + 1].name + " açıldı!", UIKit.Orange, 4f);
+                                home.PlayChapterIntro(chapter + 1);
                             }
                             else PlayFinale(0);
                         });

@@ -111,6 +111,27 @@ namespace KaraPati
         }
 
         // ---------- portraits ----------
+        /// <summary>App icon: Kara Pati in a witch hat under the moon. layer 0 = full, 1 = background only, 2 = cat only (adaptive foreground).</summary>
+        public static Texture2D AppIcon(int size, int layer = 0)
+        {
+            var p = new Painter(size, size);
+            if (layer != 2)
+            {
+                p.VerticalGradient(new Color(0.16f, 0.08f, 0.26f), new Color(0.38f, 0.2f, 0.52f));
+                p.Glow(new Vector2(0f, -0.1f), 0.95f, new Color(1f, 0.6f, 0.25f, 0.55f));
+                p.Fill(q => S.Circle(q, new Vector2(0.58f, 0.6f), 0.2f), new Color(1f, 0.95f, 0.75f));
+                p.Fill(q => S.Circle(q, new Vector2(0.66f, 0.66f), 0.17f), new Color(0.3f, 0.16f, 0.44f));
+                p.Fill(q => S.Poly(q - new Vector2(-0.3f, 0.8f), S.Star(4, 0.07f, 0.02f)), new Color(1f, 1f, 0.85f, 0.9f));
+                p.Fill(q => S.Poly(q - new Vector2(-0.68f, 0.45f), S.Star(4, 0.06f, 0.02f)), new Color(1f, 1f, 0.85f, 0.8f));
+            }
+            if (layer == 0) CatHead(p, new Vector2(0f, -0.2f), 0.72f, catFur[2], catEye[2], false, false, 2);
+            // adaptive icons are cropped to the centre ~66%, so the cat is drawn smaller there
+            else if (layer == 2) CatHead(p, new Vector2(0f, -0.14f), 0.5f, catFur[2], catEye[2], false, false, 2);
+            var tex = p.ToTexture(true);
+            tex.name = "app_icon_" + layer;
+            return tex;
+        }
+
         public static Sprite KaraPatiHead => Make("karapati_head", Size, p =>
             CatHead(p, new Vector2(0f, -0.05f), 0.95f, catFur[2], catEye[2], false, false, 0));
 

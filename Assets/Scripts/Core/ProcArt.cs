@@ -77,7 +77,9 @@ namespace KaraPati
                 oa);
         }
 
-        public Texture2D ToTexture()
+        public Texture2D ToTexture() => ToTexture(false);
+
+        public Texture2D ToTexture(bool readable)
         {
             // Bleed colour into fully transparent pixels to avoid dark halos when filtered.
             for (int i = 0; i < px.Length; i++)
@@ -88,7 +90,7 @@ namespace KaraPati
                 filterMode = FilterMode.Bilinear
             };
             t.SetPixels(px);
-            t.Apply(false, true);
+            t.Apply(false, !readable);
             return t;
         }
     }

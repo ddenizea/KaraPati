@@ -45,6 +45,17 @@ namespace KaraPati
         int shownDone = -1;
         float eyeUntil;
 
+        // chapter-specific lines first, then the general ones
+        static readonly string[][] chapterCatLines =
+        {
+            new[] { "Önce örümcek ağları. Sonra mama. Sonra yine mama." },
+            new[] { "Bu mahzen çok soğuk... patilerim dondu.", "Aynada bir şey kıpırdadı, gördün mü?" },
+            new[] { "Ay ışığında tüylerim parlıyor, değil mi?", "Bu korkuluk bana bakıyor. Bence o da kedi sever." },
+            new[] { "Hayalet kasabası ama pazarı fena değil!", "Saat kulesi çalışınca herkes uyanacak." },
+            new[] { "Bu merdivenler bitmiyor... beni taşır mısın?", "Teleskopla bakınca Cadı Hanım'ı görebilir miyiz?" },
+            new[] { "Gölge aslında yalnız. Ona bir yumak verelim.", "Eve dönmeye az kaldı, hissediyorum!" },
+        };
+
         static readonly string[] catLines =
         {
             "Miyav. Mühürleri sen topla, dükkânı ben yönetirim.",
@@ -242,7 +253,10 @@ namespace KaraPati
             catBtn.onClick.AddListener(() =>
             {
                 Tween.Punch(cat.transform, 0.15f, 0.3f);
-                GM.Toast("Kara Pati: \"" + catLines[Random.Range(0, catLines.Length)] + "\"");
+                string line = catLines[Random.Range(0, catLines.Length)];
+                if (view >= 0 && view < chapterCatLines.Length && Random.value < 0.6f)
+                    line = chapterCatLines[view][Random.Range(0, chapterCatLines[view].Length)];
+                GM.Toast("Kara Pati: \"" + line + "\"");
             });
         }
 
@@ -429,6 +443,49 @@ namespace KaraPati
             view = ch;
             if (changed && fromButton) Tween.Pop(scenes[ch], 0.3f);
             Refresh(false);
+        }
+
+        /// <summary>Curtain + big title when a new chapter opens.</summary>
+        public void PlayChapterIntro(int ch)
+        {
+            if (ch < 0 || ch >= Story.Chapters.Length) return;
+            var curtain = UIKit.Img("ChapterCurtain", sceneArea, ProcArt.Rounded, new Color(0.04f, 0.02f, 0.08f, 0f), true);
+            curtain.rectTransform.At(Vector2.zero, new Vector2(1020f, 940f));
+            curtain.raycastTarget = true;
+            var glow = UIKit.Img("Glow", curtain.transform, ProcArt.GlowSprite, new Color(1f, 0.66f, 0.3f, 0f));
+            glow.rectTransform.At(new Vector2(0f, 20f), new Vector2(900f, 500f));
+            string full = Story.Chapters[ch].name;
+            int colon = full.IndexOf(':');
+            var small = UIKit.Txt("Num", curtain.transform, colon > 0 ? full.Substring(0, colon) : "", 44, new Color(1f, 0.96f, 0.88f, 0f));
+            small.rectTransform.At(new Vector2(0f, 90f), new Vector2(900f, 60f));
+            var big = UIKit.Txt("Name", curtain.transform, colon > 0 ? full.Substring(colon + 1).Trim() : full, 76, new Color(1f, 0.66f, 0.3f, 0f));
+            big.fontStyle = FontStyle.Bold;
+            big.rectTransform.At(new Vector2(0f, 0f), new Vector2(980f, 110f));
+            var star = UIKit.Img("Star", curtain.transform, ProcArt.Sparkle, new Color(1f, 0.95f, 0.7f, 0f));
+            star.rectTransform.At(new Vector2(0f, -100f), new Vector2(80f, 80f));
+
+            System.Action<float> setA = a =>
+            {
+                if (!curtain) return;
+                curtain.color = new Color(0.04f, 0.02f, 0.08f, 0.85f * a);
+                glow.color = new Color(1f, 0.66f, 0.3f, 0.45f * a);
+                small.color = new Color(1f, 0.96f, 0.88f, a);
+                big.color = new Color(1f, 0.66f, 0.3f, a);
+                star.color = new Color(1f, 0.95f, 0.7f, a);
+            };
+            setA(0f);
+            Tween.Run(0.45f, t =>
+            {
+                setA(t);
+                if (big) big.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.6f, 1f, Tween.OutBack(t));
+                if (star) star.rectTransform.localEulerAngles = new Vector3(0f, 0f, t * 180f);
+            }, () =>
+            {
+                Tween.Run(1.4f, t => { if (star) star.rectTransform.localEulerAngles = new Vector3(0f, 0f, 180f + t * 120f); }, () =>
+                {
+                    Tween.Run(0.6f, t => setA(1f - t), () => { if (curtain) Destroy(curtain.gameObject); });
+                });
+            });
         }
 
         public void Refresh(bool animate)

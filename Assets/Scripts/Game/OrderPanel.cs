@@ -122,7 +122,13 @@ namespace KaraPati
             return r;
         }
 
-        static int StampReward(OrderSave o) => o.reqs.Count > 1 ? 2 : 1;
+        // harder ingredients pay more stamps, so later chapters don't turn into a grind
+        static int StampReward(OrderSave o)
+        {
+            int r = 0;
+            foreach (var q in o.reqs) r += q.level >= 4 ? 2 : 1;
+            return r;
+        }
 
         public void FillEmpty()
         {

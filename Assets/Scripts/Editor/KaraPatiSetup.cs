@@ -1,4 +1,9 @@
+using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Android;
+using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace KaraPati.EditorTools
@@ -63,6 +68,72 @@ namespace KaraPati.EditorTools
         {
             if (Application.isPlaying && GameManager.I != null) GameManager.I.DebugSkipChapter();
             else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        const string ApkPath = "Builds/KaraPati.apk";
+
+        [MenuItem("KaraPati/Android APK Oluştur")]
+        static void BuildApk()
+        {
+            if (Application.isPlaying) { Debug.LogWarning("KaraPati: önce Play modundan çık."); return; }
+
+            // 1) app icons drawn by the game's own procedural painter
+            var full = SaveIcon("Assets/Art/AppIcon.png", ProcArt.AppIcon(512, 0));
+            var back = SaveIcon("Assets/Art/AppIconBack.png", ProcArt.AppIcon(432, 1));
+            var fore = SaveIcon("Assets/Art/AppIconFore.png", ProcArt.AppIcon(432, 2));
+            PlayerSettings.SetIcons(NamedBuildTarget.Unknown, new[] { full }, IconKind.Any);
+            var android = NamedBuildTarget.Android;
+            // Unity 6.6 only keeps adaptive icons (background + foreground layer) for Android
+            var adaptive = PlayerSettings.GetPlatformIcons(android, AndroidPlatformIconKind.Adaptive);
+            foreach (var ic in adaptive) { ic.SetTexture(back, 0); ic.SetTexture(fore, 1); }
+            PlayerSettings.SetPlatformIcons(android, AndroidPlatformIconKind.Adaptive, adaptive);
+
+            // 2) identity + 64-bit Android (required by modern phones)
+            PlayerSettings.companyName = "KaraPati";
+            PlayerSettings.productName = "Kara Pati";
+            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.karapati.iksirdukkani");
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            EditorUserBuildSettings.buildAppBundle = false;
+
+            // 3) scenes
+            var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+            if (scenes.Length == 0) scenes = new[] { "Assets/Scenes/SampleScene.unity" };
+
+            Directory.CreateDirectory("Builds");
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = ApkPath,
+                target = BuildTarget.Android,
+                targetGroup = BuildTargetGroup.Android,
+                options = BuildOptions.None,
+            });
+            var sum = report.summary;
+            if (sum.result == BuildResult.Succeeded)
+            {
+                Debug.Log("KaraPati: APK hazır -> " + Path.GetFullPath(ApkPath) + " (" + (sum.totalSize / (1024f * 1024f)).ToString("0.0") + " MB, " + sum.totalTime.TotalMinutes.ToString("0.0") + " dk)");
+                EditorUtility.RevealInFinder(ApkPath);
+            }
+            else Debug.LogError("KaraPati: APK derlemesi başarısız: " + sum.result + " (" + sum.totalErrors + " hata). Ayrıntı için Console'a bak.");
+        }
+
+        static Texture2D SaveIcon(string path, Texture2D tex)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            if (AssetImporter.GetAtPath(path) is TextureImporter ti)
+            {
+                ti.textureType = TextureImporterType.Default;
+                ti.mipmapEnabled = false;
+                ti.alphaIsTransparency = true;
+                ti.textureCompression = TextureImporterCompression.Uncompressed;
+                ti.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
