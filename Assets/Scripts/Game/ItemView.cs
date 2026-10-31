@@ -1,0 +1,139 @@
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace KaraPati
+{
+    /// <summary>Visual + input for one item on the board.</summary>
+    public class ItemView : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+    {
+        public BoardController board;
+        public Vector2Int cell;
+        public ItemData data;
+        public RectTransform rt;
+        public bool IsDragging { get; private set; }
+        public bool IsPressed { get; private set; }
+        public bool IsHeld => IsDragging || IsPressed;
+
+        Image icon, cooldown, napCat, badge;
+        Text badgeText, zzz;
+        CanvasGroup cg;
+        Vector2 dragOffset;
+        float seed;
+
+        public void Init(BoardController b, Vector2Int c, ItemData d)
+        {
+            board = b; cell = c; data = d;
+            rt = (RectTransform)transform;
+            rt.sizeDelta = new Vector2(BoardController.CS, BoardController.CS);
+            seed = Random.value * 10f;
+
+            var hit = gameObject.AddComponent<Image>();
+            hit.color = new Color(1f, 1f, 1f, 0f);
+            cg = gameObject.AddComponent<CanvasGroup>();
+
+            icon = UIKit.Img("Icon", rt, null, Color.white);
+            icon.rectTransform.sizeDelta = new Vector2(122f, 122f);
+            icon.preserveAspect = true;
+
+            cooldown = UIKit.Img("Cooldown", rt, ProcArt.Circle, new Color(0.06f, 0.02f, 0.1f, 0.55f));
+            cooldown.rectTransform.sizeDelta = new Vector2(112f, 112f);
+            cooldown.type = Image.Type.Filled;
+            cooldown.fillMethod = Image.FillMethod.Radial360;
+            cooldown.fillOrigin = (int)Image.Origin360.Top;
+            cooldown.fillClockwise = false;
+
+            badge = UIKit.Img("Badge", rt, ProcArt.Circle, new Color(0.14f, 0.09f, 0.2f, 0.92f));
+            badge.rectTransform.At(new Vector2(46f, -46f), new Vector2(40f, 40f));
+            badgeText = UIKit.Txt("Lv", badge.transform, "1", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(badgeText.rectTransform);
+
+            napCat = UIKit.Img("NapCat", rt, ProcArt.SleepCat, Color.white);
+            napCat.rectTransform.At(new Vector2(26f, 24f), new Vector2(84f, 84f));
+            zzz = UIKit.Txt("Zzz", napCat.transform, "z", 34, UIKit.Cream);
+            zzz.rectTransform.At(new Vector2(38f, 40f), new Vector2(60f, 50f));
+
+            Refresh();
+        }
+
+        public void Refresh()
+        {
+            if (data == null) return;
+            icon.sprite = ProcArt.Item(data.chain, data.level);
+            icon.color = data.nap ? new Color(0.7f, 0.7f, 0.78f) : Color.white;
+            napCat.gameObject.SetActive(data.nap);
+            bool gen = Chains.IsGenerator(data.chain);
+            badge.gameObject.SetActive(!gen);
+            badgeText.text = data.level.ToString();
+            cooldown.gameObject.SetActive(data.IsKitten && data.level >= 2);
+            UpdateCooldown();
+        }
+
+        void UpdateCooldown()
+        {
+            if (!cooldown.gameObject.activeSelf) return;
+            float max = data.level == 2 ? KittenChaos.ApprenticeCooldown : KittenChaos.MasterInterval;
+            cooldown.fillAmount = Mathf.Clamp01(data.cd / max);
+        }
+
+        void Update()
+        {
+            if (data == null) return;
+            UpdateCooldown();
+            float t = Time.time + seed;
+            if (data.nap)
+            {
+                zzz.rectTransform.anchoredPosition = new Vector2(38f + Mathf.Sin(t * 2f) * 4f, 40f + Mathf.Repeat(t * 12f, 18f));
+                var c = zzz.color; c.a = 1f - Mathf.Repeat(t * 12f, 18f) / 18f; zzz.color = c;
+            }
+            if (data.IsWildKitten && !IsDragging)
+                icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
+            else if (data.chain == Chains.Kazan)
+                icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
+        }
+
+        public void OnPointerDown(PointerEventData e)
+        {
+            IsPressed = true;
+            board.Select(cell);
+        }
+
+        public void OnPointerUp(PointerEventData e) => IsPressed = false;
+
+        public void OnBeginDrag(PointerEventData e)
+        {
+            if (data == null || data.nap) return;
+            IsDragging = true;
+            cg.blocksRaycasts = false;
+            rt.SetAsLastSibling();
+            Tween.Stop(Tween.Key(rt, "m"));
+            Tween.Stop(Tween.Key(rt, "s"));
+            rt.localScale = Vector3.one * 1.15f;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)rt.parent, e.position, e.pressEventCamera, out var lp);
+            dragOffset = rt.anchoredPosition - lp;
+        }
+
+        public void OnDrag(PointerEventData e)
+        {
+            if (!IsDragging) return;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle((RectTransform)rt.parent, e.position, e.pressEventCamera, out var lp);
+            rt.anchoredPosition = lp + dragOffset;
+        }
+
+        public void OnEndDrag(PointerEventData e)
+        {
+            if (!IsDragging) return;
+            IsDragging = false;
+            cg.blocksRaycasts = true;
+            rt.localScale = Vector3.one;
+            var center = RectTransformUtility.WorldToScreenPoint(e.pressEventCamera, rt.position);
+            board.OnItemDropped(this, center);
+        }
+
+        public void OnPointerClick(PointerEventData e)
+        {
+            if (e.dragging) return;
+            board.OnItemClicked(this);
+        }
+    }
+}
