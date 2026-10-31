@@ -1,15 +1,18 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using Random = UnityEngine.Random;
 
 namespace KaraPati
 {
     /// <summary>
-    /// Boots the whole prototype from code: builds the UI, owns gold/energy, saving and toasts.
-    /// Drop-in: it spawns itself in any scene, so pressing Play is enough.
+    /// Boots the whole game from code: builds both screens (shop + merge table), owns the economy
+    /// (gold, energy, Pati Mührü), stickers, story progress, dialogs, toasts and saving.
+    /// It spawns itself in any scene, so pressing Play is enough.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
@@ -26,36 +29,64 @@ namespace KaraPati
         public const float EnergyRegenSec = 8f;
         public const int EnergyPackCost = 20, EnergyPackAmount = 10;
         const string SaveKey = "karapati_save_v1";
+        const float RefW = 1080f, RefH = 2060f;
 
         public int Gold { get; private set; }
+        public int Stamps { get; private set; }
         public int Energy { get; private set; }
         public int Served { get; private set; }
+        public int TasksDone { get; private set; }
         public bool KittenHintShown { get; set; }
+        bool introSeen;
+        readonly HashSet<string> stickers = new HashSet<string>();
+        readonly HashSet<string> claimedSets = new HashSet<string>();
 
         public RectTransform Root { get; private set; }
         public BoardController Board { get; private set; }
         public OrderPanel Orders { get; private set; }
-        public KittenChaos Chaos { get; private set; }
+        public KittenChaos Cats { get; private set; }
+        public bool OnBoard { get; private set; }
+        public bool ModalOpen => (album && album.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
+        HomeScreen home;
+        AlbumPanel album;
         CanvasScaler scaler;
-        Text goldText, energyText, energyTimerText, toastText, infoTitle, infoDesc;
+        CanvasGroup homeCg, boardCg;
+        Button homeBtn;
+        Text goldText, stampText, energyText, energyTimerText, toastText, infoTitle, infoDesc;
+        RectTransform goldIcon, stampIcon;
         CanvasGroup toastGroup;
         Button actionBtn;
-        RectTransform goldIcon;
         float energyTimer;
         bool dirty;
         float saveTimer;
         Coroutine toastCo;
         float resetArmedUntil;
         int tipIndex;
+        KittenAgent infoKitten;
+        float kittenInfoTimer;
+
+        // dialog
+        GameObject dialogRoot;
+        Image dialogPortrait;
+        Text dialogName, dialogText;
+        Action dialogDone;
+        readonly Queue<(string speaker, string line, Action done)> dialogQueue = new Queue<(string, string, Action)>();
+
+        // sticker popup
+        RectTransform stickerPop;
+        Image stickerPopIcon;
+        Text stickerPopText;
+        CanvasGroup stickerPopCg;
+        Coroutine stickerCo;
 
         static readonly string[] tips =
         {
             "Aynı iki eşyayı üst üste sürükle, birleşsinler.",
             "Kazana ve sandığa dokunarak malzeme üret (1 enerji).",
-            "Hayaletlerin istediklerini tahtada topla, sonra 'Ver'e bas.",
-            "Yavru kediler kaos çıkarır. Birleştir, yardımcıya dönüşsünler!",
-            "Enerjin bitince altınla alabilirsin (+ düğmesi)."
+            "Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas.",
+            "İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!",
+            "Siparişler Pati Mührü verir; mühürlerle dükkânı onarırsın."
         };
 
         // ------------------------------------------------------------------ lifecycle
@@ -100,7 +131,13 @@ namespace KaraPati
             if (resetArmedUntil > 0f && Time.unscaledTime > resetArmedUntil)
             {
                 resetArmedUntil = 0f;
-                if (Board.Get(Board.Selected) == null) ShowInfo(null);
+                if (infoKitten == null && Board.Get(Board.Selected) == null) ShowInfo(null);
+            }
+
+            if (infoKitten)
+            {
+                kittenInfoTimer -= Time.unscaledDeltaTime;
+                if (kittenInfoTimer <= 0f) ShowKittenInfo(infoKitten);
             }
 
             if (dirty)
@@ -133,19 +170,8 @@ namespace KaraPati
         void UpdateScalerMatch()
         {
             if (!scaler) return;
-            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 0.5625f;
-            scaler.matchWidthOrHeight = aspect > 1080f / 1920f ? 1f : 0f;
-        }
-
-        RectTransform Section(string name, float top, float height)
-        {
-            var rt = UIKit.Rect(name, Root);
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(1f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -top);
-            rt.sizeDelta = new Vector2(0f, height);
-            return rt;
+            float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : RefW / RefH;
+            scaler.matchWidthOrHeight = aspect > RefW / RefH ? 1f : 0f;
         }
 
         void BuildUI()
@@ -157,67 +183,99 @@ namespace KaraPati
             canvas.sortingOrder = 10;
             scaler = cgo.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1080f, 1920f);
+            scaler.referenceResolution = new Vector2(RefW, RefH);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             UpdateScalerMatch();
             var canvasRt = (RectTransform)cgo.transform;
 
             var bg = UIKit.Img("Background", canvasRt, ProcArt.Gradient, Color.white);
             UIKit.Stretch(bg.rectTransform);
-
-            // a few twinkling stars in the background
             for (int i = 0; i < 14; i++)
             {
-                var s = UIKit.Img("Star", canvasRt, ProcArt.Sparkle, new Color(1f, 0.95f, 0.8f, UnityEngine.Random.Range(0.15f, 0.45f)));
-                s.rectTransform.anchorMin = s.rectTransform.anchorMax = new Vector2(UnityEngine.Random.value, UnityEngine.Random.value);
-                float sz = UnityEngine.Random.Range(12f, 30f);
+                var s = UIKit.Img("Star", canvasRt, ProcArt.Sparkle, new Color(1f, 0.95f, 0.8f, Random.Range(0.15f, 0.45f)));
+                s.rectTransform.anchorMin = s.rectTransform.anchorMax = new Vector2(Random.value, Random.value);
+                float sz = Random.Range(12f, 30f);
                 s.rectTransform.sizeDelta = new Vector2(sz, sz);
             }
 
             Root = UIKit.Rect("Root", canvasRt);
-            Root.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)).At(Vector2.zero, new Vector2(1080f, 1920f));
+            Root.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)).At(Vector2.zero, new Vector2(RefW, RefH));
 
-            BuildTopBar(Section("TopBar", 12f, 115f));
+            // --- home screen
+            var homeRt = UIKit.Fill(Root, "HomeScreen");
+            homeCg = homeRt.gameObject.AddComponent<CanvasGroup>();
+            home = homeRt.gameObject.AddComponent<HomeScreen>();
+            home.Build(homeRt);
 
-            var ordersArea = Section("Orders", 138f, 400f);
+            // --- board screen
+            var boardRt = UIKit.Fill(Root, "BoardScreen");
+            boardCg = boardRt.gameObject.AddComponent<CanvasGroup>();
+            var ordersArea = UIKit.Section(boardRt, "Orders", 138f, 400f);
             Orders = ordersArea.gameObject.AddComponent<OrderPanel>();
             Orders.Build(ordersArea);
+            var boardArea = UIKit.Section(boardRt, "Board", 618f, 1290f);
+            Board = boardArea.gameObject.AddComponent<BoardController>();
+            Board.Build(boardArea);
+            BuildInfoBar(UIKit.Section(boardRt, "InfoBar", 1916f, 134f));
 
-            var toastArea = Section("Toast", 542f, 70f);
+            // --- shared overlays
+            BuildTopBar(UIKit.Section(Root, "TopBar", 12f, 115f));
+
+            var toastArea = UIKit.Section(Root, "Toast", 545f, 70f);
             toastGroup = toastArea.gameObject.AddComponent<CanvasGroup>();
             toastGroup.alpha = 0f;
             toastGroup.blocksRaycasts = false;
-            toastText = UIKit.Txt("Text", toastArea, "", 30, UIKit.Cream);
-            UIKit.Stretch(toastText.rectTransform, 30f, 30f);
+            var toastBg = UIKit.Img("Bg", toastArea, ProcArt.Rounded, new Color(0.08f, 0.05f, 0.12f, 0.82f), true);
+            UIKit.Stretch(toastBg.rectTransform, 30f, 30f, -6f, -6f);
+            toastText = UIKit.Txt("Text", toastArea, "", 29, UIKit.Cream);
+            UIKit.Stretch(toastText.rectTransform, 50f, 50f);
 
-            var boardArea = Section("Board", 618f, 1150f);
-            Board = boardArea.gameObject.AddComponent<BoardController>();
-            Board.Build(boardArea);
+            BuildStickerPopup();
 
-            BuildInfoBar(Section("InfoBar", 1776f, 136f));
+            var albumRt = UIKit.Rect("Album", canvasRt);
+            album = albumRt.gameObject.AddComponent<AlbumPanel>();
+            album.Build();
 
-            Chaos = gameObject.AddComponent<KittenChaos>();
+            BuildDialog(canvasRt);
+
+            Cats = gameObject.AddComponent<KittenChaos>();
+            Cats.Init(Board.CatsLayer);
+
+            // start on the shop screen
+            OnBoard = false;
+            boardCg.gameObject.SetActive(false);
+            homeBtn.gameObject.SetActive(false);
+        }
+
+        Image Pill(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, float width)
+        {
+            var p = UIKit.Img(name, parent, ProcArt.Rounded, UIKit.PanelDark, true);
+            p.rectTransform.Anchor(anchor, pivot).At(pos, new Vector2(width, 92f));
+            return p;
         }
 
         void BuildTopBar(RectTransform bar)
         {
-            // gold
-            var gold = UIKit.Img("Gold", bar, ProcArt.Rounded, UIKit.PanelDark, true);
-            gold.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(250f, 92f));
+            homeBtn = UIKit.Btn("Home", bar, "", UIKit.PanelDark, GoHome);
+            ((RectTransform)homeBtn.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(96f, 92f));
+            var hIcon = UIKit.Img("Icon", homeBtn.transform, ProcArt.House, Color.white);
+            hIcon.rectTransform.sizeDelta = new Vector2(66f, 66f);
+
+            var gold = Pill(bar, "Gold", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(140f, 0f), 230f);
             var coin = UIKit.Img("Coin", gold.transform, ProcArt.Coin, Color.white);
             goldIcon = coin.rectTransform;
-            goldIcon.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(72f, 72f));
-            goldText = UIKit.Txt("Value", gold.transform, "0", 42, UIKit.Cream, TextAnchor.MiddleLeft);
-            UIKit.Stretch(goldText.rectTransform, 92f, 10f);
+            goldIcon.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(70f, 70f));
+            goldText = UIKit.Txt("Value", gold.transform, "0", 40, UIKit.Cream, TextAnchor.MiddleLeft);
+            UIKit.Stretch(goldText.rectTransform, 88f, 8f);
 
-            // title
-            var title = UIKit.Txt("Title", bar, "Kara Pati'nin\nİksir Dükkânı", 34, UIKit.Orange);
-            title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(-15f, 0f), new Vector2(380f, 110f));
+            var st = Pill(bar, "Stamps", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(384f, 0f), 200f);
+            var stImg = UIKit.Img("Stamp", st.transform, ProcArt.Stamp, Color.white);
+            stampIcon = stImg.rectTransform;
+            stampIcon.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(70f, 70f));
+            stampText = UIKit.Txt("Value", st.transform, "0", 40, UIKit.Cream, TextAnchor.MiddleLeft);
+            UIKit.Stretch(stampText.rectTransform, 88f, 8f);
 
-            // energy
-            var en = UIKit.Img("Energy", bar, ProcArt.Rounded, UIKit.PanelDark, true);
-            en.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(330f, 92f));
+            var en = Pill(bar, "Energy", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-30f, 0f), 330f);
             var bolt = UIKit.Img("Bolt", en.transform, ProcArt.Bolt, Color.white);
             bolt.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(8f, 0f), new Vector2(70f, 70f));
             energyText = UIKit.Txt("Value", en.transform, "30/30", 38, UIKit.Cream, TextAnchor.MiddleLeft);
@@ -238,20 +296,273 @@ namespace KaraPati
             infoTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
             infoTitle.rectTransform.pivot = new Vector2(0f, 1f);
             infoTitle.rectTransform.offsetMin = new Vector2(30f, -60f);
-            infoTitle.rectTransform.offsetMax = new Vector2(-260f, -16f);
+            infoTitle.rectTransform.offsetMax = new Vector2(-260f, -14f);
             infoDesc = UIKit.Txt("Desc", panel.transform, "", 25, UIKit.Cream, TextAnchor.UpperLeft);
             infoDesc.rectTransform.anchorMin = new Vector2(0f, 0f);
             infoDesc.rectTransform.anchorMax = new Vector2(1f, 1f);
-            infoDesc.rectTransform.offsetMin = new Vector2(30f, 8f);
-            infoDesc.rectTransform.offsetMax = new Vector2(-260f, -60f);
+            infoDesc.rectTransform.offsetMin = new Vector2(30f, 6f);
+            infoDesc.rectTransform.offsetMax = new Vector2(-260f, -58f);
             actionBtn = UIKit.Btn("Action", panel.transform, "", UIKit.Orange, OnAction, 30);
             ((RectTransform)actionBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, 0f), new Vector2(220f, 92f));
+        }
+
+        void BuildStickerPopup()
+        {
+            stickerPop = UIKit.Section(Root, "StickerPopup", 140f, 150f);
+            stickerPopCg = stickerPop.gameObject.AddComponent<CanvasGroup>();
+            stickerPopCg.blocksRaycasts = false;
+            stickerPopCg.alpha = 0f;
+            var bg = UIKit.Img("Bg", stickerPop, ProcArt.Rounded, new Color(0.98f, 0.94f, 0.86f), true);
+            bg.rectTransform.At(Vector2.zero, new Vector2(640f, 140f));
+            var paper = UIKit.Img("Paper", bg.transform, ProcArt.Circle, new Color(0.15f, 0.1f, 0.2f));
+            paper.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 0f), new Vector2(118f, 118f));
+            stickerPopIcon = UIKit.Img("Icon", paper.transform, null, Color.white);
+            stickerPopIcon.rectTransform.sizeDelta = new Vector2(96f, 96f);
+            stickerPopText = UIKit.Txt("Text", bg.transform, "", 30, new Color(0.25f, 0.15f, 0.3f), TextAnchor.MiddleLeft, false);
+            UIKit.Stretch(stickerPopText.rectTransform, 150f, 20f);
+        }
+
+        void BuildDialog(RectTransform canvasRt)
+        {
+            var rt = UIKit.Rect("Dialog", canvasRt);
+            UIKit.Stretch(rt);
+            dialogRoot = rt.gameObject;
+            var dim = rt.gameObject.AddComponent<Image>();
+            dim.color = new Color(0.03f, 0.01f, 0.06f, 0.55f);
+            var dimBtn = rt.gameObject.AddComponent<Button>();
+            dimBtn.transition = Selectable.Transition.None;
+            dimBtn.onClick.AddListener(CloseDialog);
+
+            var panel = UIKit.Img("Panel", rt, ProcArt.Rounded, new Color(0.24f, 0.16f, 0.33f, 0.99f), true);
+            panel.raycastTarget = true;
+            panel.rectTransform.At(new Vector2(0f, -330f), new Vector2(1000f, 430f));
+
+            var frame = UIKit.Img("PortraitBg", panel.transform, ProcArt.Circle, new Color(0.13f, 0.09f, 0.19f));
+            frame.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -30f), new Vector2(190f, 190f));
+            dialogPortrait = UIKit.Img("Portrait", frame.transform, null, Color.white);
+            dialogPortrait.rectTransform.sizeDelta = new Vector2(160f, 160f);
+
+            dialogName = UIKit.Txt("Name", panel.transform, "", 40, UIKit.Orange, TextAnchor.MiddleLeft);
+            dialogName.fontStyle = FontStyle.Bold;
+            dialogName.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(250f, -30f), new Vector2(700f, 56f));
+            dialogText = UIKit.Txt("Text", panel.transform, "", 34, UIKit.Cream, TextAnchor.UpperLeft);
+            dialogText.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(250f, -95f), new Vector2(710f, 220f));
+            dialogText.rectTransform.pivot = new Vector2(0f, 1f);
+            dialogName.rectTransform.pivot = new Vector2(0f, 1f);
+
+            var next = UIKit.Btn("Next", panel.transform, "Devam", UIKit.Orange, CloseDialog, 36);
+            ((RectTransform)next.transform).Anchor(new Vector2(1f, 0f), new Vector2(1f, 0f)).At(new Vector2(-30f, 26f), new Vector2(230f, 86f));
+            dialogRoot.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------ screens
+        public void GoBoard()
+        {
+            if (OnBoard) return;
+            OnBoard = true;
+            homeBtn.gameObject.SetActive(true);
+            Cross(homeCg, boardCg);
+            Orders.Refresh();
+            ShowInfo(null);
+        }
+
+        public void GoHome()
+        {
+            if (!OnBoard) return;
+            OnBoard = false;
+            homeBtn.gameObject.SetActive(false);
+            Board.HideSelector();
+            Cats.Deselect();
+            infoKitten = null;
+            home.Refresh(false);
+            Cross(boardCg, homeCg);
+            Save();
+        }
+
+        void Cross(CanvasGroup from, CanvasGroup to)
+        {
+            to.gameObject.SetActive(true);
+            to.alpha = 0f;
+            from.blocksRaycasts = false;
+            to.blocksRaycasts = false;
+            Tween.Run(0.25f, t =>
+            {
+                if (from) from.alpha = 1f - t;
+                if (to) to.alpha = t;
+            }, () =>
+            {
+                if (from) { from.gameObject.SetActive(false); from.alpha = 1f; from.blocksRaycasts = true; }
+                if (to) to.blocksRaycasts = true;
+            });
+        }
+
+        public void OpenAlbum() => album.Open();
+        public void OnAlbumClosed() { if (!OnBoard) home.Refresh(false); }
+
+        // ------------------------------------------------------------------ dialog
+        public void ShowDialog(string speaker, string line, Action done = null)
+        {
+            if (dialogRoot.activeSelf) { dialogQueue.Enqueue((speaker, line, done)); return; }
+            dialogName.text = speaker;
+            dialogText.text = line;
+            dialogPortrait.sprite = Portrait(speaker);
+            dialogDone = done;
+            dialogRoot.SetActive(true);
+            dialogRoot.transform.SetAsLastSibling();
+            Tween.Pop(dialogRoot.transform.GetChild(0), 0.3f);
+        }
+
+        void CloseDialog()
+        {
+            dialogRoot.SetActive(false);
+            var d = dialogDone;
+            dialogDone = null;
+            d?.Invoke();
+            if (!dialogRoot.activeSelf && dialogQueue.Count > 0)
+            {
+                var next = dialogQueue.Dequeue();
+                ShowDialog(next.speaker, next.line, next.done);
+            }
+        }
+
+        static Sprite Portrait(string speaker)
+        {
+            int gi = Array.IndexOf(Ghosts.Names, speaker);
+            return gi >= 0 ? ProcArt.Ghost(gi) : ProcArt.KaraPatiHead;
+        }
+
+        // ------------------------------------------------------------------ story
+        public void DoTask(int idx)
+        {
+            if (idx != TasksDone || idx >= Story.Tasks.Length) return;
+            var task = Story.Tasks[idx];
+            if (Stamps < task.cost)
+            {
+                Toast(task.cost + " Pati Mührü gerekiyor. 'Dükkânı Aç'a bas, sipariş hazırla!", new Color(1f, 0.6f, 0.5f));
+                Tween.Punch(stampIcon, 0.3f, 0.3f);
+                return;
+            }
+            Stamps -= task.cost;
+            TasksDone++;
+            RefreshHud();
+            home.Refresh(true);
+            Save();
+            StartCoroutine(After(0.7f, () =>
+            {
+                ShowDialog(task.speaker, task.line, () =>
+                {
+                    GiveRandomMissing(Stickers.Sets[2]);
+                    if (task.id == "yatak") GiveSticker("c_karapati", false);
+                    if (TasksDone >= Story.Tasks.Length) ShowDialog("Kara Pati", Story.EndLine);
+                    else if (Stamps < Story.Tasks[TasksDone].cost && TasksDone <= 2) Toast(Story.FirstBoardHint, UIKit.Orange, 4.5f);
+                    home.Refresh(false);
+                });
+            }));
+        }
+
+        static IEnumerator After(float s, Action a)
+        {
+            yield return new WaitForSeconds(s);
+            a();
+        }
+
+        // ------------------------------------------------------------------ stickers
+        public bool HasSticker(string id) => stickers.Contains(id);
+        public bool IsSetClaimed(StickerSet s) => claimedSets.Contains(s.id);
+        public bool IsSetClaimable(StickerSet s) => !IsSetClaimed(s) && StickerCount(s) >= s.ids.Length;
+
+        public bool AnyClaimableSet
+        {
+            get
+            {
+                foreach (var s in Stickers.Sets) if (IsSetClaimable(s)) return true;
+                return false;
+            }
+        }
+
+        public int StickerCount(StickerSet s)
+        {
+            int n = 0;
+            foreach (var id in s.ids) if (stickers.Contains(id)) n++;
+            return n;
+        }
+
+        /// <summary>Award a sticker. Duplicates from random drops turn into a little gold.</summary>
+        public void GiveSticker(string id, bool duplicateGold = true)
+        {
+            if (stickers.Contains(id))
+            {
+                if (duplicateGold)
+                {
+                    AddGold(5);
+                    Toast("Kopya etiket (" + Stickers.Name(id) + "): +5 altın");
+                }
+                return;
+            }
+            stickers.Add(id);
+            ShowStickerPopup(id);
+            var set = Stickers.SetOf(id);
+            if (set != null && IsSetClaimable(set))
+                StartCoroutine(After(2.6f, () => Toast("\"" + set.name + "\" seti tamamlandı! Albümden ödülünü al.", UIKit.Orange, 4f)));
+            MarkDirty();
+        }
+
+        void GiveRandomMissing(StickerSet set)
+        {
+            var missing = new List<string>();
+            foreach (var id in set.ids) if (!stickers.Contains(id)) missing.Add(id);
+            if (missing.Count > 0) GiveSticker(missing[Random.Range(0, missing.Count)], false);
+        }
+
+        public void OnOrderDelivered(int ghostIndex)
+        {
+            float r = Random.value;
+            if (r < 0.4f) GiveSticker("g" + ghostIndex);
+            else if (r < 0.55f)
+            {
+                var w = Stickers.Sets[2].ids;
+                GiveSticker(w[Random.Range(0, w.Length)]);
+            }
+            if (Random.value < 0.05f) GiveSticker("c_hayaletkedi", false);
+        }
+
+        public bool ClaimSet(StickerSet s)
+        {
+            if (!IsSetClaimable(s)) return false;
+            claimedSets.Add(s.id);
+            AddGold(Stickers.SetRewardGold);
+            AddStamps(Stickers.SetRewardStamps);
+            Toast("\"" + s.name + "\" ödülü: +" + Stickers.SetRewardGold + " altın, +" + Stickers.SetRewardStamps + " mühür!", UIKit.Orange);
+            Save();
+            return true;
+        }
+
+        void ShowStickerPopup(string id)
+        {
+            stickerPopIcon.sprite = ProcArt.StickerIcon(id);
+            var set = Stickers.SetOf(id);
+            stickerPopText.text = "<b>Yeni etiket!</b>\n" + Stickers.Name(id) + (set != null ? "  <size=24>(" + set.name + ")</size>" : "");
+            stickerPop.SetAsLastSibling();
+            if (stickerCo != null) StopCoroutine(stickerCo);
+            stickerCo = StartCoroutine(StickerPopCo());
+        }
+
+        IEnumerator StickerPopCo()
+        {
+            stickerPopCg.alpha = 1f;
+            Tween.Pop(stickerPop, 0.35f);
+            yield return new WaitForSecondsRealtime(2.4f);
+            float t = 0f;
+            while (t < 0.35f) { t += Time.unscaledDeltaTime; stickerPopCg.alpha = 1f - t / 0.35f; yield return null; }
+            stickerPopCg.alpha = 0f;
         }
 
         // ------------------------------------------------------------------ info bar
         public void ShowInfo(ItemData d)
         {
             if (infoTitle == null) return;
+            infoKitten = null;
+            Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (d == null)
             {
@@ -275,26 +586,7 @@ namespace KaraPati
             }
             if (Chains.IsGenerator(d.chain))
             {
-                infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") +
-                                " Dokun: 1 enerji.";
-                return;
-            }
-            if (d.IsKitten)
-            {
-                switch (d.level)
-                {
-                    case 1:
-                        infoDesc.text = "Eşyaları iter, üstlerine yatar! İki yavru birleşirse Çırak Kedi olur.";
-                        actionBtn.gameObject.SetActive(true);
-                        actionBtn.Label().text = "Sahiplendir +3";
-                        break;
-                    case 2:
-                        infoDesc.text = "Dokun: bedava malzeme getirir (" + (int)KittenChaos.ApprenticeCooldown + " sn bekler). İki çırak = Usta Kedi.";
-                        break;
-                    default:
-                        infoDesc.text = "Her " + (int)KittenChaos.MasterInterval + " sn'de kendiliğinden malzeme getirir, yavruları sakinleştirir.";
-                        break;
-                }
+                infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") + " Dokun: 1 enerji.";
                 return;
             }
             int max = Chains.MaxLevel(d.chain);
@@ -305,15 +597,61 @@ namespace KaraPati
             actionBtn.Label().text = "Sat  +" + d.level;
         }
 
+        public void ShowKittenInfo(KittenAgent a)
+        {
+            if (infoTitle == null) return;
+            if (!a) { ShowInfo(null); return; }
+            infoKitten = a;
+            kittenInfoTimer = 1f;
+            var btnImg = actionBtn.GetComponent<Image>();
+            btnImg.color = UIKit.Orange;
+            actionBtn.gameObject.SetActive(false);
+            switch (a.level)
+            {
+                case 1:
+                    infoTitle.text = "Yaramaz Yavru";
+                    infoDesc.text = a.state == KittenAgent.State.Napping
+                        ? "Mışıl mışıl uyuyor... Dokunup okşa, kalksın."
+                        : "Eşyaları iter, üstlerine yatar! Başka bir yavrunun üstüne sürükle: Çırak Kedi.";
+                    actionBtn.gameObject.SetActive(true);
+                    actionBtn.Label().text = "Sahiplendir +3";
+                    break;
+                case 2:
+                {
+                    infoTitle.text = "Çırak Kedi";
+                    var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
+                    string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
+                    infoDesc.text = "Dokun: bedava malzeme. Buradayken yavru gelmez. Kalan: " + time;
+                    if (Cats.HasMaster) infoDesc.text += " (Dükkânda zaten Usta var.)";
+                    else
+                    {
+                        actionBtn.gameObject.SetActive(true);
+                        actionBtn.Label().text = "Usta Yap\n" + KittenChaos.PromoteCost + " altın";
+                        btnImg.color = Gold >= KittenChaos.PromoteCost ? UIKit.Green : UIKit.Disabled;
+                    }
+                    break;
+                }
+                default:
+                    infoTitle.text = "Usta Kedi";
+                    infoDesc.text = "Kalıcı yardımcı! Her " + (int)KittenChaos.MasterInterval + " sn'de kendiliğinden malzeme getirir.";
+                    break;
+            }
+        }
+
         void OnAction()
         {
+            if (infoKitten)
+            {
+                if (infoKitten.level == 1) Cats.Adopt(infoKitten);
+                else if (infoKitten.level == 2) Cats.Promote(infoKitten);
+                return;
+            }
             var d = Board.Get(Board.Selected);
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)
             {
                 resetArmedUntil = 0f;
                 NewGame();
-                Toast("Yeni oyun başladı. Dükkân senin, Kara Pati!", UIKit.Orange);
                 return;
             }
             resetArmedUntil = Time.unscaledTime + 3f;
@@ -326,6 +664,27 @@ namespace KaraPati
             Gold += amount;
             RefreshHud();
             if (goldIcon) Tween.Punch(goldIcon, 0.25f, 0.3f);
+            MarkDirty();
+        }
+
+        public bool TrySpendGold(int amount)
+        {
+            if (Gold < amount)
+            {
+                Toast(amount + " altın gerekiyor.", new Color(1f, 0.6f, 0.5f));
+                return false;
+            }
+            Gold -= amount;
+            RefreshHud();
+            MarkDirty();
+            return true;
+        }
+
+        public void AddStamps(int amount)
+        {
+            Stamps += amount;
+            RefreshHud();
+            if (stampIcon) Tween.Punch(stampIcon, 0.3f, 0.35f);
             MarkDirty();
         }
 
@@ -366,6 +725,7 @@ namespace KaraPati
         void RefreshHud()
         {
             goldText.text = Gold.ToString();
+            stampText.text = Stamps.ToString();
             energyText.text = Energy + "/" + MaxEnergy;
         }
 
@@ -406,32 +766,47 @@ namespace KaraPati
         void NewGame()
         {
             Gold = 20;
+            Stamps = 1;
             Energy = MaxEnergy;
             energyTimer = 0f;
             Served = 0;
+            TasksDone = 0;
             KittenHintShown = false;
+            introSeen = false;
             tipIndex = 0;
+            stickers.Clear();
+            claimedSets.Clear();
 
+            Cats.ClearAll();
             Board.ClearAll();
-            Board.Set(new Vector2Int(1, 3), new ItemData(Chains.Kazan, 1), true);
-            Board.Set(new Vector2Int(5, 3), new ItemData(Chains.Sandik, 1), true);
-            Board.Set(new Vector2Int(2, 5), new ItemData(Chains.Ot, 1), true);
-            Board.Set(new Vector2Int(3, 5), new ItemData(Chains.Ot, 1), true);
-            Board.Set(new Vector2Int(4, 5), new ItemData(Chains.Mantar, 1), true);
-            Board.Set(new Vector2Int(3, 6), new ItemData(Chains.Kristal, 1), true);
-            Board.Set(new Vector2Int(2, 6), new ItemData(Chains.Ag, 1), true);
+            Board.Set(new Vector2Int(1, 4), new ItemData(Chains.Kazan, 1), true);
+            Board.Set(new Vector2Int(5, 4), new ItemData(Chains.Sandik, 1), true);
+            Board.Set(new Vector2Int(2, 6), new ItemData(Chains.Ot, 1), true);
+            Board.Set(new Vector2Int(3, 6), new ItemData(Chains.Ot, 1), true);
+            Board.Set(new Vector2Int(4, 6), new ItemData(Chains.Mantar, 1), true);
+            Board.Set(new Vector2Int(3, 7), new ItemData(Chains.Kristal, 1), true);
+            Board.Set(new Vector2Int(2, 7), new ItemData(Chains.Ag, 1), true);
 
             Orders.ClearAll();
             Orders.FillEmpty();
             RefreshHud();
             ShowInfo(null);
+            if (OnBoard) GoHome();
+            home.Refresh(false);
             Save();
+            ShowIntro();
+        }
+
+        void ShowIntro()
+        {
+            if (introSeen) return;
+            ShowDialog("Kara Pati", Story.IntroLine, () => { introSeen = true; MarkDirty(); });
         }
 
         void Save()
         {
             dirty = false;
-            if (Board == null || Orders == null) return;
+            if (Board == null || Orders == null || Cats == null) return;
             var s = new SaveData
             {
                 gold = Gold,
@@ -439,10 +814,16 @@ namespace KaraPati
                 energyTimer = energyTimer,
                 stamp = DateTime.UtcNow.Ticks,
                 served = Served,
-                kittenHint = KittenHintShown
+                kittenHint = KittenHintShown,
+                stamps = Stamps,
+                tasksDone = TasksDone,
+                introSeen = introSeen,
+                stickers = new List<string>(stickers),
+                claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
             Orders.WriteSave(s.orders);
+            Cats.WriteSave(s.kittens);
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
         }
@@ -450,12 +831,7 @@ namespace KaraPati
         void Load()
         {
             string json = PlayerPrefs.GetString(SaveKey, "");
-            if (string.IsNullOrEmpty(json))
-            {
-                NewGame();
-                Toast("Cadı ortadan kayboldu, dükkân artık senin Kara Pati! Kazana dokun.", UIKit.Orange, 5f);
-                return;
-            }
+            if (string.IsNullOrEmpty(json)) { NewGame(); return; }
             try
             {
                 var s = JsonUtility.FromJson<SaveData>(json);
@@ -463,6 +839,14 @@ namespace KaraPati
                 Gold = s.gold;
                 Served = s.served;
                 KittenHintShown = s.kittenHint;
+                Stamps = s.stamps;
+                TasksDone = Mathf.Clamp(s.tasksDone, 0, Story.Tasks.Length);
+                introSeen = s.introSeen;
+                stickers.Clear();
+                if (s.stickers != null) foreach (var id in s.stickers) stickers.Add(id);
+                claimedSets.Clear();
+                if (s.claimedSets != null) foreach (var id in s.claimedSets) claimedSets.Add(id);
+
                 Energy = s.energy;
                 energyTimer = s.energyTimer;
                 if (Energy < MaxEnergy && s.stamp > 0)
@@ -473,10 +857,13 @@ namespace KaraPati
                     energyTimer = Energy < MaxEnergy ? elapsed % EnergyRegenSec : 0f;
                 }
                 Board.ReadSave(s.cells);
+                Cats.ReadSave(s.kittens);
                 Orders.ReadSave(s.orders);
                 RefreshHud();
                 ShowInfo(null);
-                Toast("Tekrar hoş geldin, Kara Pati! Hayaletler seni bekliyordu.");
+                home.Refresh(false);
+                if (!introSeen) ShowIntro();
+                else Toast("Tekrar hoş geldin, Kara Pati!");
             }
             catch (Exception e)
             {

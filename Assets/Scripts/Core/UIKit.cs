@@ -103,5 +103,24 @@ namespace KaraPati
         }
 
         public static Text Label(this Button b) => b.GetComponentInChildren<Text>();
+
+        /// <summary>Full-width horizontal band measured from the top of a parent.</summary>
+        public static RectTransform Section(Transform parent, string name, float top, float height)
+        {
+            var rt = Rect(name, parent);
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -top);
+            rt.sizeDelta = new Vector2(0f, height);
+            return rt;
+        }
+
+        public static RectTransform Fill(Transform parent, string name)
+        {
+            var rt = Rect(name, parent);
+            Stretch(rt);
+            return rt;
+        }
     }
 }

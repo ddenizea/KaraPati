@@ -20,6 +20,8 @@ namespace KaraPati
             public Image[] icons = new Image[2];
             public Image[] checks = new Image[2];
             public Button give;
+            public GameObject stampBadge;
+            public Text stampText;
             public Image giveImg;
             public Text giveText;
         }
@@ -59,6 +61,12 @@ namespace KaraPati
                     card.checks[k].rectTransform.At(new Vector2(38f, 38f), new Vector2(40f, 40f));
                 }
 
+                var stamp = UIKit.Img("Stamp", card.root, ProcArt.Stamp, Color.white);
+                stamp.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-38f, -38f), new Vector2(58f, 58f));
+                card.stampBadge = stamp.gameObject;
+                card.stampText = UIKit.Txt("N", stamp.transform, "1", 26, UIKit.Cream);
+                card.stampText.rectTransform.At(new Vector2(18f, -18f), new Vector2(40f, 34f));
+
                 card.give = UIKit.Btn("Give", card.root, "Ver", UIKit.Disabled, () => Deliver(slot), 34);
                 card.giveImg = card.give.GetComponent<Image>();
                 card.giveText = card.give.Label();
@@ -91,14 +99,14 @@ namespace KaraPati
 
             var used = new HashSet<string>();
             foreach (var o in orders) if (o != null) used.Add(o.ghost);
-            string name;
+            int gi;
             int guard = 0;
-            do { name = Ghosts.Names[Random.Range(0, Ghosts.Names.Length)]; } while (used.Contains(name) && guard++ < 20);
+            do { gi = Random.Range(0, Ghosts.Names.Length); } while (used.Contains(Ghosts.Names[gi]) && guard++ < 20);
 
             var order = new OrderSave
             {
-                ghost = name,
-                tint = Random.Range(0, ProcArt.GhostTintCount),
+                ghost = Ghosts.Names[gi],
+                tint = gi,
                 line = Random.Range(0, Ghosts.Lines.Length)
             };
             for (int i = 0; i < count; i++)
@@ -113,6 +121,8 @@ namespace KaraPati
             if (o.reqs.Count > 1) r += 5;
             return r;
         }
+
+        static int StampReward(OrderSave o) => o.reqs.Count > 1 ? 2 : 1;
 
         public void FillEmpty()
         {
@@ -129,6 +139,7 @@ namespace KaraPati
             card.ghost.gameObject.SetActive(has);
             card.name.text = has ? o.ghost : "...";
             card.give.gameObject.SetActive(has);
+            card.stampBadge.SetActive(has);
             for (int k = 0; k < 2; k++)
             {
                 bool on = has && k < o.reqs.Count;
@@ -143,6 +154,7 @@ namespace KaraPati
             {
                 card.ghost.sprite = ProcArt.Ghost(o.tint);
                 card.giveText.text = "Ver  +" + Reward(o);
+                card.stampText.text = StampReward(o).ToString();
             }
         }
 
@@ -180,9 +192,11 @@ namespace KaraPati
 
             int reward = Reward(o);
             GM.AddGold(reward);
+            GM.AddStamps(StampReward(o));
             GM.RegisterServed();
             GM.Toast(o.ghost + ": \"" + Ghosts.Lines[o.line % Ghosts.Lines.Length] + "\"", UIKit.Cream, 4f);
 
+            GM.OnOrderDelivered(Mathf.Max(0, System.Array.IndexOf(Ghosts.Names, o.ghost)));
             orders[i] = null;
             ready[i] = false;
             Tween.Punch(card.root, 0.08f, 0.3f);

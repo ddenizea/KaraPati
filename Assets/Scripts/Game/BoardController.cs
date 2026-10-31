@@ -5,19 +5,22 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>The merge grid: data model, item views, moving, merging and spawning.</summary>
+    /// <summary>The merge grid (the witch's table): data model, item views, moving, merging and spawning.
+    /// Cats are not part of the grid; they walk around on their own layer above the items.</summary>
     public class BoardController : MonoBehaviour, IPointerClickHandler
     {
-        public const int Cols = 7, Rows = 8;
+        public const int Cols = 7, Rows = 9;
         public const float CS = 140f;
 
         readonly ItemData[,] data = new ItemData[Cols, Rows];
         readonly ItemView[,] views = new ItemView[Cols, Rows];
 
-        RectTransform grid, itemsLayer, fxLayer;
+        RectTransform grid, itemsLayer, catsLayer, fxLayer;
         Image selector;
         public Vector2Int Selected { get; private set; } = new Vector2Int(-1, -1);
         public bool Ready { get; private set; }
+        public RectTransform CatsLayer => catsLayer;
+        public RectTransform FxLayer => fxLayer;
 
         GameManager GM => GameManager.I;
 
@@ -27,8 +30,13 @@ namespace KaraPati
             var catcher = area.gameObject.AddComponent<Image>();
             catcher.color = new Color(0, 0, 0, 0);
 
-            var frame = UIKit.Img("Frame", area, ProcArt.Rounded, new Color(0.17f, 0.11f, 0.25f, 0.95f), true);
-            frame.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 30f, Rows * CS + 30f));
+            // the wooden table the grid sits on
+            var table = UIKit.Img("Table", area, ProcArt.Rounded, new Color(0.36f, 0.23f, 0.17f), true);
+            table.rectTransform.At(new Vector2(0f, -6f), new Vector2(Cols * CS + 56f, Rows * CS + 56f));
+            var tableTop = UIKit.Img("TableTop", area, ProcArt.Rounded, new Color(0.47f, 0.31f, 0.22f), true);
+            tableTop.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 40f, Rows * CS + 40f));
+            var cloth = UIKit.Img("Cloth", area, ProcArt.Rounded, new Color(0.2f, 0.13f, 0.27f, 0.97f), true);
+            cloth.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 14f, Rows * CS + 14f));
 
             grid = UIKit.Rect("Grid", area).At(Vector2.zero, new Vector2(Cols * CS, Rows * CS));
 
@@ -46,6 +54,7 @@ namespace KaraPati
             selector.gameObject.SetActive(false);
 
             itemsLayer = UIKit.Rect("Items", grid).At(Vector2.zero, grid.sizeDelta);
+            catsLayer = UIKit.Rect("Cats", grid).At(Vector2.zero, grid.sizeDelta);
             fxLayer = UIKit.Rect("FX", grid).At(Vector2.zero, grid.sizeDelta);
             Ready = true;
         }
@@ -55,28 +64,35 @@ namespace KaraPati
         public static Vector2 CellPos(Vector2Int c) => CellPos(c.x, c.y);
         public static bool InBounds(Vector2Int c) => c.x >= 0 && c.y >= 0 && c.x < Cols && c.y < Rows;
 
+        public static Vector2Int LocalToCell(Vector2 lp) =>
+            new Vector2Int(Mathf.FloorToInt(lp.x / CS + Cols / 2f), Mathf.FloorToInt(Rows / 2f - lp.y / CS));
+
+        public static Vector2Int LocalToCellClamped(Vector2 lp)
+        {
+            var c = LocalToCell(lp);
+            return new Vector2Int(Mathf.Clamp(c.x, 0, Cols - 1), Mathf.Clamp(c.y, 0, Rows - 1));
+        }
+
         public bool ScreenToCell(Vector2 screen, out Vector2Int cell)
         {
             RectTransformUtility.ScreenPointToLocalPointInRectangle(grid, screen, null, out var lp);
-            cell = new Vector2Int(Mathf.FloorToInt(lp.x / CS + Cols / 2f), Mathf.FloorToInt(Rows / 2f - lp.y / CS));
+            cell = LocalToCell(lp);
             return InBounds(cell);
         }
-
-        public Vector3 CellWorld(Vector2Int c) => grid.TransformPoint(CellPos(c));
 
         // ---------------------------------------------------------------- queries
         public ItemData Get(Vector2Int c) => InBounds(c) ? data[c.x, c.y] : null;
         public ItemView ViewAt(Vector2Int c) => InBounds(c) ? views[c.x, c.y] : null;
         public bool IsDragging(Vector2Int c) { var v = ViewAt(c); return v != null && v.IsHeld; }
 
-        /// <summary>True while the player is touching or dragging any item.</summary>
+        /// <summary>True while the player is touching or dragging any item or cat.</summary>
         public bool AnyHeld
         {
             get
             {
                 foreach (var v in itemsLayer.GetComponentsInChildren<ItemView>())
                     if (v.IsHeld) return true;
-                return false;
+                return GM.Cats != null && GM.Cats.AnyHeld;
             }
         }
 
@@ -162,7 +178,7 @@ namespace KaraPati
         public void ClearAll()
         {
             foreach (var c in AllCells()) Set(c, null);
-            Select(new Vector2Int(-1, -1));
+            HideSelector();
         }
 
         public void RefreshView(Vector2Int c)
@@ -193,34 +209,18 @@ namespace KaraPati
             if (vb) { vb.cell = a; Tween.Move(vb.rt, CellPos(a), 0.18f); }
         }
 
-        /// <summary>Spawn an item that flies out of a source cell into the destination.</summary>
-        public void SpawnFrom(Vector2Int src, Vector2Int dst, ItemData item)
+        /// <summary>Spawn an item that flies from a board-local position into the destination cell.</summary>
+        public void SpawnFromPos(Vector2 from, Vector2Int dst, ItemData item)
         {
             var v = Set(dst, item);
-            v.rt.anchoredPosition = CellPos(src);
+            v.rt.anchoredPosition = from;
             v.rt.localScale = Vector3.one * 0.3f;
             Tween.Move(v.rt, CellPos(dst), 0.3f);
             var tr = v.rt;
             Tween.Run(0.3f, t => { if (tr) tr.localScale = Vector3.one * Mathf.LerpUnclamped(0.3f, 1f, Tween.OutBack(t)); }, null, Tween.Key(tr, "s"));
         }
 
-        /// <summary>A wild kitten leaps onto another item and falls asleep there.</summary>
-        public void KittenJumpOnto(Vector2Int kitten, Vector2Int target)
-        {
-            var v = views[kitten.x, kitten.y];
-            data[kitten.x, kitten.y] = null; views[kitten.x, kitten.y] = null;
-            var t = data[target.x, target.y];
-            if (t != null) t.nap = true;
-            if (!v) { RefreshView(target); return; }
-            v.rt.SetAsLastSibling();
-            Tween.Move(v.rt, CellPos(target), 0.35f, () =>
-            {
-                if (v) Destroy(v.gameObject);
-                RefreshView(target);
-                var tv = ViewAt(target);
-                if (tv) Tween.Punch(tv.rt);
-            });
-        }
+        public void SpawnFrom(Vector2Int src, Vector2Int dst, ItemData item) => SpawnFromPos(CellPos(src), dst, item);
 
         /// <summary>Remove an item, flying it to a world position (e.g. an order card).</summary>
         public void FlyAway(Vector2Int c, Vector3 worldTarget)
@@ -266,7 +266,16 @@ namespace KaraPati
             GM.ShowInfo(d);
         }
 
-        public void RefreshSelection() => Select(Selected);
+        public void HideSelector()
+        {
+            Selected = new Vector2Int(-1, -1);
+            if (selector) selector.gameObject.SetActive(false);
+        }
+
+        public void RefreshSelection()
+        {
+            if (Get(Selected) != null) Select(Selected);
+        }
 
         public void OnPointerClick(PointerEventData e)
         {
@@ -313,9 +322,8 @@ namespace KaraPati
             var c = v.cell;
             var d = data[c.x, c.y];
             if (d == null) return;
-            if (d.nap) { GM.Chaos.Pet(c); return; }
+            if (d.nap) { GM.Cats.PetAt(c); return; }
             if (Chains.IsGenerator(d.chain)) { UseGenerator(c); return; }
-            if (d.IsKitten) { GM.Chaos.OnKittenTapped(c); return; }
             Tween.Punch(v.rt, 0.1f, 0.2f);
         }
 
@@ -325,7 +333,7 @@ namespace KaraPati
             var v = ViewAt(c);
             if (!NearestEmpty(c, out var e))
             {
-                GM.Toast("Tahta dolu! Birleştir ya da sat.");
+                GM.Toast("Masa dolu! Birleştir ya da sat.");
                 if (v) Tween.Punch(v.rt, 0.08f, 0.2f);
                 return;
             }
@@ -347,18 +355,11 @@ namespace KaraPati
             if (fv) Destroy(fv.gameObject);
 
             var nd = new ItemData(a.chain, a.level + 1);
-            if (nd.IsKitten) nd.cd = nd.level == 3 ? KittenChaos.MasterInterval : 0f;
             Set(to, nd, true);
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
-
-            if (nd.IsKitten)
-                GM.Toast(nd.level == 2
-                    ? "Yavrular birleşti: Çırak Kedi! Dokununca sana malzeme getirir."
-                    : "Usta Kedi geldi! Kendiliğinden malzeme getirir, yavruları da sakinleştirir.", UIKit.Orange);
-            else if (nd.level == Chains.MaxLevel(nd.chain))
+            if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
-
             GM.OnBoardChanged();
         }
 
@@ -366,18 +367,9 @@ namespace KaraPati
         {
             var c = Selected;
             var d = Get(c);
-            if (d == null || d.nap) return;
-            if (Chains.IsIngredient(d.chain))
-            {
-                GM.AddGold(d.level);
-                GM.Toast(d.Name + " satıldı: +" + d.level + " altın");
-            }
-            else if (d.IsWildKitten)
-            {
-                GM.AddGold(3);
-                GM.Toast("Yavru yeni ailesine kavuştu! +3 altın");
-            }
-            else return;
+            if (d == null || d.nap || !Chains.IsIngredient(d.chain)) return;
+            GM.AddGold(d.level);
+            GM.Toast(d.Name + " satıldı: +" + d.level + " altın");
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
             GM.OnBoardChanged();
@@ -401,8 +393,9 @@ namespace KaraPati
             foreach (var s in list)
             {
                 var c = new Vector2Int(s.x, s.y);
-                if (!InBounds(c) || string.IsNullOrEmpty(s.chain)) continue;
-                Set(c, new ItemData(s.chain, s.level) { nap = s.nap, cd = s.cd });
+                // cats used to live on the grid in the first prototype; they walk freely now
+                if (!InBounds(c) || string.IsNullOrEmpty(s.chain) || s.chain == Chains.Kedi) continue;
+                Set(c, new ItemData(s.chain, s.level) { nap = s.nap });
             }
         }
     }

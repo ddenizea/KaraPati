@@ -61,7 +61,7 @@ namespace KaraPati
             if (data == null) return;
             icon.sprite = ProcArt.Item(data.chain, data.level);
             icon.color = data.nap ? new Color(0.7f, 0.7f, 0.78f) : Color.white;
-            napCat.gameObject.SetActive(data.nap);
+            napCat.gameObject.SetActive(false); // the sleeping kitten itself sits on top now
             bool gen = Chains.IsGenerator(data.chain);
             badge.gameObject.SetActive(!gen);
             badgeText.text = data.level.ToString();

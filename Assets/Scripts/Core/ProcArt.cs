@@ -165,7 +165,7 @@ namespace KaraPati
     }
 
     /// <summary>All placeholder sprites, generated once and cached.</summary>
-    public static class ProcArt
+    public static partial class ProcArt
     {
         public static readonly Color Outline = new Color(0.12f, 0.07f, 0.19f, 1f);
         const int Size = 128;
@@ -232,7 +232,8 @@ namespace KaraPati
         static readonly Color[] ghostTints =
         {
             new Color(0.95f, 0.97f, 1f), new Color(0.8f, 0.95f, 0.9f), new Color(0.95f, 0.85f, 0.95f),
-            new Color(0.85f, 0.9f, 1f), new Color(1f, 0.95f, 0.8f), new Color(0.9f, 0.85f, 1f)
+            new Color(0.85f, 0.9f, 1f), new Color(1f, 0.95f, 0.8f), new Color(0.9f, 0.85f, 1f),
+            new Color(1f, 0.85f, 0.85f), new Color(0.85f, 1f, 0.8f)
         };
         public static int GhostTintCount => ghostTints.Length;
 
