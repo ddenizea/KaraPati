@@ -69,11 +69,12 @@ namespace KaraPati
         public OrderPanel Orders { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
         CaseFilePanel caseFile;
+        RecipePanel recipePanel;
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
@@ -119,6 +120,7 @@ namespace KaraPati
             "Aynı iki eşyayı üst üste sürükle, birleşsinler.",
             "Kazana ve sandığa dokunarak malzeme üret (1 enerji).",
             "Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas.",
+            "Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!",
             "İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!",
             "Siparişler Pati Mührü verir; mühürlerle dükkânı onarırsın."
         };
@@ -292,6 +294,10 @@ namespace KaraPati
             var dailyRt = UIKit.Rect("DailyPanel", canvasRt);
             dailyPanel = dailyRt.gameObject.AddComponent<DailyPanel>();
             dailyPanel.Build();
+
+            var recipeRt = UIKit.Rect("RecipePanel", canvasRt);
+            recipePanel = recipeRt.gameObject.AddComponent<RecipePanel>();
+            recipePanel.Build();
 
             BuildDialog(canvasRt);
 
@@ -550,6 +556,7 @@ namespace KaraPati
             if (DailyAvailable && !OnBoard) StartCoroutine(After(0.6f, () => { if (!ModalOpen && DailyAvailable) dailyPanel.Open(); }));
         }
         public void OpenCaseFile() => caseFile.Open();
+        public void OpenRecipes() => recipePanel.Open();
 
         // ------------------------------------------------------------------ clues
         public bool HasClue(string id) => clues.Contains(id);
@@ -808,7 +815,7 @@ namespace KaraPati
                 return;
             }
 
-            infoTitle.text = d.Name + (Chains.IsGenerator(d.chain) ? "" : "  <size=26>(Sv. " + d.level + ")</size>");
+            infoTitle.text = d.Name + (Chains.IsSpecial(d.chain) ? "" : "  <size=26>(Sv. " + d.level + ")</size>");
             actionBtn.gameObject.SetActive(false);
             btnImg.color = UIKit.Orange;
 
@@ -826,6 +833,44 @@ namespace KaraPati
                 actionBtn.gameObject.SetActive(true);
                 actionBtn.Label().text = "Aç\n" + price + " altın";
                 btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
+                return;
+            }
+            if (Chains.IsStation(d.chain))
+            {
+                actionBtn.gameObject.SetActive(true);
+                if (d.BrewReady)
+                {
+                    infoDesc.text = Chains.Name(Chains.Iksir, d.brew) + " hazır! Kazana dokun ya da al.";
+                    actionBtn.Label().text = "Al!";
+                    btnImg.color = UIKit.Green;
+                }
+                else if (d.Brewing)
+                {
+                    long left = d.brewUntil - DateTime.UtcNow.Ticks;
+                    int sec = Mathf.CeilToInt((float)TimeSpan.FromTicks(left).TotalSeconds);
+                    int price = Recipes.SkipPrice(left);
+                    infoDesc.text = Chains.Name(Chains.Iksir, d.brew) + " kaynıyor... " + sec + " sn kaldı.";
+                    actionBtn.Label().text = "Hızlandır\n" + price + " altın";
+                    btnImg.color = Gold >= price ? UIKit.Orange : UIKit.Disabled;
+                }
+                else if (!string.IsNullOrEmpty(d.mix) && Recipes.ParseKey(d.mix, out var mc, out var ml))
+                {
+                    infoDesc.text = "İçinde: " + Chains.Name(mc, ml) + ". Eşini sürükle, iksir kaynasın!";
+                    actionBtn.Label().text = "Geri Al";
+                }
+                else
+                {
+                    infoDesc.text = "İki malzemeyi kazana sürükle, iksir kaynasın. " + Recipes.UnlockedCount(TasksDone) + "/" + Recipes.All.Length + " tarif açık.";
+                    actionBtn.Label().text = "Tarifler";
+                }
+                return;
+            }
+            if (Chains.IsPotion(d.chain))
+            {
+                var r = Recipes.Get(d.level);
+                infoDesc.text = "Hayaletler bu iksiri sipariş eder: " + (r != null ? r.Gold : 0) + " altın + " + Recipes.PotionStamps + " mühür!";
+                actionBtn.gameObject.SetActive(true);
+                actionBtn.Label().text = "Sat  +" + BoardController.PotionSellPrice(d.level);
                 return;
             }
             if (Chains.IsGenerator(d.chain))
@@ -892,6 +937,7 @@ namespace KaraPati
             }
             var d = Board.Get(Board.Selected);
             if (d != null && d.bubble) { Board.OpenBubble(Board.Selected); return; }
+            if (d != null && Chains.IsStation(d.chain)) { Board.PotAction(); return; }
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)
             {
@@ -1182,6 +1228,7 @@ namespace KaraPati
             Board.ClearAll();
             Board.Set(new Vector2Int(1, 4), new ItemData(Chains.Kazan, 1), true);
             Board.Set(new Vector2Int(5, 4), new ItemData(Chains.Sandik, 1), true);
+            Board.Set(new Vector2Int(3, 4), new ItemData(Chains.Simya, 1), true);
             Board.Set(new Vector2Int(2, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(3, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(4, 6), new ItemData(Chains.Mantar, 1), true);
@@ -1281,6 +1328,7 @@ namespace KaraPati
                     energyTimer = Energy < MaxEnergy ? elapsed % EnergyRegenSec : 0f;
                 }
                 Board.ReadSave(s.cells);
+                Board.EnsurePot();
                 Cats.ReadSave(s.kittens);
                 Orders.ReadSave(s.orders);
                 RefreshHud();

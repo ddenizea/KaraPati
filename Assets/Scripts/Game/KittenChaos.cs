@@ -164,7 +164,7 @@ namespace KaraPati
         public void PlanMischief(KittenAgent a)
         {
             if (B.AnyHeld) return;
-            var cands = B.Cells(d => !d.Locked);
+            var cands = B.Cells(d => !d.Locked && !Chains.IsStation(d.chain)); // never nap on the alchemy cauldron
             cands.RemoveAll(c => IsTargeted(c));
             if (cands.Count == 0) return;
             cands.Sort((x, y) => (BoardController.CellPos(x) - a.Pos).sqrMagnitude
@@ -216,7 +216,7 @@ namespace KaraPati
         {
             if (!a || B.AnyHeld) return;
             var d = B.Get(c);
-            if (d == null || d.Locked || NapperAt(c) != null) return;
+            if (d == null || d.Locked || Chains.IsStation(d.chain) || NapperAt(c) != null) return;
             d.nap = true;
             B.RefreshView(c);
             a.Nap(c, BoardController.CellPos(c) + new Vector2(0f, 12f));

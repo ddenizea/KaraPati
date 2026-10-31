@@ -15,8 +15,8 @@ namespace KaraPati
         public bool IsPressed { get; private set; }
         public bool IsHeld => IsDragging || IsPressed;
 
-        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing;
-        Text badgeText, zzz;
+        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra;
+        Text badgeText, zzz, potTimer;
         CanvasGroup cg;
         Vector2 dragOffset;
         Transform homeParent;
@@ -57,6 +57,16 @@ namespace KaraPati
             bubbleRing.fillMethod = Image.FillMethod.Radial360;
             bubbleRing.fillOrigin = (int)Image.Origin360.Top;
 
+            // cauldron: what is inside / what is brewing
+            potExtra = UIKit.Img("PotExtra", rt, null, Color.white);
+            potExtra.rectTransform.At(new Vector2(40f, 40f), new Vector2(60f, 60f));
+            potExtra.raycastTarget = false;
+            potTimer = UIKit.Txt("PotTimer", rt, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            potTimer.rectTransform.At(new Vector2(0f, -52f), new Vector2(130f, 30f));
+            potTimer.raycastTarget = false;
+            var sh = potTimer.gameObject.AddComponent<Outline>();
+            sh.effectColor = new Color(0.1f, 0.05f, 0.15f, 0.9f);
+
             needed = UIKit.Img("Needed", rt, ProcArt.Check, Color.white);
             needed.rectTransform.At(new Vector2(-46f, -46f), new Vector2(38f, 38f));
             needed.gameObject.SetActive(false);
@@ -75,11 +85,12 @@ namespace KaraPati
             icon.sprite = ProcArt.Item(data.chain, data.level);
             icon.color = data.nap ? new Color(0.7f, 0.7f, 0.78f) : Color.white;
             napCat.gameObject.SetActive(false); // the sleeping kitten itself sits on top now
-            bool gen = Chains.IsGenerator(data.chain);
+            bool gen = Chains.IsSpecial(data.chain);
             badge.gameObject.SetActive(!gen);
             badgeText.text = data.level.ToString();
-            cooldown.gameObject.SetActive(data.IsKitten && data.level >= 2);
+            cooldown.gameObject.SetActive((data.IsKitten && data.level >= 2) || data.Brewing);
             UpdateCooldown();
+            RefreshPot();
             bubble.gameObject.SetActive(data.bubble);
             bubbleRing.gameObject.SetActive(data.bubble);
             icon.rectTransform.sizeDelta = data.bubble ? new Vector2(96f, 96f) : new Vector2(122f, 122f);
@@ -92,9 +103,38 @@ namespace KaraPati
             if (needed && needed.gameObject.activeSelf != on) needed.gameObject.SetActive(on);
         }
 
+        void RefreshPot()
+        {
+            bool pot = Chains.IsStation(data.chain);
+            bool showExtra = pot && (data.brew > 0 || !string.IsNullOrEmpty(data.mix));
+            potExtra.gameObject.SetActive(showExtra);
+            potTimer.gameObject.SetActive(pot && data.brew > 0);
+            if (!showExtra) return;
+            if (data.brew > 0)
+            {
+                potExtra.sprite = ProcArt.Item(Chains.Iksir, data.brew);
+                bool ready = data.BrewReady;
+                potExtra.rectTransform.At(ready ? new Vector2(0f, 46f) : new Vector2(40f, 40f), ready ? new Vector2(84f, 84f) : new Vector2(56f, 56f));
+                potExtra.color = ready ? Color.white : new Color(1f, 1f, 1f, 0.8f);
+            }
+            else if (Recipes.ParseKey(data.mix, out var mc, out var ml))
+            {
+                potExtra.sprite = ProcArt.Item(mc, ml);
+                potExtra.rectTransform.At(new Vector2(40f, 40f), new Vector2(56f, 56f));
+                potExtra.color = Color.white;
+            }
+        }
+
         void UpdateCooldown()
         {
             if (!cooldown.gameObject.activeSelf) return;
+            if (Chains.IsStation(data.chain))
+            {
+                var r = Recipes.Get(data.brew);
+                float left = (float)System.TimeSpan.FromTicks(data.brewUntil - System.DateTime.UtcNow.Ticks).TotalSeconds;
+                cooldown.fillAmount = r == null ? 0f : Mathf.Clamp01(left / r.seconds);
+                return;
+            }
             float max = data.level == 2 ? KittenChaos.ApprenticeCooldown : KittenChaos.MasterInterval;
             cooldown.fillAmount = Mathf.Clamp01(data.cd / max);
         }
@@ -122,6 +162,23 @@ namespace KaraPati
                 icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
             else if (data.chain == Chains.Kazan)
                 icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
+            else if (Chains.IsStation(data.chain) && data.brew > 0)
+            {
+                if (data.Brewing)
+                {
+                    float left = (float)System.TimeSpan.FromTicks(data.brewUntil - System.DateTime.UtcNow.Ticks).TotalSeconds;
+                    int sec = Mathf.CeilToInt(left);
+                    potTimer.text = sec >= 60 ? (sec / 60) + ":" + (sec % 60).ToString("00") : sec + " sn";
+                    icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
+                }
+                else
+                {
+                    if (cooldown.gameObject.activeSelf) Refresh();
+                    potTimer.text = "Hazır!";
+                    potExtra.rectTransform.anchoredPosition = new Vector2(0f, 46f + Mathf.Sin(t * 3f) * 6f);
+                    icon.rectTransform.localScale = Vector3.one;
+                }
+            }
         }
 
         public void OnPointerDown(PointerEventData e)

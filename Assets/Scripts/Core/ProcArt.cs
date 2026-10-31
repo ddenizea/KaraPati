@@ -274,6 +274,8 @@ namespace KaraPati
                 case Chains.Kedi: DrawKedi(p, level); break;
                 case Chains.Kazan: Cauldron(p); break;
                 case Chains.Sandik: Chest(p); break;
+                case Chains.Simya: SimyaPot(p); break;
+                case Chains.Iksir: PotionFlask(p, level); break;
             }
         }
 

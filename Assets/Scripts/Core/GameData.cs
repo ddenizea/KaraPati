@@ -8,6 +8,7 @@ namespace KaraPati
     {
         public const string Ot = "ot", Mantar = "mantar", Kristal = "kristal", Ag = "ag";
         public const string Kedi = "kedi", Kazan = "kazan", Sandik = "sandik";
+        public const string Iksir = "iksir", Simya = "simya";
 
         public static readonly string[] Ingredients = { Ot, Mantar, Kristal, Ag };
 
@@ -20,12 +21,18 @@ namespace KaraPati
             { Kedi, new[] { "Yaramaz Yavru", "Çırak Kedi", "Usta Kedi" } },
             { Kazan, new[] { "Kazan" } },
             { Sandik, new[] { "Eski Sandık" } },
+            { Iksir, new[] { "Uyku İksiri", "Işıltı İksiri", "Gölge İksiri", "Ay İksiri", "Hayalet İksiri", "Yıldız İksiri" } },
+            { Simya, new[] { "Simya Kazanı" } },
         };
 
         public static int MaxLevel(string chain) => names[chain].Length;
         public static string Name(string chain, int level) => names[chain][Mathf.Clamp(level - 1, 0, names[chain].Length - 1)];
         public static bool IsIngredient(string c) => c == Ot || c == Mantar || c == Kristal || c == Ag;
         public static bool IsGenerator(string c) => c == Kazan || c == Sandik;
+        public static bool IsPotion(string c) => c == Iksir;
+        public static bool IsStation(string c) => c == Simya;
+        /// <summary>Items that show no level badge (machines and potions).</summary>
+        public static bool IsSpecial(string c) => IsGenerator(c) || IsPotion(c) || IsStation(c);
         public static int Value(int level) => 5 * (1 << (level - 1));
         public static string RandomIngredient() => Ingredients[UnityEngine.Random.Range(0, Ingredients.Length)];
     }
@@ -39,6 +46,14 @@ namespace KaraPati
         public float cd;   // cooldown for helper cats
         public bool bubble;        // free copy floating in a ghost bubble; must be bought before use
         public long bubbleUntil;   // UTC ticks when the bubble pops
+        // alchemy cauldron state
+        public string mix = "";    // first ingredient waiting in the pot ("chain:level")
+        public int brew;           // recipe id being brewed / ready (0 = none)
+        public long brewUntil;     // UTC ticks when the potion is ready
+        [NonSerialized] public bool readyNotified;
+
+        public bool Brewing => brew > 0 && DateTime.UtcNow.Ticks < brewUntil;
+        public bool BrewReady => brew > 0 && DateTime.UtcNow.Ticks >= brewUntil;
 
         public ItemData(string chain, int level)
         {
@@ -53,6 +68,84 @@ namespace KaraPati
         public bool Locked => nap || bubble;
     }
 
+    public class Recipe
+    {
+        public int id;
+        public string aChain, bChain;
+        public int aLevel, bLevel;
+        public int seconds;
+        public int chapter;   // chapter index that unlocks it
+        public string Name => Chains.Name(Chains.Iksir, id);
+        public int Gold => 2 * (Chains.Value(aLevel) + Chains.Value(bLevel));
+        public bool Uses(string chain, int level) => (chain == aChain && level == aLevel) || (chain == bChain && level == bLevel);
+    }
+
+    /// <summary>Alchemy: drop two ingredients into the Simya Kazanı, wait, get a potion ghosts love.</summary>
+    public static class Recipes
+    {
+        public static readonly Recipe[] All =
+        {
+            new Recipe { id = 1, aChain = Chains.Ot, aLevel = 2, bChain = Chains.Mantar, bLevel = 2, seconds = 30, chapter = 0 },
+            new Recipe { id = 2, aChain = Chains.Kristal, aLevel = 2, bChain = Chains.Ot, bLevel = 3, seconds = 45, chapter = 0 },
+            new Recipe { id = 3, aChain = Chains.Ag, aLevel = 3, bChain = Chains.Mantar, bLevel = 3, seconds = 60, chapter = 1 },
+            new Recipe { id = 4, aChain = Chains.Kristal, aLevel = 3, bChain = Chains.Ot, bLevel = 4, seconds = 90, chapter = 2 },
+            new Recipe { id = 5, aChain = Chains.Ag, aLevel = 4, bChain = Chains.Kristal, bLevel = 4, seconds = 120, chapter = 3 },
+            new Recipe { id = 6, aChain = Chains.Kristal, aLevel = 5, bChain = Chains.Mantar, bLevel = 4, seconds = 180, chapter = 4 },
+        };
+
+        public const int PotionStamps = 3;
+
+        public static Recipe Get(int id) => id >= 1 && id <= All.Length ? All[id - 1] : null;
+        public static bool Unlocked(Recipe r, int tasksDone) => Story.CurrentChapter(tasksDone) >= r.chapter;
+
+        public static string Key(string chain, int level) => chain + ":" + level;
+
+        public static bool ParseKey(string key, out string chain, out int level)
+        {
+            chain = null; level = 0;
+            if (string.IsNullOrEmpty(key)) return false;
+            int i = key.IndexOf(':');
+            if (i <= 0) return false;
+            chain = key.Substring(0, i);
+            return int.TryParse(key.Substring(i + 1), out level);
+        }
+
+        /// <summary>Can this ingredient go into an empty pot?</summary>
+        public static bool AnyUses(string chain, int level, int tasksDone)
+        {
+            foreach (var r in All) if (Unlocked(r, tasksDone) && r.Uses(chain, level)) return true;
+            return false;
+        }
+
+        public static Recipe Match(string c1, int l1, string c2, int l2, int tasksDone)
+        {
+            foreach (var r in All)
+            {
+                if (!Unlocked(r, tasksDone)) continue;
+                if ((r.aChain == c1 && r.aLevel == l1 && r.bChain == c2 && r.bLevel == l2) ||
+                    (r.aChain == c2 && r.aLevel == l2 && r.bChain == c1 && r.bLevel == l1)) return r;
+            }
+            return null;
+        }
+
+        /// <summary>Partners for an ingredient already waiting in the pot.</summary>
+        public static List<Recipe> PartnersOf(string chain, int level, int tasksDone)
+        {
+            var list = new List<Recipe>();
+            foreach (var r in All) if (Unlocked(r, tasksDone) && r.Uses(chain, level)) list.Add(r);
+            return list;
+        }
+
+        public static int UnlockedCount(int tasksDone)
+        {
+            int n = 0;
+            foreach (var r in All) if (Unlocked(r, tasksDone)) n++;
+            return n;
+        }
+
+        public static int SkipPrice(long ticksLeft) => Mathf.Max(1, Mathf.CeilToInt((float)TimeSpan.FromTicks(ticksLeft).TotalSeconds / 5f));
+    }
+
     public static class Bubbles
     {
         public const float Seconds = 60f;
@@ -60,7 +153,7 @@ namespace KaraPati
         public static int Price(int level) => 6 * level + 4 * (level - 1) * (level - 1);
     }
 
-    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; }
+    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; }
     [Serializable] public class ReqSave { public string chain; public int level; }
 
     [Serializable]

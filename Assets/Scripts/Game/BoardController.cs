@@ -317,13 +317,18 @@ namespace KaraPati
                 GM.OnBoardChanged();
                 return;
             }
+            if (Chains.IsStation(b.chain) && Chains.IsIngredient(a.chain) && !b.nap)
+            {
+                DropIntoPot(from, to);
+                return;
+            }
             if (b.Locked)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
                 GM.Toast(b.bubble ? "Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)" : "Orada bir yavru uyuyor! Önce dokunup okşa.");
                 return;
             }
-            if (a.chain == b.chain && a.level == b.level && !Chains.IsGenerator(a.chain))
+            if (a.chain == b.chain && a.level == b.level && Chains.IsIngredient(a.chain))
             {
                 if (a.level < Chains.MaxLevel(a.chain)) { Merge(from, to); return; }
                 GM.Toast(a.Name + " zaten en üst seviyede!");
@@ -341,6 +346,7 @@ namespace KaraPati
             if (d.nap) { GM.Cats.PetAt(c); return; }
             if (d.bubble) { Tween.Punch(v.rt, 0.12f, 0.25f); return; }
             if (Chains.IsGenerator(d.chain)) { UseGenerator(c); return; }
+            if (Chains.IsStation(d.chain)) { TapPot(c); return; }
             Tween.Punch(v.rt, 0.1f, 0.2f);
         }
 
@@ -386,12 +392,153 @@ namespace KaraPati
         {
             var c = Selected;
             var d = Get(c);
-            if (d == null || d.Locked || !Chains.IsIngredient(d.chain)) return;
-            GM.AddGold(d.level);
-            GM.Toast(d.Name + " satıldı: +" + d.level + " altın");
+            if (d == null || d.Locked) return;
+            int price;
+            if (Chains.IsIngredient(d.chain)) price = d.level;
+            else if (Chains.IsPotion(d.chain)) price = PotionSellPrice(d.level);
+            else return;
+            GM.AddGold(price);
+            GM.Toast(d.Name + " satıldı: +" + price + " altın");
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
             GM.OnBoardChanged();
+        }
+
+        // ---------------------------------------------------------------- alchemy cauldron
+        public static int PotionSellPrice(int id) { var r = Recipes.Get(id); return r == null ? 1 : r.Gold / 4; }
+
+        void ConsumeInto(Vector2Int from, Vector2Int pot)
+        {
+            var v = views[from.x, from.y];
+            data[from.x, from.y] = null; views[from.x, from.y] = null;
+            if (Selected == from) HideSelector();
+            if (!v) return;
+            var tr = v.rt;
+            tr.SetParent(itemsLayer, true);
+            Tween.Move(tr, CellPos(pot) + new Vector2(0f, 20f), 0.18f);
+            Tween.Run(0.22f, t => { if (tr) tr.localScale = Vector3.one * Mathf.Lerp(1.1f, 0.2f, t); }, () => { if (tr) Destroy(tr.gameObject); }, Tween.Key(tr, "s"));
+        }
+
+        void DropIntoPot(Vector2Int from, Vector2Int potCell)
+        {
+            var a = data[from.x, from.y];
+            var pot = data[potCell.x, potCell.y];
+            var v = views[from.x, from.y];
+            int done = GM.TasksDone;
+            if (pot.brew > 0)
+            {
+                Tween.Move(v.rt, CellPos(from), 0.15f);
+                GM.Toast(pot.BrewReady ? "İksir hazır! Önce kazana dokunup al." : "Kazan kaynıyor, biraz bekle.");
+                return;
+            }
+            if (string.IsNullOrEmpty(pot.mix))
+            {
+                if (!Recipes.AnyUses(a.chain, a.level, done))
+                {
+                    Tween.Move(v.rt, CellPos(from), 0.15f);
+                    GM.Toast(a.Name + " hiçbir tarifte yok. Kazanı seçip 'Tarifler'e bak.");
+                    return;
+                }
+                pot.mix = Recipes.Key(a.chain, a.level);
+                ConsumeInto(from, potCell);
+                var partners = Recipes.PartnersOf(a.chain, a.level, done);
+                var names = new List<string>();
+                foreach (var r in partners)
+                {
+                    bool isA = r.aChain == a.chain && r.aLevel == a.level;
+                    names.Add(Chains.Name(isA ? r.bChain : r.aChain, isA ? r.bLevel : r.aLevel));
+                }
+                GM.Toast("Kazana " + a.Name + " girdi. Şimdi ekle: " + string.Join(" ya da ", names), new Color(0.85f, 0.7f, 1f), 4f);
+            }
+            else
+            {
+                Recipes.ParseKey(pot.mix, out var mc, out var ml);
+                var r = Recipes.Match(mc, ml, a.chain, a.level, done);
+                if (r == null)
+                {
+                    Tween.Move(v.rt, CellPos(from), 0.15f);
+                    GM.Toast("Bu ikisi karışmaz! " + Chains.Name(mc, ml) + " için başka bir eş lazım.");
+                    return;
+                }
+                pot.mix = "";
+                pot.brew = r.id;
+                pot.brewUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(r.seconds).Ticks;
+                pot.readyNotified = false;
+                ConsumeInto(from, potCell);
+                FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
+                GM.Toast(r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
+                GM.AddXp(1);
+            }
+            RefreshView(potCell);
+            var pv = ViewAt(potCell);
+            if (pv) Tween.Punch(pv.rt, 0.15f, 0.3f);
+            Select(potCell);
+            GM.OnBoardChanged();
+        }
+
+        void TapPot(Vector2Int c)
+        {
+            var pot = data[c.x, c.y];
+            var v = ViewAt(c);
+            if (pot.BrewReady) { CollectPotion(c); return; }
+            if (v) Tween.Punch(v.rt, 0.1f, 0.2f);
+            if (pot.brew == 0 && string.IsNullOrEmpty(pot.mix)) GM.Toast("Kazana iki malzeme sürükle, iksir kaynasın! Tarifler için kazanı seç.");
+        }
+
+        void CollectPotion(Vector2Int c)
+        {
+            var pot = data[c.x, c.y];
+            if (!NearestEmpty(c, out var e)) { GM.Toast("Masa dolu! İksire yer aç."); return; }
+            var r = Recipes.Get(pot.brew);
+            pot.brew = 0;
+            pot.brewUntil = 0;
+            pot.readyNotified = false;
+            SpawnFrom(c, e, new ItemData(Chains.Iksir, r != null ? r.id : 1));
+            FX.Burst(fxLayer, CellPos(e), ProcArt.PotionColor(r != null ? r.id : 1), 12);
+            RefreshView(c);
+            GM.AddXp(2);
+            Select(e);
+            GM.OnBoardChanged();
+        }
+
+        /// <summary>Info-panel button for the selected cauldron.</summary>
+        public void PotAction()
+        {
+            var c = Selected;
+            var pot = Get(c);
+            if (pot == null || !Chains.IsStation(pot.chain)) return;
+            if (pot.BrewReady) { CollectPotion(c); return; }
+            if (pot.Brewing)
+            {
+                int price = Recipes.SkipPrice(pot.brewUntil - System.DateTime.UtcNow.Ticks);
+                if (!GM.TrySpendGold(price)) return;
+                pot.brewUntil = System.DateTime.UtcNow.Ticks;
+                RefreshView(c);
+                CollectPotion(c);
+                return;
+            }
+            if (!string.IsNullOrEmpty(pot.mix))
+            {
+                // take the waiting ingredient back out
+                if (!NearestEmpty(c, out var e)) { GM.Toast("Masa dolu!"); return; }
+                Recipes.ParseKey(pot.mix, out var mc, out var ml);
+                pot.mix = "";
+                SpawnFrom(c, e, new ItemData(mc, ml));
+                RefreshView(c);
+                Select(c);
+                GM.OnBoardChanged();
+                return;
+            }
+            GM.OpenRecipes();
+        }
+
+        /// <summary>Older saves have no cauldron yet: put one on the table.</summary>
+        public void EnsurePot()
+        {
+            foreach (var d in AllCells()) if (data[d.x, d.y] != null && Chains.IsStation(data[d.x, d.y].chain)) return;
+            var pref = new Vector2Int(3, 4);
+            if (data[pref.x, pref.y] == null || NearestEmpty(pref, out pref))
+                Set(pref, new ItemData(Chains.Simya, 1), true);
         }
 
         // ---------------------------------------------------------------- ghost bubbles
@@ -453,6 +600,17 @@ namespace KaraPati
             bool changed = false;
             foreach (var c in AllCells())
             {
+                var pd = data[c.x, c.y];
+                if (pd != null && pd.brew > 0 && !pd.readyNotified && pd.brewUntil <= now)
+                {
+                    pd.readyNotified = true;
+                    RefreshView(c);
+                    FX.Burst(fxLayer, CellPos(c), ProcArt.PotionColor(pd.brew), 10);
+                    GM.Toast(Chains.Name(Chains.Iksir, pd.brew) + " hazır! Kazana dokun.", new Color(0.85f, 0.7f, 1f));
+                }
+            }
+            foreach (var c in AllCells())
+            {
                 var d = data[c.x, c.y];
                 if (d == null || !d.bubble || d.bubbleUntil > now) continue;
                 FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 10);
@@ -469,7 +627,7 @@ namespace KaraPati
             else
             {
                 var sd = Get(Selected);
-                if (sd != null && sd.bubble) GM.ShowInfo(sd); // live countdown
+                if (sd != null && (sd.bubble || sd.brew > 0)) GM.ShowInfo(sd); // live countdown
             }
         }
 
@@ -481,7 +639,7 @@ namespace KaraPati
             {
                 var d = data[c.x, c.y];
                 if (d == null) continue;
-                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil });
+                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil, mix = d.mix, brew = d.brew, brewUntil = d.brewUntil });
             }
         }
 
@@ -494,7 +652,9 @@ namespace KaraPati
                 // cats used to live on the grid in the first prototype; they walk freely now
                 if (!InBounds(c) || string.IsNullOrEmpty(s.chain) || s.chain == Chains.Kedi) continue;
                 if (s.bubble && s.bubbleUntil <= System.DateTime.UtcNow.Ticks) continue; // popped while away
-                Set(c, new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil });
+                var item = new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil, mix = s.mix ?? "", brew = s.brew, brewUntil = s.brewUntil };
+                item.readyNotified = item.BrewReady; // finished while away: no extra toast on load
+                Set(c, item);
             }
         }
     }

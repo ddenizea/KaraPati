@@ -109,6 +109,15 @@ namespace KaraPati
                 tint = gi,
                 line = Random.Range(0, Ghosts.Lines.Length)
             };
+            // sometimes a ghost wants a potion instead (only recipes the player has unlocked)
+            int unlocked = Recipes.UnlockedCount(GM.TasksDone);
+            if (served >= 4 && unlocked > 0 && Random.value < 0.25f)
+            {
+                var open = new List<int>();
+                foreach (var r in Recipes.All) if (Recipes.Unlocked(r, GM.TasksDone)) open.Add(r.id);
+                order.reqs.Add(new ReqSave { chain = Chains.Iksir, level = open[Random.Range(0, open.Count)] });
+                return order;
+            }
             for (int i = 0; i < count; i++)
                 order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(minLvl, maxLvl + 1) });
             return order;
@@ -117,7 +126,11 @@ namespace KaraPati
         static int Reward(OrderSave o)
         {
             int r = 0;
-            foreach (var q in o.reqs) r += Chains.Value(q.level);
+            foreach (var q in o.reqs)
+            {
+                if (Chains.IsPotion(q.chain)) { var rc = Recipes.Get(q.level); r += rc != null ? rc.Gold : 10; }
+                else r += Chains.Value(q.level);
+            }
             if (o.reqs.Count > 1) r += 5;
             return r;
         }
@@ -126,7 +139,7 @@ namespace KaraPati
         static int StampReward(OrderSave o)
         {
             int r = 0;
-            foreach (var q in o.reqs) r += q.level >= 4 ? 2 : 1;
+            foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 4 ? 2 : 1;
             return r;
         }
 

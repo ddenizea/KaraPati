@@ -141,5 +141,76 @@ namespace KaraPati
                 default: return PawPrint;
             }
         }
+
+        // ---------- alchemy ----------
+        static readonly Color[] flaskColors =
+        {
+            new Color(0.62f, 0.55f, 1f),   // uyku
+            new Color(1f, 0.85f, 0.3f),    // ışıltı
+            new Color(0.35f, 0.25f, 0.5f), // gölge
+            new Color(0.75f, 0.9f, 1f),    // ay
+            new Color(0.55f, 1f, 0.85f),   // hayalet
+            new Color(1f, 0.5f, 0.75f),    // yıldız
+        };
+
+        public static Color PotionColor(int id) => flaskColors[Mathf.Clamp(id - 1, 0, flaskColors.Length - 1)];
+
+        /// <summary>The purple alchemy cauldron that brews potions.</summary>
+        static void SimyaPot(Painter p)
+        {
+            var iron = new Color(0.3f, 0.2f, 0.4f);
+            var gold = new Color(1f, 0.78f, 0.3f);
+            p.Glow(new Vector2(0f, 0.3f), 0.7f, new Color(0.8f, 0.5f, 1f, 0.45f));
+            p.FillOutlined(q => S.U(S.Box(q, new Vector2(-0.48f, -0.76f), new Vector2(0.09f, 0.14f), 0.04f),
+                S.Box(q, new Vector2(0.48f, -0.76f), new Vector2(0.09f, 0.14f), 0.04f)), iron, 0.04f);
+            p.FillOutlined(q => S.Ellipse(q, new Vector2(0f, -0.2f), new Vector2(0.84f, 0.6f)), iron, 0.05f);
+            p.Fill(q => S.Ring(S.Ellipse(q, new Vector2(0f, -0.22f), new Vector2(0.66f, 0.4f)), 0.035f), new Color(gold.r, gold.g, gold.b, 0.8f));
+            p.Fill(q => S.Poly(q - new Vector2(0f, -0.22f), S.Star(5, 0.17f, 0.07f)), gold);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.34f), new Vector2(0.9f, 0.11f), 0.09f), gold, 0.05f);
+            p.Fill(q => S.Ellipse(q, new Vector2(0f, 0.36f), new Vector2(0.74f, 0.07f)), new Color(0.8f, 0.45f, 1f));
+            var bub = new Color(0.9f, 0.7f, 1f);
+            p.FillOutlined(q => S.Circle(q, new Vector2(-0.22f, 0.6f), 0.12f), bub, 0.035f);
+            p.FillOutlined(q => S.Circle(q, new Vector2(0.2f, 0.76f), 0.09f), bub, 0.035f);
+            p.Fill(q => S.Poly(q - new Vector2(0.45f, 0.62f), S.Star(4, 0.1f, 0.03f)), new Color(1f, 1f, 0.8f));
+        }
+
+        /// <summary>Potion bottles: each recipe has its own colour and flask shape.</summary>
+        static void PotionFlask(Painter p, int id)
+        {
+            var liq = PotionColor(id);
+            var glass = new Color(0.85f, 0.92f, 1f, 0.55f);
+            var cork = new Color(0.6f, 0.4f, 0.25f);
+            int shape = (id - 1) % 3;
+            p.Glow(new Vector2(0f, -0.2f), 0.75f, new Color(liq.r, liq.g, liq.b, 0.4f));
+            if (shape == 0)
+            {
+                // round flask
+                p.FillOutlined(q => S.U(S.Circle(q, new Vector2(0f, -0.3f), 0.52f), S.Box(q, new Vector2(0f, 0.32f), new Vector2(0.15f, 0.28f), 0.04f)), glass, 0.05f);
+                p.Fill(q => S.I(S.Circle(q, new Vector2(0f, -0.3f), 0.45f), q.y + 0.2f), liq);
+            }
+            else if (shape == 1)
+            {
+                // tall vial
+                p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.3f, 0.66f), 0.22f), glass, 0.05f);
+                p.Fill(q => S.I(S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.24f, 0.6f), 0.18f), q.y + 0.05f), liq);
+            }
+            else
+            {
+                // triangle (erlenmeyer) flask
+                var tri = new[] { new Vector2(-0.6f, -0.78f), new Vector2(0.6f, -0.78f), new Vector2(0.16f, 0.2f), new Vector2(-0.16f, 0.2f) };
+                p.FillOutlined(q => S.U(S.Poly(q, tri) - 0.04f, S.Box(q, new Vector2(0f, 0.38f), new Vector2(0.15f, 0.22f), 0.04f)), glass, 0.05f);
+                var liqTri = new[] { new Vector2(-0.52f, -0.72f), new Vector2(0.52f, -0.72f), new Vector2(0.28f, -0.2f), new Vector2(-0.28f, -0.2f) };
+                p.Fill(q => S.Poly(q, liqTri), liq);
+            }
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.68f), new Vector2(0.13f, 0.1f), 0.03f), cork, 0.04f);
+            p.Fill(q => S.Ellipse(q, new Vector2(-0.18f, -0.25f), new Vector2(0.06f, 0.14f)), new Color(1f, 1f, 1f, 0.6f));
+            // stars mark the stronger potions
+            int stars = (id + 1) / 2;
+            for (int i = 0; i < stars; i++)
+            {
+                var c = new Vector2(-0.11f * (stars - 1) + i * 0.22f, -0.42f);
+                p.Fill(q => S.Poly(q - c, S.Star(5, 0.1f, 0.045f)), new Color(1f, 0.95f, 0.6f));
+            }
+        }
     }
 }
