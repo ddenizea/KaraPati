@@ -1,0 +1,19 @@
+# Unity sahne ve prefab dosyaları metin olarak saklanır; satır sonları karışmasın
+* text=auto
+*.cs diff=csharp text
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.meta text eol=lf
+*.mat text eol=lf
+# Görseller ve sesler ikili dosyadır
+*.png binary
+*.jpg binary
+*.psd binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.ttf binary
+*.fbx binary
+*.aif binary
+*.otf binary
