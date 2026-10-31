@@ -37,6 +37,8 @@ namespace KaraPati
         public int level = 1;
         public bool nap;   // a kitten is sleeping on top of it
         public float cd;   // cooldown for helper cats
+        public bool bubble;        // free copy floating in a ghost bubble; must be bought before use
+        public long bubbleUntil;   // UTC ticks when the bubble pops
 
         public ItemData(string chain, int level)
         {
@@ -47,9 +49,18 @@ namespace KaraPati
         public bool IsKitten => chain == Chains.Kedi;
         public bool IsWildKitten => chain == Chains.Kedi && level == 1;
         public string Name => Chains.Name(chain, level);
+        /// <summary>Cannot be dragged, merged, sold, stored or delivered right now.</summary>
+        public bool Locked => nap || bubble;
     }
 
-    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; }
+    public static class Bubbles
+    {
+        public const float Seconds = 60f;
+        public static float Chance(int level) => level >= 4 ? 0.14f : 0.1f;
+        public static int Price(int level) => 6 * level + 4 * (level - 1) * (level - 1);
+    }
+
+    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; }
     [Serializable] public class ReqSave { public string chain; public int level; }
 
     [Serializable]

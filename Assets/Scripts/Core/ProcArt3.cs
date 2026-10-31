@@ -106,6 +106,16 @@ namespace KaraPati
             p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.55f), new Vector2(0.86f, 0.14f), 0.06f), new Color(0.88f, 0.65f, 0.4f), 0.06f);
         });
 
+        public static Sprite Bubble => Make("bubble", Size, p =>
+        {
+            p.Fill(q => S.Circle(q, Vector2.zero, 0.94f), new Color(0.75f, 0.9f, 1f, 0.16f));
+            p.Fill(q => S.Ring(S.Circle(q, Vector2.zero, 0.92f), 0.04f), new Color(0.75f, 0.92f, 1f, 0.85f));
+            p.Fill(q => S.I(S.Ring(S.Circle(q, Vector2.zero, 0.84f), 0.03f), q.x - 0.1f), new Color(1f, 0.7f, 0.95f, 0.55f));
+            p.Fill(q => S.I(S.Ring(S.Circle(q, Vector2.zero, 0.84f), 0.03f), -q.y - 0.2f), new Color(0.7f, 1f, 0.8f, 0.5f));
+            p.Fill(q => S.Ellipse(q, new Vector2(-0.42f, 0.45f), new Vector2(0.2f, 0.11f)), new Color(1f, 1f, 1f, 0.75f));
+            p.Fill(q => S.Circle(q, new Vector2(-0.18f, 0.62f), 0.06f), new Color(1f, 1f, 1f, 0.7f));
+        });
+
         /// <summary>Icon shown for a clue once it is found.</summary>
         public static Sprite ClueIcon(string id)
         {

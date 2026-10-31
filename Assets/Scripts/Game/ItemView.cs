@@ -15,7 +15,7 @@ namespace KaraPati
         public bool IsPressed { get; private set; }
         public bool IsHeld => IsDragging || IsPressed;
 
-        Image icon, cooldown, napCat, badge, needed;
+        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing;
         Text badgeText, zzz;
         CanvasGroup cg;
         Vector2 dragOffset;
@@ -49,6 +49,14 @@ namespace KaraPati
             badgeText = UIKit.Txt("Lv", badge.transform, "1", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(badgeText.rectTransform);
 
+            bubble = UIKit.Img("Bubble", rt, ProcArt.Bubble, Color.white);
+            bubble.rectTransform.sizeDelta = new Vector2(138f, 138f);
+            bubbleRing = UIKit.Img("BubbleTimer", rt, ProcArt.Circle, new Color(1f, 1f, 1f, 0.22f));
+            bubbleRing.rectTransform.sizeDelta = new Vector2(128f, 128f);
+            bubbleRing.type = Image.Type.Filled;
+            bubbleRing.fillMethod = Image.FillMethod.Radial360;
+            bubbleRing.fillOrigin = (int)Image.Origin360.Top;
+
             needed = UIKit.Img("Needed", rt, ProcArt.Check, Color.white);
             needed.rectTransform.At(new Vector2(-46f, -46f), new Vector2(38f, 38f));
             needed.gameObject.SetActive(false);
@@ -72,6 +80,10 @@ namespace KaraPati
             badgeText.text = data.level.ToString();
             cooldown.gameObject.SetActive(data.IsKitten && data.level >= 2);
             UpdateCooldown();
+            bubble.gameObject.SetActive(data.bubble);
+            bubbleRing.gameObject.SetActive(data.bubble);
+            icon.rectTransform.sizeDelta = data.bubble ? new Vector2(96f, 96f) : new Vector2(122f, 122f);
+            if (data.bubble) icon.color = new Color(1f, 1f, 1f, 0.85f);
         }
 
         /// <summary>Green tick: a ghost customer is asking for this item.</summary>
@@ -97,7 +109,16 @@ namespace KaraPati
                 zzz.rectTransform.anchoredPosition = new Vector2(38f + Mathf.Sin(t * 2f) * 4f, 40f + Mathf.Repeat(t * 12f, 18f));
                 var c = zzz.color; c.a = 1f - Mathf.Repeat(t * 12f, 18f) / 18f; zzz.color = c;
             }
-            if (data.IsWildKitten && !IsDragging)
+            if (data.bubble)
+            {
+                float left = (float)System.TimeSpan.FromTicks(data.bubbleUntil - System.DateTime.UtcNow.Ticks).TotalSeconds;
+                bubbleRing.fillAmount = Mathf.Clamp01(left / Bubbles.Seconds);
+                float bob = Mathf.Sin(t * 2.2f) * 5f;
+                bubble.rectTransform.anchoredPosition = new Vector2(0f, bob);
+                icon.rectTransform.anchoredPosition = new Vector2(0f, bob);
+                bubble.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 3.1f) * 0.03f);
+            }
+            else if (data.IsWildKitten && !IsDragging)
                 icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
             else if (data.chain == Chains.Kazan)
                 icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
@@ -113,7 +134,7 @@ namespace KaraPati
 
         public void OnBeginDrag(PointerEventData e)
         {
-            if (data == null || data.nap) return;
+            if (data == null || data.Locked) return;
             IsDragging = true;
             cg.blocksRaycasts = false;
             // lift the item above every UI layer while it is being dragged

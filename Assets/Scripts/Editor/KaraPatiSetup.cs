@@ -37,6 +37,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Baloncuk çıkar (Play modunda)")]
+        static void Bubble()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Board.DebugSpawnBubble();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {

@@ -145,7 +145,7 @@ namespace KaraPati
                 foreach (var c in AllCells())
                 {
                     var d = data[c.x, c.y];
-                    if (d == null || d.nap || d.chain != req.chain || d.level != req.level) continue;
+                    if (d == null || d.Locked || d.chain != req.chain || d.level != req.level) continue;
                     if (used.Contains(c) || IsDragging(c)) continue;
                     used.Add(c);
                     outCells?.Add(c);
@@ -298,12 +298,12 @@ namespace KaraPati
         {
             var from = v.cell;
             var a = data[from.x, from.y];
-            if (a != null && !a.nap && GM.IsOverStorage(screen))
+            if (a != null && !a.Locked && GM.IsOverStorage(screen))
             {
                 if (!GM.TryStore(from)) Tween.Move(v.rt, CellPos(from), 0.15f);
                 return;
             }
-            if (a == null || a.nap || !ScreenToCell(screen, out var to) || to == from)
+            if (a == null || a.Locked || !ScreenToCell(screen, out var to) || to == from)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
                 return;
@@ -317,10 +317,10 @@ namespace KaraPati
                 GM.OnBoardChanged();
                 return;
             }
-            if (b.nap)
+            if (b.Locked)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
-                GM.Toast("Orada bir yavru uyuyor! Önce dokunup okşa.");
+                GM.Toast(b.bubble ? "Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)" : "Orada bir yavru uyuyor! Önce dokunup okşa.");
                 return;
             }
             if (a.chain == b.chain && a.level == b.level && !Chains.IsGenerator(a.chain))
@@ -339,6 +339,7 @@ namespace KaraPati
             var d = data[c.x, c.y];
             if (d == null) return;
             if (d.nap) { GM.Cats.PetAt(c); return; }
+            if (d.bubble) { Tween.Punch(v.rt, 0.12f, 0.25f); return; }
             if (Chains.IsGenerator(d.chain)) { UseGenerator(c); return; }
             Tween.Punch(v.rt, 0.1f, 0.2f);
         }
@@ -375,6 +376,7 @@ namespace KaraPati
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
             if (nd.level >= 3) GM.AddXp(nd.level - 2);
+            TrySpawnBubble(to, nd);
             if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
             GM.OnBoardChanged();
@@ -384,12 +386,91 @@ namespace KaraPati
         {
             var c = Selected;
             var d = Get(c);
-            if (d == null || d.nap || !Chains.IsIngredient(d.chain)) return;
+            if (d == null || d.Locked || !Chains.IsIngredient(d.chain)) return;
             GM.AddGold(d.level);
             GM.Toast(d.Name + " satıldı: +" + d.level + " altın");
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
             GM.OnBoardChanged();
+        }
+
+        // ---------------------------------------------------------------- ghost bubbles
+        float bubbleCheck;
+
+        void TrySpawnBubble(Vector2Int from, ItemData merged)
+        {
+            if (!Chains.IsIngredient(merged.chain) || Random.value > Bubbles.Chance(merged.level)) return;
+            if (!NearestEmpty(from, out var e)) return;
+            var b = new ItemData(merged.chain, merged.level)
+            {
+                bubble = true,
+                bubbleUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(Bubbles.Seconds).Ticks
+            };
+            SpawnFromPos(CellPos(from), e, b);
+            FX.Burst(fxLayer, CellPos(e), new Color(0.75f, 0.9f, 1f), 8);
+            GM.Toast("Bir hayalet baloncuk belirdi! İçindeki " + b.Name + " " + (int)Bubbles.Seconds + " sn boyunca senin olabilir.", new Color(0.7f, 0.9f, 1f), 4f);
+        }
+
+        /// <summary>Test helper: force a bubble next to the middle of the table.</summary>
+        public void DebugSpawnBubble()
+        {
+            TrySpawnBubbleForced(new Vector2Int(Cols / 2, Rows / 2), new ItemData(Chains.RandomIngredient(), 2));
+        }
+
+        void TrySpawnBubbleForced(Vector2Int from, ItemData merged)
+        {
+            if (!NearestEmpty(from, out var e)) return;
+            var b = new ItemData(merged.chain, merged.level)
+            {
+                bubble = true,
+                bubbleUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(Bubbles.Seconds).Ticks
+            };
+            Set(e, b, true);
+        }
+
+        public void OpenBubble(Vector2Int c)
+        {
+            var d = Get(c);
+            if (d == null || !d.bubble) return;
+            if (!GM.TrySpendGold(Bubbles.Price(d.level))) return;
+            d.bubble = false;
+            RefreshView(c);
+            var v = ViewAt(c);
+            if (v) Tween.Pop(v.rt, 0.35f);
+            FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 12);
+            GM.Toast(d.Name + " baloncuktan çıktı!");
+            Select(c);
+            GM.OnBoardChanged();
+        }
+
+        void Update()
+        {
+            if (!Ready) return;
+            bubbleCheck -= Time.unscaledDeltaTime;
+            if (bubbleCheck > 0f) return;
+            bubbleCheck = 0.25f;
+            long now = System.DateTime.UtcNow.Ticks;
+            bool changed = false;
+            foreach (var c in AllCells())
+            {
+                var d = data[c.x, c.y];
+                if (d == null || !d.bubble || d.bubbleUntil > now) continue;
+                FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 10);
+                bool sel = Selected == c;
+                RemoveWithShrink(c);
+                if (sel) Select(new Vector2Int(-1, -1));
+                changed = true;
+            }
+            if (changed)
+            {
+                GM.Toast("Pof! Baloncuk uçup gitti.");
+                GM.OnBoardChanged();
+            }
+            else
+            {
+                var sd = Get(Selected);
+                if (sd != null && sd.bubble) GM.ShowInfo(sd); // live countdown
+            }
         }
 
         // ---------------------------------------------------------------- save
@@ -400,7 +481,7 @@ namespace KaraPati
             {
                 var d = data[c.x, c.y];
                 if (d == null) continue;
-                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd });
+                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil });
             }
         }
 
@@ -412,7 +493,8 @@ namespace KaraPati
                 var c = new Vector2Int(s.x, s.y);
                 // cats used to live on the grid in the first prototype; they walk freely now
                 if (!InBounds(c) || string.IsNullOrEmpty(s.chain) || s.chain == Chains.Kedi) continue;
-                Set(c, new ItemData(s.chain, s.level) { nap = s.nap });
+                if (s.bubble && s.bubbleUntil <= System.DateTime.UtcNow.Ticks) continue; // popped while away
+                Set(c, new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil });
             }
         }
     }

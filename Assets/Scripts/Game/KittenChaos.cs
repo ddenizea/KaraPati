@@ -164,7 +164,7 @@ namespace KaraPati
         public void PlanMischief(KittenAgent a)
         {
             if (B.AnyHeld) return;
-            var cands = B.Cells(d => !d.nap);
+            var cands = B.Cells(d => !d.Locked);
             cands.RemoveAll(c => IsTargeted(c));
             if (cands.Count == 0) return;
             cands.Sort((x, y) => (BoardController.CellPos(x) - a.Pos).sqrMagnitude
@@ -202,7 +202,7 @@ namespace KaraPati
             if (!a || B.AnyHeld) return;
             var d = B.Get(c);
             var n = c + dir;
-            if (d == null || d.nap || !Chains.IsIngredient(d.chain) || !BoardController.InBounds(n) || B.Get(n) != null) return;
+            if (d == null || d.Locked || !Chains.IsIngredient(d.chain) || !BoardController.InBounds(n) || B.Get(n) != null) return;
             a.Face(dir.x != 0 ? dir.x : (BoardController.CellPos(c).x >= a.Pos.x ? 1 : -1));
             Tween.Punch(a.rt, 0.15f, 0.25f);
             bool sel = B.Selected == c;
@@ -216,7 +216,7 @@ namespace KaraPati
         {
             if (!a || B.AnyHeld) return;
             var d = B.Get(c);
-            if (d == null || d.nap || NapperAt(c) != null) return;
+            if (d == null || d.Locked || NapperAt(c) != null) return;
             d.nap = true;
             B.RefreshView(c);
             a.Nap(c, BoardController.CellPos(c) + new Vector2(0f, 12f));

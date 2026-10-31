@@ -695,6 +695,17 @@ namespace KaraPati
                 infoDesc.text = "Üstünde bir yavru uyuyor! Dokunup okşarsan kalkar.";
                 return;
             }
+            if (d.bubble)
+            {
+                int left = Mathf.Max(0, Mathf.CeilToInt((float)TimeSpan.FromTicks(d.bubbleUntil - DateTime.UtcNow.Ticks).TotalSeconds));
+                infoTitle.text = d.Name + "  <size=26>(Baloncuk)</size>";
+                infoDesc.text = "Bedava kopya! " + left + " sn içinde açmazsan uçup gider.";
+                int price = Bubbles.Price(d.level);
+                actionBtn.gameObject.SetActive(true);
+                actionBtn.Label().text = "Aç\n" + price + " altın";
+                btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
+                return;
+            }
             if (Chains.IsGenerator(d.chain))
             {
                 infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") + " Dokun: 1 enerji.";
@@ -758,6 +769,7 @@ namespace KaraPati
                 return;
             }
             var d = Board.Get(Board.Selected);
+            if (d != null && d.bubble) { Board.OpenBubble(Board.Selected); return; }
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)
             {
