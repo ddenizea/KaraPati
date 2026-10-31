@@ -96,6 +96,16 @@ namespace KaraPati
                 new Color(0.45f, 0.28f, 0.15f));
         });
 
+        public static Sprite Crate => Make("ui_crate", Size, p =>
+        {
+            var wood = new Color(0.78f, 0.55f, 0.32f);
+            var dark = new Color(0.55f, 0.36f, 0.2f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.12f), new Vector2(0.78f, 0.6f), 0.08f), wood, 0.06f);
+            p.Fill(q => S.U(S.Box(q, new Vector2(0f, 0.1f), new Vector2(0.78f, 0.04f), 0f), S.Box(q, new Vector2(0f, -0.34f), new Vector2(0.78f, 0.04f), 0f)), dark);
+            p.Fill(q => S.U(S.Seg(q, new Vector2(-0.68f, 0.38f), new Vector2(0.68f, -0.62f), 0.05f), S.Seg(q, new Vector2(-0.68f, -0.62f), new Vector2(0.68f, 0.38f), 0.05f)), dark);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.55f), new Vector2(0.86f, 0.14f), 0.06f), new Color(0.88f, 0.65f, 0.4f), 0.06f);
+        });
+
         /// <summary>Icon shown for a clue once it is found.</summary>
         public static Sprite ClueIcon(string id)
         {

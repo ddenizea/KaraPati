@@ -250,6 +250,8 @@ namespace KaraPati
             }, () => { if (rt) Destroy(rt.gameObject); });
         }
 
+        public void Remove(Vector2Int c) => RemoveWithShrink(c);
+
         void RemoveWithShrink(Vector2Int c)
         {
             var v = views[c.x, c.y];
@@ -296,6 +298,11 @@ namespace KaraPati
         {
             var from = v.cell;
             var a = data[from.x, from.y];
+            if (a != null && !a.nap && GM.IsOverStorage(screen))
+            {
+                if (!GM.TryStore(from)) Tween.Move(v.rt, CellPos(from), 0.15f);
+                return;
+            }
             if (a == null || a.nap || !ScreenToCell(screen, out var to) || to == from)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
@@ -367,6 +374,7 @@ namespace KaraPati
             Set(to, nd, true);
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
+            if (nd.level >= 3) GM.AddXp(nd.level - 2);
             if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
             GM.OnBoardChanged();

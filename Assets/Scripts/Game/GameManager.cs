@@ -25,7 +25,6 @@ namespace KaraPati
                 new GameObject("KaraPati Game").AddComponent<GameManager>();
         }
 
-        public const int MaxEnergy = 30;
         public const float EnergyRegenSec = 8f;
         public const int EnergyPackCost = 20, EnergyPackAmount = 10;
         const string SaveKey = "karapati_save_v1";
@@ -35,6 +34,11 @@ namespace KaraPati
         public int Stamps { get; private set; }
         public int Energy { get; private set; }
         public int Served { get; private set; }
+        public int Level { get; private set; } = 1;
+        public int Xp { get; private set; }
+        public int MaxEnergy => Levels.MaxEnergy(Level);
+        public int StorageSlots => Levels.StorageSlots(Level);
+        public readonly List<ItemData> Storage = new List<ItemData>();
         public int TasksDone { get; private set; }
         public bool KittenHintShown { get; set; }
         bool introSeen;
@@ -47,7 +51,7 @@ namespace KaraPati
         public OrderPanel Orders { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -55,6 +59,10 @@ namespace KaraPati
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
+        RectTransform storageBtn, levelBadge;
+        Text storageText, levelText;
+        Image levelRing;
+        StoragePanel storagePanel;
         Text goldText, stampText, energyText, energyTimerText, toastText, infoTitle, infoDesc;
         RectTransform goldIcon, stampIcon;
         CanvasGroup toastGroup;
@@ -242,6 +250,10 @@ namespace KaraPati
             caseFile = caseRt.gameObject.AddComponent<CaseFilePanel>();
             caseFile.Build();
 
+            var storeRt = UIKit.Rect("StoragePanel", canvasRt);
+            storagePanel = storeRt.gameObject.AddComponent<StoragePanel>();
+            storagePanel.Build();
+
             BuildDialog(canvasRt);
 
             Cats = gameObject.AddComponent<KittenChaos>();
@@ -250,7 +262,6 @@ namespace KaraPati
             // start on the shop screen
             OnBoard = false;
             boardCg.gameObject.SetActive(false);
-            homeBtn.gameObject.SetActive(false);
         }
 
         Image Pill(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, float width)
@@ -262,10 +273,29 @@ namespace KaraPati
 
         void BuildTopBar(RectTransform bar)
         {
-            homeBtn = UIKit.Btn("Home", bar, "", UIKit.PanelDark, GoHome);
-            ((RectTransform)homeBtn.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(96f, 92f));
-            var hIcon = UIKit.Img("Icon", homeBtn.transform, ProcArt.House, Color.white);
-            hIcon.rectTransform.sizeDelta = new Vector2(66f, 66f);
+            // player level ring
+            var lvBg = UIKit.Img("Level", bar, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f));
+            lvBg.raycastTarget = true;
+            levelBadge = lvBg.rectTransform;
+            levelBadge.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(100f, 100f));
+            levelRing = UIKit.Img("Ring", lvBg.transform, ProcArt.Circle, new Color(0.35f, 0.75f, 1f));
+            levelRing.rectTransform.sizeDelta = new Vector2(100f, 100f);
+            levelRing.type = Image.Type.Filled;
+            levelRing.fillMethod = Image.FillMethod.Radial360;
+            levelRing.fillOrigin = (int)Image.Origin360.Top;
+            levelRing.fillClockwise = true;
+            var lvIn = UIKit.Img("Inner", lvBg.transform, ProcArt.Circle, new Color(0.16f, 0.12f, 0.24f));
+            lvIn.rectTransform.sizeDelta = new Vector2(78f, 78f);
+            levelText = UIKit.Txt("N", lvBg.transform, "1", 40, UIKit.Cream);
+            levelText.fontStyle = FontStyle.Bold;
+            UIKit.Stretch(levelText.rectTransform);
+            var lvBtn = lvBg.gameObject.AddComponent<Button>();
+            lvBtn.transition = Selectable.Transition.None;
+            lvBtn.onClick.AddListener(() =>
+            {
+                Tween.Punch(levelBadge, 0.15f, 0.25f);
+                Toast("Seviye " + Level + ": " + Xp + "/" + Levels.XpToNext(Level) + " XP. Sipariş, görev ve ipuçları XP verir.");
+            });
 
             var gold = Pill(bar, "Gold", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(140f, 0f), 230f);
             var coin = UIKit.Img("Coin", gold.transform, ProcArt.Coin, Color.white);
@@ -294,22 +324,37 @@ namespace KaraPati
 
         void BuildInfoBar(RectTransform area)
         {
+            // storage box (bottom-left) and back-to-shop (bottom-right), like a classic merge layout
+            var store = UIKit.Btn("Storage", area, "", new Color(0.3f, 0.55f, 0.6f), () => storagePanel.Open(), 26);
+            storageBtn = (RectTransform)store.transform;
+            storageBtn.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(22f, 0f), new Vector2(150f, 134f));
+            var sIcon = UIKit.Img("Icon", storageBtn, ProcArt.Crate, Color.white);
+            sIcon.rectTransform.At(new Vector2(0f, 14f), new Vector2(92f, 92f));
+            storageText = store.Label();
+            storageText.alignment = TextAnchor.LowerCenter;
+            storageText.text = "0/4";
+
+            homeBtn = UIKit.Btn("Home", area, "", new Color(0.3f, 0.55f, 0.6f), GoHome);
+            ((RectTransform)homeBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-22f, 0f), new Vector2(150f, 134f));
+            var hIcon = UIKit.Img("Icon", homeBtn.transform, ProcArt.House, Color.white);
+            hIcon.rectTransform.sizeDelta = new Vector2(90f, 90f);
+
             var panel = UIKit.Img("Panel", area, ProcArt.Rounded, UIKit.Panel, true);
-            UIKit.Stretch(panel.rectTransform, 35f, 35f, 0f, 0f);
+            UIKit.Stretch(panel.rectTransform, 186f, 186f, 0f, 0f);
             infoTitle = UIKit.Txt("Title", panel.transform, "", 34, UIKit.Orange, TextAnchor.UpperLeft);
             infoTitle.fontStyle = FontStyle.Bold;
             infoTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
             infoTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
             infoTitle.rectTransform.pivot = new Vector2(0f, 1f);
-            infoTitle.rectTransform.offsetMin = new Vector2(30f, -60f);
-            infoTitle.rectTransform.offsetMax = new Vector2(-260f, -14f);
+            infoTitle.rectTransform.offsetMin = new Vector2(24f, -60f);
+            infoTitle.rectTransform.offsetMax = new Vector2(-196f, -14f);
             infoDesc = UIKit.Txt("Desc", panel.transform, "", 25, UIKit.Cream, TextAnchor.UpperLeft);
             infoDesc.rectTransform.anchorMin = new Vector2(0f, 0f);
             infoDesc.rectTransform.anchorMax = new Vector2(1f, 1f);
-            infoDesc.rectTransform.offsetMin = new Vector2(30f, 6f);
-            infoDesc.rectTransform.offsetMax = new Vector2(-260f, -58f);
-            actionBtn = UIKit.Btn("Action", panel.transform, "", UIKit.Orange, OnAction, 30);
-            ((RectTransform)actionBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, 0f), new Vector2(220f, 92f));
+            infoDesc.rectTransform.offsetMin = new Vector2(24f, 6f);
+            infoDesc.rectTransform.offsetMax = new Vector2(-196f, -58f);
+            actionBtn = UIKit.Btn("Action", panel.transform, "", UIKit.Orange, OnAction, 28);
+            ((RectTransform)actionBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 0f), new Vector2(176f, 96f));
         }
 
         void BuildStickerPopup()
@@ -366,7 +411,6 @@ namespace KaraPati
         {
             if (OnBoard) return;
             OnBoard = true;
-            homeBtn.gameObject.SetActive(true);
             Cross(homeCg, boardCg);
             Orders.Refresh();
             ShowInfo(null);
@@ -376,7 +420,6 @@ namespace KaraPati
         {
             if (!OnBoard) return;
             OnBoard = false;
-            homeBtn.gameObject.SetActive(false);
             Board.HideSelector();
             Cats.Deselect();
             infoKitten = null;
@@ -413,6 +456,7 @@ namespace KaraPati
             if (clues.Contains(c.id)) return;
             clues.Add(c.id);
             AddStamps(1);
+            AddXp(5);
             Save();
             ShowDialog(c.title, c.text, () =>
             {
@@ -468,6 +512,7 @@ namespace KaraPati
             int chapter = Story.CurrentChapter(idx);
             Stamps -= task.cost;
             TasksDone++;
+            AddXp(10);
             RefreshHud();
             home.Refresh(true);
             Save();
@@ -724,6 +769,78 @@ namespace KaraPati
             ShowInfo(null);
         }
 
+        // ------------------------------------------------------------------ level / xp
+        public void AddXp(int amount)
+        {
+            if (amount <= 0) return;
+            Xp += amount;
+            int ups = 0;
+            while (Xp >= Levels.XpToNext(Level))
+            {
+                Xp -= Levels.XpToNext(Level);
+                Level++;
+                ups++;
+                int g = Levels.GoldReward(Level);
+                Gold += g;
+                Stamps += 1;
+                Energy = Mathf.Max(Energy, MaxEnergy);
+                ShowDialog("Seviye " + Level + "!",
+                    "Tebrikler! Ödül: +" + g + " altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık " + MaxEnergy +
+                    ", depoda " + StorageSlots + " yer var.");
+            }
+            RefreshHud();
+            if (levelBadge) Tween.Punch(levelBadge, ups > 0 ? 0.35f : 0.12f, 0.3f);
+            if (ups > 0 && !OnBoard && home) home.Refresh(false);
+            MarkDirty();
+        }
+
+        // ------------------------------------------------------------------ storage box
+        public bool IsOverStorage(Vector2 screen) =>
+            OnBoard && storageBtn && RectTransformUtility.RectangleContainsScreenPoint(storageBtn, screen, null);
+
+        /// <summary>Called when an item is dropped on the storage button. Returns true if it was handled.</summary>
+        public bool TryStore(Vector2Int cell)
+        {
+            var d = Board.Get(cell);
+            if (d == null) return false;
+            if (!Chains.IsIngredient(d.chain))
+            {
+                Toast("Depoya sadece malzemeler girer.");
+                return false;
+            }
+            if (Storage.Count >= StorageSlots)
+            {
+                Toast("Depo dolu! (" + StorageSlots + " yer) Seviye atladıkça büyür.");
+                return false;
+            }
+            Storage.Add(new ItemData(d.chain, d.level));
+            Board.Remove(cell);
+            Board.HideSelector();
+            ShowInfo(null);
+            Tween.Punch(storageBtn, 0.2f, 0.3f);
+            Toast(d.Name + " depoya kondu.");
+            RefreshHud();
+            OnBoardChanged();
+            return true;
+        }
+
+        public bool TakeFromStorage(int index)
+        {
+            if (index < 0 || index >= Storage.Count) return false;
+            var center = new Vector2Int(BoardController.Cols / 2, BoardController.Rows - 1);
+            if (!Board.NearestEmpty(center, out var e))
+            {
+                Toast("Masa dolu! Önce yer aç.");
+                return false;
+            }
+            var d = Storage[index];
+            Storage.RemoveAt(index);
+            Board.Set(e, d, true);
+            RefreshHud();
+            OnBoardChanged();
+            return true;
+        }
+
         // ------------------------------------------------------------------ economy
         public void AddGold(int amount)
         {
@@ -794,6 +911,9 @@ namespace KaraPati
             goldText.text = Gold.ToString();
             stampText.text = Stamps.ToString();
             energyText.text = Energy + "/" + MaxEnergy;
+            levelText.text = Level.ToString();
+            levelRing.fillAmount = Mathf.Clamp01(Xp / (float)Levels.XpToNext(Level));
+            storageText.text = Storage.Count + "/" + StorageSlots;
         }
 
         public void OnBoardChanged()
@@ -834,6 +954,9 @@ namespace KaraPati
         {
             Gold = 20;
             Stamps = 1;
+            Level = 1;
+            Xp = 0;
+            Storage.Clear();
             Energy = MaxEnergy;
             energyTimer = 0f;
             Served = 0;
@@ -889,10 +1012,13 @@ namespace KaraPati
                 introSeen = introSeen,
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
+                level = Level,
+                xp = Xp,
                 claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
             Orders.WriteSave(s.orders);
+            foreach (var it in Storage) s.storage.Add(new ReqSave { chain = it.chain, level = it.level });
             Cats.WriteSave(s.kittens);
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
@@ -919,6 +1045,12 @@ namespace KaraPati
                 claimedSets.Clear();
                 if (s.claimedSets != null) foreach (var id in s.claimedSets) claimedSets.Add(id);
 
+                Level = Mathf.Max(1, s.level);
+                Xp = Mathf.Max(0, s.xp);
+                Storage.Clear();
+                if (s.storage != null)
+                    foreach (var it in s.storage)
+                        if (!string.IsNullOrEmpty(it.chain)) Storage.Add(new ItemData(it.chain, it.level));
                 Energy = s.energy;
                 energyTimer = s.energyTimer;
                 if (Energy < MaxEnergy && s.stamp > 0)

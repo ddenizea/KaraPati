@@ -86,6 +86,9 @@ namespace KaraPati
         public int tasksDone;
         public bool introSeen;
         public List<string> clues = new List<string>();
+        public int level = 1;
+        public int xp;
+        public List<ReqSave> storage = new List<ReqSave>();
         public List<CellSave> cells = new List<CellSave>();
         public List<OrderSave> orders = new List<OrderSave>();
         public List<KittenSave> kittens = new List<KittenSave>();
@@ -278,6 +281,16 @@ namespace KaraPati
                 if (TaskAt(i).id == id) return true;
             return false;
         }
+    }
+
+    /// <summary>Player level curve and what each level gives.</summary>
+    public static class Levels
+    {
+        public const int MaxStorage = 12;
+        public static int XpToNext(int level) => 30 + (level - 1) * 20;
+        public static int MaxEnergy(int level) => Mathf.Min(50, 30 + (level - 1) * 2);
+        public static int StorageSlots(int level) => Mathf.Min(MaxStorage, 3 + level);
+        public static int GoldReward(int level) => 15 * level;
     }
 
     public static class Ghosts

@@ -19,6 +19,7 @@ namespace KaraPati
         Text badgeText, zzz;
         CanvasGroup cg;
         Vector2 dragOffset;
+        Transform homeParent;
         float seed;
 
         public void Init(BoardController b, Vector2Int c, ItemData d)
@@ -115,6 +116,9 @@ namespace KaraPati
             if (data == null || data.nap) return;
             IsDragging = true;
             cg.blocksRaycasts = false;
+            // lift the item above every UI layer while it is being dragged
+            homeParent = rt.parent;
+            rt.SetParent(GameManager.I.Root, true);
             rt.SetAsLastSibling();
             Tween.Stop(Tween.Key(rt, "m"));
             Tween.Stop(Tween.Key(rt, "s"));
@@ -136,8 +140,10 @@ namespace KaraPati
             IsDragging = false;
             cg.blocksRaycasts = true;
             rt.localScale = Vector3.one;
+            if (homeParent) rt.SetParent(homeParent, true);
             var center = RectTransformUtility.WorldToScreenPoint(e.pressEventCamera, rt.position);
-            board.OnItemDropped(this, center);
+            // dropping on the storage box goes by the finger, everything else by the item's centre
+            board.OnItemDropped(this, GameManager.I.IsOverStorage(e.position) ? e.position : center);
         }
 
         public void OnPointerClick(PointerEventData e)

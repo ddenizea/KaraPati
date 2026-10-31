@@ -30,6 +30,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/+50 XP (Play modunda)")]
+        static void GiveXp()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.AddXp(50);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {
