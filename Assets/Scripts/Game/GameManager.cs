@@ -39,6 +39,21 @@ namespace KaraPati
         public int MaxEnergy => Levels.MaxEnergy(Level);
         public int StorageSlots => Levels.StorageSlots(Level);
         public readonly List<ItemData> Storage = new List<ItemData>();
+        public int Pumpkins { get; private set; }
+        public int EventClaimed { get; private set; }
+        long eventStart;
+        public bool EventActive => DateTime.UtcNow.Ticks < EventEnd;
+        long EventEnd => eventStart + TimeSpan.FromDays(PumpkinEvent.Days).Ticks;
+        public string EventTimeLeftText
+        {
+            get
+            {
+                var left = TimeSpan.FromTicks(Math.Max(0L, EventEnd - DateTime.UtcNow.Ticks));
+                if (left.TotalDays >= 1) return (int)left.TotalDays + "g " + left.Hours + "sa";
+                if (left.TotalHours >= 1) return (int)left.TotalHours + "sa " + left.Minutes + "dk";
+                return left.Minutes + "dk " + left.Seconds + "sn";
+            }
+        }
         public int TasksDone { get; private set; }
         public bool KittenHintShown { get; set; }
         bool introSeen;
@@ -51,7 +66,7 @@ namespace KaraPati
         public OrderPanel Orders { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -63,6 +78,11 @@ namespace KaraPati
         Text storageText, levelText;
         Image levelRing;
         StoragePanel storagePanel;
+        EventPanel eventPanel;
+        RectTransform eventBtn;
+        Text eventTimerText;
+        GameObject eventBadge;
+        float eventTick;
         Text goldText, stampText, energyText, energyTimerText, toastText, infoTitle, infoDesc;
         RectTransform goldIcon, stampIcon;
         CanvasGroup toastGroup;
@@ -142,6 +162,13 @@ namespace KaraPati
             {
                 resetArmedUntil = 0f;
                 if (infoKitten == null && Board.Get(Board.Selected) == null) ShowInfo(null);
+            }
+
+            eventTick -= Time.unscaledDeltaTime;
+            if (eventTick <= 0f)
+            {
+                eventTick = 1f;
+                RefreshEventButton();
             }
 
             if (infoKitten)
@@ -254,6 +281,10 @@ namespace KaraPati
             storagePanel = storeRt.gameObject.AddComponent<StoragePanel>();
             storagePanel.Build();
 
+            var eventRt = UIKit.Rect("EventPanel", canvasRt);
+            eventPanel = eventRt.gameObject.AddComponent<EventPanel>();
+            eventPanel.Build();
+
             BuildDialog(canvasRt);
 
             Cats = gameObject.AddComponent<KittenChaos>();
@@ -310,6 +341,23 @@ namespace KaraPati
             stampIcon.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(70f, 70f));
             stampText = UIKit.Txt("Value", st.transform, "0", 40, UIKit.Cream, TextAnchor.MiddleLeft);
             UIKit.Stretch(stampText.rectTransform, 88f, 8f);
+
+            // time-limited event
+            var ev = UIKit.Img("Event", bar, ProcArt.Rounded, new Color(0.45f, 0.2f, 0.45f), true);
+            ev.raycastTarget = true;
+            eventBtn = ev.rectTransform;
+            eventBtn.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(598f, 0f), new Vector2(112f, 104f));
+            var evIcon = UIKit.Img("Icon", ev.transform, ProcArt.Pumpkin, Color.white);
+            evIcon.rectTransform.At(new Vector2(0f, 12f), new Vector2(74f, 74f));
+            eventTimerText = UIKit.Txt("Timer", ev.transform, "", 20, new Color(1f, 0.9f, 0.6f));
+            eventTimerText.rectTransform.At(new Vector2(0f, -36f), new Vector2(120f, 30f));
+            var evB = UIKit.Img("Badge", ev.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            evB.rectTransform.At(new Vector2(44f, 40f), new Vector2(38f, 38f));
+            var evBt = UIKit.Txt("!", evB.transform, "!", 28, Color.white);
+            UIKit.Stretch(evBt.rectTransform);
+            eventBadge = evB.gameObject;
+            var evBtn = ev.gameObject.AddComponent<Button>();
+            evBtn.onClick.AddListener(() => eventPanel.Open());
 
             var en = Pill(bar, "Energy", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-30f, 0f), 330f);
             var bolt = UIKit.Img("Bolt", en.transform, ProcArt.Bolt, Color.white);
@@ -513,6 +561,7 @@ namespace KaraPati
             Stamps -= task.cost;
             TasksDone++;
             AddXp(10);
+            AddPumpkins(2);
             RefreshHud();
             home.Refresh(true);
             Save();
@@ -853,6 +902,77 @@ namespace KaraPati
             return true;
         }
 
+        // ------------------------------------------------------------------ pumpkin event
+        void RefreshEventButton()
+        {
+            if (!eventTimerText) return;
+            eventTimerText.text = EventActive ? EventTimeLeftText : "bitti";
+            bool claimable = EventClaimed < PumpkinEvent.Path.Length && Pumpkins >= PumpkinEvent.Path[EventClaimed].need;
+            eventBadge.SetActive(claimable);
+        }
+
+        public void AddPumpkins(int n)
+        {
+            if (n <= 0 || !EventActive) return;
+            Pumpkins += n;
+            if (eventBtn)
+            {
+                Tween.Punch(eventBtn, 0.25f, 0.35f);
+                FloatText(eventBtn, "+" + n);
+            }
+            RefreshEventButton();
+            MarkDirty();
+        }
+
+        void FloatText(RectTransform anchor, string text)
+        {
+            var t = UIKit.Txt("Float", Root, text, 40, UIKit.Orange);
+            t.fontStyle = FontStyle.Bold;
+            var rt = t.rectTransform;
+            rt.sizeDelta = new Vector2(160f, 60f);
+            rt.position = anchor.position;
+            Vector3 from = rt.position;
+            float lift = 90f * Root.lossyScale.y;
+            Tween.Run(0.9f, k =>
+            {
+                if (!rt) return;
+                rt.position = from + Vector3.down * lift * Tween.OutCubic(k);
+                t.color = new Color(1f, 0.66f, 0.3f, 1f - k * k);
+            }, () => { if (rt) Destroy(rt.gameObject); });
+        }
+
+        public bool ClaimEventStep(int idx)
+        {
+            var path = PumpkinEvent.Path;
+            if (idx != EventClaimed || idx >= path.Length || Pumpkins < path[idx].need) return false;
+            var m = path[idx];
+            switch (m.type)
+            {
+                case "gold": AddGold(m.amount); break;
+                case "energy": Energy += m.amount; RefreshHud(); break;
+                case "stamps": AddStamps(m.amount); break;
+                default:
+                    if (!GiveRandomMissingAny()) AddGold(50);
+                    break;
+            }
+            EventClaimed++;
+            Toast(PumpkinEvent.Name + " ödülü: " + PumpkinEvent.RewardText(m), UIKit.Orange);
+            RefreshEventButton();
+            Save();
+            return true;
+        }
+
+        bool GiveRandomMissingAny()
+        {
+            var missing = new List<string>();
+            foreach (var set in Stickers.Sets)
+                foreach (var id in set.ids)
+                    if (!stickers.Contains(id)) missing.Add(id);
+            if (missing.Count == 0) return false;
+            GiveSticker(missing[Random.Range(0, missing.Count)], false);
+            return true;
+        }
+
         // ------------------------------------------------------------------ economy
         public void AddGold(int amount)
         {
@@ -969,6 +1089,9 @@ namespace KaraPati
             Level = 1;
             Xp = 0;
             Storage.Clear();
+            Pumpkins = 0;
+            EventClaimed = 0;
+            eventStart = DateTime.UtcNow.Ticks;
             Energy = MaxEnergy;
             energyTimer = 0f;
             Served = 0;
@@ -1026,6 +1149,9 @@ namespace KaraPati
                 clues = new List<string>(clues),
                 level = Level,
                 xp = Xp,
+                eventStart = eventStart,
+                pumpkins = Pumpkins,
+                eventClaimed = EventClaimed,
                 claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
@@ -1057,6 +1183,9 @@ namespace KaraPati
                 claimedSets.Clear();
                 if (s.claimedSets != null) foreach (var id in s.claimedSets) claimedSets.Add(id);
 
+                eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
+                Pumpkins = s.pumpkins;
+                EventClaimed = s.eventClaimed;
                 Level = Mathf.Max(1, s.level);
                 Xp = Mathf.Max(0, s.xp);
                 Storage.Clear();

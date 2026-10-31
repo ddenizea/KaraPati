@@ -100,6 +100,9 @@ namespace KaraPati
         public int level = 1;
         public int xp;
         public List<ReqSave> storage = new List<ReqSave>();
+        public long eventStart;
+        public int pumpkins;
+        public int eventClaimed;
         public List<CellSave> cells = new List<CellSave>();
         public List<OrderSave> orders = new List<OrderSave>();
         public List<KittenSave> kittens = new List<KittenSave>();
@@ -302,6 +305,45 @@ namespace KaraPati
         public static int MaxEnergy(int level) => Mathf.Min(50, 30 + (level - 1) * 2);
         public static int StorageSlots(int level) => Mathf.Min(MaxStorage, 3 + level);
         public static int GoldReward(int level) => 15 * level;
+    }
+
+    public class EventMilestone
+    {
+        public int need;          // total pumpkins
+        public string type;       // gold | energy | stamps | sticker
+        public int amount;
+    }
+
+    /// <summary>Time-limited Halloween event: collect pumpkins from orders and tasks, walk the reward path.</summary>
+    public static class PumpkinEvent
+    {
+        public const string Name = "Balkabağı Şenliği";
+        public const int Days = 7;
+
+        public static readonly EventMilestone[] Path =
+        {
+            new EventMilestone { need = 3, type = "gold", amount = 30 },
+            new EventMilestone { need = 6, type = "energy", amount = 15 },
+            new EventMilestone { need = 10, type = "sticker", amount = 1 },
+            new EventMilestone { need = 15, type = "stamps", amount = 2 },
+            new EventMilestone { need = 20, type = "gold", amount = 60 },
+            new EventMilestone { need = 26, type = "energy", amount = 25 },
+            new EventMilestone { need = 33, type = "sticker", amount = 1 },
+            new EventMilestone { need = 40, type = "stamps", amount = 3 },
+            new EventMilestone { need = 48, type = "gold", amount = 120 },
+            new EventMilestone { need = 56, type = "stamps", amount = 6 },
+        };
+
+        public static string RewardText(EventMilestone m)
+        {
+            switch (m.type)
+            {
+                case "gold": return m.amount + " altın";
+                case "energy": return m.amount + " enerji";
+                case "stamps": return m.amount + " Pati Mührü";
+                default: return "Sürpriz etiket";
+            }
+        }
     }
 
     public static class Ghosts

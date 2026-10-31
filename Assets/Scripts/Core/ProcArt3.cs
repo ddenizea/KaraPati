@@ -116,6 +116,21 @@ namespace KaraPati
             p.Fill(q => S.Circle(q, new Vector2(-0.18f, 0.62f), 0.06f), new Color(1f, 1f, 1f, 0.7f));
         });
 
+        public static Sprite Pumpkin => Make("pumpkin", Size, p =>
+        {
+            var orange = new Color(1f, 0.55f, 0.15f);
+            var dark = new Color(0.85f, 0.4f, 0.08f);
+            p.FillOutlined(q => S.Seg(q, new Vector2(0f, 0.45f), new Vector2(0.08f, 0.78f), 0.08f), new Color(0.35f, 0.6f, 0.25f), 0.04f);
+            p.FillOutlined(q => S.U(S.U(S.Ellipse(q, new Vector2(-0.38f, -0.08f), new Vector2(0.42f, 0.55f)),
+                S.Ellipse(q, new Vector2(0.38f, -0.08f), new Vector2(0.42f, 0.55f))), S.Ellipse(q, new Vector2(0f, -0.08f), new Vector2(0.4f, 0.58f))), orange, 0.06f);
+            p.Fill(q => S.U(S.Ring(S.Ellipse(q, new Vector2(-0.2f, -0.08f), new Vector2(0.2f, 0.55f)), 0.02f),
+                S.Ring(S.Ellipse(q, new Vector2(0.2f, -0.08f), new Vector2(0.2f, 0.55f)), 0.02f)), dark);
+            var face = new Color(0.35f, 0.12f, 0.05f);
+            p.Fill(q => S.U(S.Poly(q, new[] { new Vector2(-0.38f, 0.05f), new Vector2(-0.14f, 0.05f), new Vector2(-0.26f, 0.25f) }),
+                S.Poly(q, new[] { new Vector2(0.14f, 0.05f), new Vector2(0.38f, 0.05f), new Vector2(0.26f, 0.25f) })), face);
+            p.Fill(q => S.I(S.Ellipse(q, new Vector2(0f, -0.3f), new Vector2(0.36f, 0.16f)), q.y + 0.3f), face);
+        });
+
         /// <summary>Icon shown for a clue once it is found.</summary>
         public static Sprite ClueIcon(string id)
         {

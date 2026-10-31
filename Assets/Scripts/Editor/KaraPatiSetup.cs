@@ -44,6 +44,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/+10 Balkabağı (Play modunda)")]
+        static void Pumpkins()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.AddPumpkins(10);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {
