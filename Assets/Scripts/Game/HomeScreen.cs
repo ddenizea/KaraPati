@@ -20,9 +20,11 @@ namespace KaraPati
         int view = -1;
 
         RectTransform sceneArea;
-        readonly RectTransform[] scenes = new RectTransform[2];
-        readonly Image[] dims = new Image[2];
-        readonly RectTransform[] clueLayers = new RectTransform[2];
+        readonly RectTransform[] scenes = new RectTransform[Story.Chapters.Length];
+        readonly Image[] dims = new Image[Story.Chapters.Length];
+        readonly RectTransform[] clueLayers = new RectTransform[Story.Chapters.Length];
+        readonly ChapterScene[] extra = new ChapterScene[Story.Chapters.Length];
+        static readonly string[] sceneNames = { "Shop", "Cellar", "Garden", "Town", "Tower", "Realm" };
         RectTransform ghostLayer;
 
         // shop (chapter 1)
@@ -79,6 +81,12 @@ namespace KaraPati
             sceneArea = UIKit.Section(root, "Scene", 272f, 940f);
             scenes[0] = BuildShop(sceneArea);
             scenes[1] = BuildCellar(sceneArea);
+            for (int i = 2; i < scenes.Length; i++)
+            {
+                extra[i] = ChapterScenes.Build(i, NewScene(i < sceneNames.Length ? sceneNames[i] : "Chapter" + i), MakeCatTappable);
+                scenes[i] = extra[i].root;
+                dims[i] = extra[i].dim;
+            }
             for (int i = 0; i < scenes.Length; i++) BuildClues(i);
 
             // investigation buttons on top of the scene
@@ -453,6 +461,7 @@ namespace KaraPati
             bool justDid = animate && shownDone >= 0 && done > shownDone;
             ApplyShop(done);
             ApplyCellar(done);
+            for (int i = 2; i < extra.Length; i++) extra[i]?.Apply(done, i);
             if (justDid) HighlightTask(Story.TaskAt(done - 1).id);
             shownDone = done;
 
@@ -563,7 +572,10 @@ namespace KaraPati
                 case "daire": return circle.transform;
                 case "portre": return portraitArt.transform.GetChild(0);
                 case "ayna": return mirror.transform;
-                default: return null;
+                default:
+                    foreach (var e in extra)
+                        if (e != null && e.targets.TryGetValue(id, out var tr)) return tr;
+                    return null;
             }
         }
 
@@ -580,7 +592,7 @@ namespace KaraPati
             FX.Burst(scene, local, UIKit.Orange, 12);
         }
 
-        static Sprite TaskIcon(string id)
+        Sprite TaskIcon(string id)
         {
             switch (id)
             {
@@ -599,7 +611,11 @@ namespace KaraPati
                 case "zincir": return ProcArt.Chain;
                 case "daire": return ProcArt.MagicCircle;
                 case "portre": return ProcArt.WitchItem("w_sapka");
-                default: return ProcArt.Mirror(true);
+                case "ayna": return ProcArt.Mirror(true);
+                default:
+                    foreach (var e in extra)
+                        if (e != null && e.icons.TryGetValue(id, out var sp)) return sp;
+                    return ProcArt.Sparkle;
             }
         }
 
@@ -615,7 +631,7 @@ namespace KaraPati
             {
                 var row = Row(0);
                 bool last = view == Story.Chapters.Length - 1;
-                string msg = last ? "Bölüm tamamlandı!\nBölüm 3: Dolunay - yakında" : "Bölüm tamamlandı!\nSıradaki bölüm için > düğmesine bas.";
+                string msg = last ? "Hikâye tamamlandı! Cadı Hanım evinde.\nYeni maceralar yakında..." : "Bölüm tamamlandı!\nSıradaki bölüm için > düğmesine bas.";
                 var txt = UIKit.Txt("Done", row, msg, 34, UIKit.Cream);
                 UIKit.Stretch(txt.rectTransform, 20f, 20f);
                 return;
@@ -700,6 +716,8 @@ namespace KaraPati
                 circleGlow.color = new Color(0.7f, 0.4f, 1f, 0.45f + Mathf.Sin(t * 2f) * 0.12f);
             if (karaPati && GM != null && Story.IsDone("yatak", GM.TasksDone))
                 karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
+
+            if (view >= 0 && view < extra.Length && extra[view] != null) extra[view].tick?.Invoke(t);
 
             // clue twinkle; the eye makes waiting clues pulse brightly
             bool eye = t < eyeUntil;

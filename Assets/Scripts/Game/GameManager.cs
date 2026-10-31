@@ -526,6 +526,18 @@ namespace KaraPati
             return true;
         }
 
+        /// <summary>Editor test: jump to the next chapter's start (on the last chapter: one task before the finale).</summary>
+        public void DebugSkipChapter()
+        {
+            int ch = Story.CurrentChapter(TasksDone);
+            if (ch < Story.Chapters.Length - 1) TasksDone = Story.ChapterStart(ch + 1);
+            else TasksDone = Mathf.Max(TasksDone, Story.TotalTasks - 1);
+            Save();
+            if (!OnBoard) home.ShowChapter(Story.CurrentChapter(TasksDone));
+            home.Refresh(false);
+            Toast(Story.Chapters[Story.CurrentChapter(TasksDone)].name, UIKit.Orange);
+        }
+
         public void DebugResetDaily()
         {
             lastDailyDay = -1;
@@ -585,6 +597,8 @@ namespace KaraPati
 
         static Sprite Portrait(string speaker)
         {
+            if (speaker == "Cadı Hanım") return ProcArt.Witch;
+            if (speaker == "Gölge") return ProcArt.SideCat(0, 4);
             int gi = Array.IndexOf(Ghosts.Names, speaker);
             return gi >= 0 ? ProcArt.Ghost(gi) : ProcArt.KaraPatiHead;
         }
@@ -625,12 +639,28 @@ namespace KaraPati
                                 home.ShowChapter(chapter + 1);
                                 Toast(Story.Chapters[chapter + 1].name + " açıldı!", UIKit.Orange, 4f);
                             }
+                            else PlayFinale(0);
                         });
                     }
                     else if (Stamps < Story.TaskAt(TasksDone).cost && TasksDone <= 2) Toast(Story.FirstBoardHint, UIKit.Orange, 4.5f);
                     else if (HasNewClue()) Toast("Göz düğmesine bas: yeni bir ipucu belirdi!", UIKit.Orange, 4f);
                 });
             }));
+        }
+
+        // the whole story is done: a short epilogue, then a big reward
+        void PlayFinale(int i)
+        {
+            if (i < Story.Finale.Length)
+            {
+                ShowDialog(Story.Finale[i][0], Story.Finale[i][1], () => PlayFinale(i + 1));
+                return;
+            }
+            AddGold(Story.FinaleGold);
+            AddStamps(Story.FinaleStamps);
+            Save();
+            FX.Burst(Root, new Vector2(0f, 200f), UIKit.Orange, 30);
+            Toast("TEBRİKLER! Hikâyeyi bitirdin: +" + Story.FinaleGold + " altın, +" + Story.FinaleStamps + " Pati Mührü", UIKit.Orange, 6f);
         }
 
         bool HasNewClue()

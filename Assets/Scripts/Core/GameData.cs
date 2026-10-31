@@ -181,6 +181,18 @@ namespace KaraPati
             "Cadı ortadan kayboldu, dükkân da toz içinde kaldı. Hayaletlere iksir malzemesi verip Pati Mührü kazanalım, " +
             "dükkânı adım adım toparlayalım. İlk iş: şu örümcek ağları!";
 
+        /// <summary>Epilogue after the very last chapter.</summary>
+        public static readonly string[][] Finale =
+        {
+            new[] { "Cadı Hanım", "Dükkânım! Ne kadar güzel olmuş... Kara Pati, hayaletler, sizi çok özledim." },
+            new[] { "Gölge", "Ben de... Beni unuttun sandım. Yeni kedi gelince aynaya küstüm. Özür dilerim." },
+            new[] { "Cadı Hanım", "Seni hiç unutmadım Gölge. Afişleri hâlâ saklıyorum, bak!" },
+            new[] { "Kara Pati", "Dükkânda iki kedilik yer var. Hatta yavrularla beraber... bir sürü kedilik!" },
+            new[] { "Cadı Hanım", "O zaman Kara Pati'nin İksir Dükkânı yeniden açılıyor! Bu bir son değil, yeni bir başlangıç." },
+        };
+
+        public const int FinaleGold = 300, FinaleStamps = 10;
+
         public const string FirstBoardHint = "Mühür bitti! 'Dükkânı Aç'a bas, hayaletlerin siparişlerini hazırla.";
 
         public static readonly Chapter[] Chapters =
@@ -233,6 +245,102 @@ namespace KaraPati
                         line = "Ayna titredi ve camın ardında bir yüz belirdi... Cadı! Aynanın içinde!" },
                 }
             },
+            new Chapter
+            {
+                id = "bahce", name = "Bölüm 3: Dolunay Bahçesi",
+                endLine = "Dolunay doğdu ve ayin başladı... ama aynadan simsiyah, dev bir kedi fırladı! Pati izlerinin sahibi oymuş. Cadıyı da kapıp aynaya geri daldı. Rüzgârda bir fısıltı: 'Hayalet Kasabası'na git...'",
+                tasks = new[]
+                {
+                    new StoryTask { id = "b_kapi", title = "Bahçe kapısını aç", cost = 3, speaker = "Kara Pati",
+                        line = "Dükkânın arkasında koca bir bahçe varmış! Cadı ayin için burayı hazırlıyormuş." },
+                    new StoryTask { id = "b_ot", title = "Yabani otları biç", cost = 3, speaker = "Kara Pati",
+                        line = "Otların arasında yine o kocaman pati izleri... Biri burada dolaşıyor." },
+                    new StoryTask { id = "b_cesme", title = "Çeşmeyi çalıştır", cost = 4, speaker = "Minik Boo",
+                        line = "Su şırıl şırıl! Ayin için ay ışığını yansıtacak su lazımmış, kitapta öyle yazıyor." },
+                    new StoryTask { id = "b_cicek", title = "Ay çiçeklerini dik", cost = 3, speaker = "Bayan Fısıltı",
+                        line = "Ay çiçekleri sadece dolunayda açar canım. Cadı onları hep buraya dikerdi." },
+                    new StoryTask { id = "b_korkuluk", title = "Korkuluğu giydir", cost = 4, speaker = "Kaptan Pus",
+                        line = "Ahoy! Korkuluğa cadının eski şapkasını giydirdik. Kargalar artık bize selam veriyor!" },
+                    new StoryTask { id = "b_bal", title = "Balkabağı tarlasını düzelt", cost = 4, speaker = "Kara Pati",
+                        line = "Balkabakları tombul tombul! Hayaletler şenlikte bunlara bayılıyor." },
+                    new StoryTask { id = "b_fener", title = "Ateşböceği fenerlerini as", cost = 5, speaker = "Leydi Ürperti",
+                        line = "Ateşböcekleri fenerlere doldu. Ne romantik... ama çalılarda iki sarı göz parladı!" },
+                    new StoryTask { id = "b_kadran", title = "Ay kadranını kur", cost = 5, speaker = "Kara Pati",
+                        line = "Kadran kuruldu. Dolunay tam tepede. Ayna parlıyor... Hazırım cadı hanım!" },
+                }
+            },
+            new Chapter
+            {
+                id = "kasaba", name = "Bölüm 4: Hayalet Kasabası",
+                endLine = "Çan çaldı ve kasabadaki bütün hayaletler aynı yönü gösterdi: tepedeki Kayıp Kule. 'Aynalar Diyarı'nın kapısı orada,' dedi Profesör Uğultu.",
+                tasks = new[]
+                {
+                    new StoryTask { id = "k_kopru", title = "Sisli köprüyü onar", cost = 3, speaker = "Sis Teyze",
+                        line = "Hoş geldin canım, Hayalet Kasabası'na! Köprü sisten yapılmıştı, hep çökerdi zaten." },
+                    new StoryTask { id = "k_lamba", title = "Sokak lambalarını yak", cost = 4, speaker = "Kont Gıcırtı",
+                        line = "Gıcır! Lambalar yandı. Bu kasabada en son ışık yüz yıl önce yanmıştı." },
+                    new StoryTask { id = "k_tezgah", title = "Pazar tezgâhlarını kur", cost = 4, speaker = "Bayan Fısıltı",
+                        line = "Pazar yeniden kuruldu! Satıcılardan biri o dev kediyi tanıyor: adı Gölge'ymiş." },
+                    new StoryTask { id = "k_cesme", title = "Meydan çeşmesini temizle", cost = 4, speaker = "Minik Boo",
+                        line = "Çeşmeden bir şişe çıktı, içinde not var: 'Gölge, cadının ilk kedisiydi.' Vay!" },
+                    new StoryTask { id = "k_ev", title = "Evlerin camlarını sil", cost = 5, speaker = "Leydi Ürperti",
+                        line = "Pencereler ışıl ışıl. Gölge yıllar önce buralarda yaşarmış, yalnız ve küskün..." },
+                    new StoryTask { id = "k_bayrak", title = "Şenlik bayraklarını as", cost = 4, speaker = "Minik Boo",
+                        line = "Bayraklar asıldı! Kasaba ilk kez şenlik havasında. Herkes sana yardım edecek Kara Pati!" },
+                    new StoryTask { id = "k_saat", title = "Saat kulesini onar", cost = 5, speaker = "Profesör Uğultu",
+                        line = "Saat tekrar işliyor delikanlı. Akrep dolunayı, yelkovan da tepedeki kuleyi gösteriyor." },
+                    new StoryTask { id = "k_can", title = "Kule çanını çal", cost = 6, speaker = "Kaptan Pus",
+                        line = "DONG! Bu çan sadece kayıp bir dost geri dönecekken çalarmış. Rotamız belli!" },
+                }
+            },
+            new Chapter
+            {
+                id = "kule", name = "Bölüm 5: Kayıp Kule",
+                endLine = "Geçit dairesi parladı ve mor bir kapı açıldı: Aynalar Diyarı! Kara Pati derin bir nefes aldı: 'Geliyorum cadı hanım. Gölge... seninle de konuşacağız.'",
+                tasks = new[]
+                {
+                    new StoryTask { id = "t_merdiven", title = "Döner merdiveni sağlamlaştır", cost = 4, speaker = "Kara Pati",
+                        line = "Bu kule cadının gözlemeviymiş! Merdivenler gıcırdıyor ama artık sağlam." },
+                    new StoryTask { id = "t_kitap", title = "Kitaplığı düzenle", cost = 4, speaker = "Profesör Uğultu",
+                        line = "Şu kitaba bak: 'Kediler ve Kıskançlık'. Altı çizili satır: 'Unutulduğunu sanan kedi, gölgeye dönüşür.'" },
+                    new StoryTask { id = "t_harita", title = "Yıldız haritasını as", cost = 5, speaker = "Kara Pati",
+                        line = "Haritadaki yıldızlar bir kedi şeklinde dizilmiş... Gölge'nin takımyıldızı!" },
+                    new StoryTask { id = "t_teleskop", title = "Teleskobu onar", cost = 5, speaker = "Leydi Ürperti",
+                        line = "Teleskopla aya baktım tatlım: ayın içinde bir kafes ve içinde cadı hanım var!" },
+                    new StoryTask { id = "t_kure", title = "Kristal küreyi parlat", cost = 5, speaker = "Sis Teyze",
+                        line = "Kürede Gölge görünüyor canım. Kızgın değil... sadece çok, çok yalnız." },
+                    new StoryTask { id = "t_kazan", title = "Kule kazanını yak", cost = 5, speaker = "Minik Boo",
+                        line = "Kazan mor fokurduyor! Geçit iksiri neredeyse hazır, son bir adım kaldı." },
+                    new StoryTask { id = "t_pencere", title = "Ay penceresini aç", cost = 6, speaker = "Kaptan Pus",
+                        line = "Ay ışığı içeri doldu! Pusula ilk kez dümdüz gösteriyor: aynanın içine!" },
+                    new StoryTask { id = "t_gecit", title = "Geçit dairesini çiz", cost = 6, speaker = "Kara Pati",
+                        line = "Daireyi pati izimle mühürledim. Anahtar kedideymiş, hatırladın mı? Hep bendeymiş." },
+                }
+            },
+            new Chapter
+            {
+                id = "diyar", name = "Bölüm 6: Aynalar Diyarı",
+                endLine = "Kafes açıldı! Cadı hanım, Gölge ve Kara Pati birlikte geçitten süzüldü... ve dükkânın sıcak ışığına geri döndüler.",
+                tasks = new[]
+                {
+                    new StoryTask { id = "d_kopru", title = "Kristal köprüyü kur", cost = 4, speaker = "Kara Pati",
+                        line = "Burası Aynalar Diyarı... Her şey mor ve parlak. Köprüyü kristallerle tamamladım." },
+                    new StoryTask { id = "d_fener", title = "Yıldız fenerlerini yak", cost = 5, speaker = "Sis Teyze",
+                        line = "Fenerler yandı canım! Biz hayaletler de geldik, yalnız değilsin." },
+                    new StoryTask { id = "d_ayna", title = "Kırık aynaları birleştir", cost = 5, speaker = "Profesör Uğultu",
+                        line = "Aynalar birleşince Gölge'nin anıları göründü: cadıyla oynadığı mutlu günler." },
+                    new StoryTask { id = "d_yol", title = "Pati izli yolu takip et", cost = 6, speaker = "Kara Pati",
+                        line = "İzler bir tahta çıkıyor. Tahtta Gölge oturuyor. Dev ama... ürkek bakıyor." },
+                    new StoryTask { id = "d_yastik", title = "Gölge için yastık bırak", cost = 6, speaker = "Gölge",
+                        line = "Bu yastık... benim eski yastığım mı? Cadı onu saklamış mı? Mrr..." },
+                    new StoryTask { id = "d_yumak", title = "Gölge'yle yumak oyna", cost = 6, speaker = "Gölge",
+                        line = "Hah! Yakaladım! Uzun zamandır kimse benimle oynamamıştı, küçük kara kedi." },
+                    new StoryTask { id = "d_kafes", title = "Kafesin kilidini aç", cost = 7, speaker = "Cadı Hanım",
+                        line = "Kara Pati! Beni buldun! Gölge'yi de yumuşatmışsın, ah benim akıllı kedim." },
+                    new StoryTask { id = "d_eve", title = "Herkesle eve dön", cost = 8, speaker = "Gölge",
+                        line = "Ben de gelebilir miyim? Söz, artık aynalara saklanmak yok. Sadece... bir yastık lazım." },
+                }
+            },
         };
 
         public static readonly Clue[] Clues =
@@ -253,6 +361,24 @@ namespace KaraPati
                 text = "Büyü dairesinden aynaya doğru uzanan parlak pati izleri. Dev kedi buradan geçmiş!" },
             new Clue { id = "c2_mektup", chapter = 1, x = 170f, y = 380f, afterTasks = 15, title = "Mühürlü Mektup",
                 text = "Portrenin arkasında bir mektup: 'Aynayı onaran, beni geri getirir. -C.'" },
+            new Clue { id = "c3_iz", chapter = 2, x = 120f, y = -430f, afterTasks = 18, title = "Çamurdaki Dev İz",
+                text = "Bahçedeki çamurda kocaman bir pati izi. Kenarında siyah tüyler var. Bu kedi benden üç kat büyük!" },
+            new Clue { id = "c3_tuy", chapter = 2, x = -300f, y = -270f, afterTasks = 20, title = "Siyah Tüy Yumağı",
+                text = "Korkuluğun dibinde simsiyah tüyler. Dokununca hafifçe titriyorlar... sanki gölgeden yapılmışlar." },
+            new Clue { id = "c3_not", chapter = 2, x = 430f, y = -20f, afterTasks = 23, title = "Yırtık Ayin Notu",
+                text = "'Dolunayda ayna açılırsa, içeride bekleyen de dışarı çıkar. Dikkat et.' Hmm, keşke daha önce okusaydım." },
+            new Clue { id = "c4_afis", chapter = 3, x = 390f, y = 40f, afterTasks = 26, title = "Eski Afiş",
+                text = "Solmuş bir afiş: 'Kayıp kedi: Gölge. Siyah, iri, çok sevimli. Bulana kocaman teşekkür. -Cadı'" },
+            new Clue { id = "c4_foto", chapter = 3, x = -170f, y = -130f, afterTasks = 29, title = "Soluk Fotoğraf",
+                text = "Genç cadı kucağında koca siyah bir kediyle gülümsüyor. Arkasında: 'Gölge ile, ilk dükkân günü.'" },
+            new Clue { id = "c5_gunluk", chapter = 4, x = 330f, y = 30f, afterTasks = 35, title = "Cadının Son Notu",
+                text = "'Gölge kaybolduğunda çok ağladım. Sonra Kara Pati geldi. Gölge bunu duyunca küstü sanırım...'" },
+            new Clue { id = "c5_tasma", chapter = 4, x = -330f, y = -330f, afterTasks = 38, title = "Kocaman Tasma",
+                text = "Yerde dev bir tasma. Üzerinde 'G.' harfi. Benim 'K.P.' tasmamın kocaman bir ikizi gibi." },
+            new Clue { id = "c6_oyuncak", chapter = 5, x = -160f, y = -340f, afterTasks = 43, title = "Eski Oyuncak Fare",
+                text = "Yıpranmış bir oyuncak fare. Gölge bunu yıllardır saklamış. Demek ki hep eve dönmek istemiş." },
+            new Clue { id = "c6_mektup", chapter = 5, x = 430f, y = -40f, afterTasks = 46, title = "Gölge'nin Mektubu",
+                text = "Pati izleriyle yazılmış: 'Beni unuttuklarını sandım. Belki... yeni kedi ile arkadaş olabiliriz?'" },
         };
 
         public static int TotalTasks

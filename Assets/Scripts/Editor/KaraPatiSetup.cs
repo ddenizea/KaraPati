@@ -58,6 +58,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Sonraki Bölüme Atla (Play modunda)")]
+        static void SkipChapter()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.DebugSkipChapter();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {

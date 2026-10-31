@@ -158,7 +158,7 @@ namespace KaraPati
                 case "c2_takvim": return Moon;
                 case "c2_tasma": return Coin;
                 case "c2_mektup": return WitchItem("w_mektup");
-                default: return PawPrint;
+                default: return ExtraClueIcon(id);
             }
         }
     }
