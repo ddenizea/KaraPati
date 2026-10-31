@@ -42,6 +42,9 @@ namespace KaraPati
         public int Pumpkins { get; private set; }
         public int EventClaimed { get; private set; }
         long eventStart;
+        public int DailyIndex { get; private set; }
+        int lastDailyDay = -1;
+        public bool DailyAvailable => lastDailyDay != DailyRewards.Today;
         public bool EventActive => DateTime.UtcNow.Ticks < EventEnd;
         long EventEnd => eventStart + TimeSpan.FromDays(PumpkinEvent.Days).Ticks;
         public string EventTimeLeftText
@@ -66,7 +69,7 @@ namespace KaraPati
         public OrderPanel Orders { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -79,6 +82,7 @@ namespace KaraPati
         Image levelRing;
         StoragePanel storagePanel;
         EventPanel eventPanel;
+        DailyPanel dailyPanel;
         RectTransform eventBtn;
         Text eventTimerText;
         GameObject eventBadge;
@@ -284,6 +288,10 @@ namespace KaraPati
             var eventRt = UIKit.Rect("EventPanel", canvasRt);
             eventPanel = eventRt.gameObject.AddComponent<EventPanel>();
             eventPanel.Build();
+
+            var dailyRt = UIKit.Rect("DailyPanel", canvasRt);
+            dailyPanel = dailyRt.gameObject.AddComponent<DailyPanel>();
+            dailyPanel.Build();
 
             BuildDialog(canvasRt);
 
@@ -494,6 +502,41 @@ namespace KaraPati
         }
 
         public void OpenAlbum() => album.Open();
+        public void OpenDaily() => dailyPanel.Open();
+        public void OnDailyClosed() { if (!OnBoard) home.Refresh(false); }
+
+        public bool ClaimDaily()
+        {
+            if (!DailyAvailable) return false;
+            var m = DailyRewards.Days[DailyIndex % DailyRewards.Days.Length];
+            switch (m.type)
+            {
+                case "gold": AddGold(m.amount); break;
+                case "energy": Energy += m.amount; RefreshHud(); break;
+                case "stamps": AddStamps(m.amount); break;
+                default:
+                    AddGold(m.amount);
+                    if (!GiveRandomMissingAny()) AddGold(50);
+                    break;
+            }
+            Toast("Günlük ödül: " + DailyRewards.Text(m), UIKit.Orange);
+            lastDailyDay = DailyRewards.Today;
+            DailyIndex = (DailyIndex + 1) % DailyRewards.Days.Length;
+            Save();
+            return true;
+        }
+
+        public void DebugResetDaily()
+        {
+            lastDailyDay = -1;
+            if (!OnBoard) home.Refresh(false);
+            dailyPanel.Open();
+        }
+
+        void MaybeShowDaily()
+        {
+            if (DailyAvailable && !OnBoard) StartCoroutine(After(0.6f, () => { if (!ModalOpen && DailyAvailable) dailyPanel.Open(); }));
+        }
         public void OpenCaseFile() => caseFile.Open();
 
         // ------------------------------------------------------------------ clues
@@ -1091,6 +1134,8 @@ namespace KaraPati
             Storage.Clear();
             Pumpkins = 0;
             EventClaimed = 0;
+            DailyIndex = 0;
+            lastDailyDay = -1;
             eventStart = DateTime.UtcNow.Ticks;
             Energy = MaxEnergy;
             energyTimer = 0f;
@@ -1127,7 +1172,7 @@ namespace KaraPati
         void ShowIntro()
         {
             if (introSeen) return;
-            ShowDialog("Kara Pati", Story.IntroLine, () => { introSeen = true; MarkDirty(); });
+            ShowDialog("Kara Pati", Story.IntroLine, () => { introSeen = true; MarkDirty(); MaybeShowDaily(); });
         }
 
         void Save()
@@ -1152,6 +1197,8 @@ namespace KaraPati
                 eventStart = eventStart,
                 pumpkins = Pumpkins,
                 eventClaimed = EventClaimed,
+                dailyIndex = DailyIndex,
+                lastDailyDay = lastDailyDay,
                 claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
@@ -1186,6 +1233,8 @@ namespace KaraPati
                 eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
                 Pumpkins = s.pumpkins;
                 EventClaimed = s.eventClaimed;
+                DailyIndex = Mathf.Clamp(s.dailyIndex, 0, DailyRewards.Days.Length - 1);
+                lastDailyDay = s.lastDailyDay;
                 Level = Mathf.Max(1, s.level);
                 Xp = Mathf.Max(0, s.xp);
                 Storage.Clear();
@@ -1208,7 +1257,11 @@ namespace KaraPati
                 ShowInfo(null);
                 home.Refresh(false);
                 if (!introSeen) ShowIntro();
-                else Toast("Tekrar hoş geldin, Kara Pati!");
+                else
+                {
+                    Toast("Tekrar hoş geldin, Kara Pati!");
+                    MaybeShowDaily();
+                }
             }
             catch (Exception e)
             {

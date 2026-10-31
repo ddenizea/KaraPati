@@ -103,6 +103,8 @@ namespace KaraPati
         public long eventStart;
         public int pumpkins;
         public int eventClaimed;
+        public int dailyIndex;
+        public int lastDailyDay = -1;
         public List<CellSave> cells = new List<CellSave>();
         public List<OrderSave> orders = new List<OrderSave>();
         public List<KittenSave> kittens = new List<KittenSave>();
@@ -344,6 +346,26 @@ namespace KaraPati
                 default: return "Sürpriz etiket";
             }
         }
+    }
+
+    /// <summary>7-day login calendar. The day only moves forward when you claim; it loops after day 7.</summary>
+    public static class DailyRewards
+    {
+        public static readonly EventMilestone[] Days =
+        {
+            new EventMilestone { type = "gold", amount = 20 },
+            new EventMilestone { type = "energy", amount = 10 },
+            new EventMilestone { type = "stamps", amount = 1 },
+            new EventMilestone { type = "gold", amount = 40 },
+            new EventMilestone { type = "energy", amount = 20 },
+            new EventMilestone { type = "stamps", amount = 2 },
+            new EventMilestone { type = "sticker", amount = 100 },   // sticker + 100 gold
+        };
+
+        public static int Today => (int)(DateTime.Now.Date - new DateTime(2020, 1, 1)).TotalDays;
+
+        public static string Text(EventMilestone m) =>
+            m.type == "sticker" ? m.amount + " altın + etiket" : PumpkinEvent.RewardText(m);
     }
 
     public static class Ghosts

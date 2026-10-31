@@ -51,6 +51,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Günlük ödülü sıfırla (Play modunda)")]
+        static void ResetDaily()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.DebugResetDaily();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {

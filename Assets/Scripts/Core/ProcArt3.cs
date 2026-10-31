@@ -131,6 +131,22 @@ namespace KaraPati
             p.Fill(q => S.I(S.Ellipse(q, new Vector2(0f, -0.3f), new Vector2(0.36f, 0.16f)), q.y + 0.3f), face);
         });
 
+        public static Sprite Calendar => Make("ui_calendar", Size, p =>
+        {
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.72f, 0.7f), 0.12f), new Color(1f, 0.97f, 0.9f), 0.06f);
+            p.Fill(q => S.I(S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.72f, 0.7f), 0.12f), -(q.y - 0.32f)), new Color(0.88f, 0.3f, 0.35f));
+            p.FillOutlined(q => S.U(S.Box(q, new Vector2(-0.35f, 0.68f), new Vector2(0.07f, 0.16f), 0.05f), S.Box(q, new Vector2(0.35f, 0.68f), new Vector2(0.07f, 0.16f), 0.05f)),
+                new Color(0.6f, 0.6f, 0.66f), 0.04f);
+            for (int r = 0; r < 2; r++)
+            for (int c = 0; c < 3; c++)
+            {
+                var pc = new Vector2(-0.36f + c * 0.36f, 0.05f - r * 0.36f);
+                bool star = r == 1 && c == 2;
+                if (star) p.Fill(S.Xf(q => S.Poly(q, S.Star(5, 1f, 0.45f)), pc, 0.15f), new Color(1f, 0.75f, 0.25f));
+                else p.Fill(q => S.Box(q, pc, new Vector2(0.1f, 0.1f), 0.03f), new Color(0.75f, 0.68f, 0.6f));
+            }
+        });
+
         /// <summary>Icon shown for a clue once it is found.</summary>
         public static Sprite ClueIcon(string id)
         {

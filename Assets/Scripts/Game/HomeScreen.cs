@@ -36,7 +36,7 @@ namespace KaraPati
         readonly List<Image> candleGlows = new List<Image>();
 
         RectTransform taskList;
-        Image albumBadge, caseBadge;
+        Image albumBadge, caseBadge, dailyBadge;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -88,6 +88,11 @@ namespace KaraPati
             caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(caseBadgeText.rectTransform);
             RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
+            var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
+            dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var db = UIKit.Txt("!", dailyBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(db.rectTransform);
 
             // tasks
             var tasks = UIKit.Section(root, "Tasks", 1228f, 515f);
@@ -455,6 +460,7 @@ namespace KaraPati
             RefreshGhosts();
             RefreshClues();
             albumBadge.gameObject.SetActive(GM.AnyClaimableSet);
+            dailyBadge.gameObject.SetActive(GM.DailyAvailable);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);
