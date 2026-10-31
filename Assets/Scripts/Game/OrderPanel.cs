@@ -161,13 +161,16 @@ namespace KaraPati
         public void Refresh()
         {
             if (GM == null || GM.Board == null) return;
+            var needed = new HashSet<Vector2Int>();
             for (int i = 0; i < SlotCount; i++)
             {
                 var o = orders[i];
                 var card = cards[i];
                 if (o == null) { ready[i] = false; continue; }
                 var per = new List<bool>();
-                ready[i] = GM.Board.TryCollect(o.reqs, null, per);
+                var found = new List<Vector2Int>();
+                ready[i] = GM.Board.TryCollect(o.reqs, found, per);
+                foreach (var c in found) needed.Add(c);
                 for (int k = 0; k < o.reqs.Count && k < 2; k++)
                 {
                     card.checks[k].gameObject.SetActive(per[k]);
@@ -177,6 +180,7 @@ namespace KaraPati
                 card.give.interactable = ready[i];
                 if (!ready[i]) card.give.transform.localScale = Vector3.one;
             }
+            GM.Board.MarkNeeded(needed);
         }
 
         void Deliver(int i)

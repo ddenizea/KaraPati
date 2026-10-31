@@ -3,17 +3,26 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>Sticker collection album: three sets, each pays out once when completed.</summary>
+    /// <summary>
+    /// Sticker album. Overview: a grand prize for completing every set plus one card per set with its progress.
+    /// Tap a card to open the set's stickers.
+    /// </summary>
     public class AlbumPanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
 
-        RectTransform panel, grid;
-        Text progress;
-        Button claim;
-        Image claimImg;
-        readonly Button[] tabs = new Button[3];
+        RectTransform panel, overview, detail, grid;
+        Text detailTitle, progress, grandText;
+        RectTransform grandFill;
+        Button claim, grandClaim;
+        Image claimImg, grandImg;
         int setIndex;
+        const float GrandBarW = 620f;
+
+        static readonly Color[] setColors =
+        {
+            new Color(0.45f, 0.62f, 0.95f), new Color(0.95f, 0.6f, 0.3f), new Color(0.65f, 0.4f, 0.9f)
+        };
 
         public bool IsOpen => gameObject.activeSelf;
 
@@ -22,54 +31,186 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.7f);
+            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.75f);
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
 
-            var bg = UIKit.Img("Panel", root, ProcArt.Rounded, new Color(0.22f, 0.15f, 0.31f, 0.99f), true);
+            var bg = UIKit.Img("Panel", root, ProcArt.Rounded, new Color(0.24f, 0.17f, 0.36f, 0.99f), true);
             bg.raycastTarget = true;
-            // swallow clicks on the panel itself so they don't bubble up to the dim (which closes)
             bg.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
             panel = bg.rectTransform;
-            panel.At(Vector2.zero, new Vector2(1000f, 1560f));
+            panel.At(Vector2.zero, new Vector2(1000f, 1600f));
 
-            var title = UIKit.Txt("Title", panel, "Etiket Albümü", 52, UIKit.Orange);
+            var moon = UIKit.Img("Moon", panel, ProcArt.Moon, new Color(1f, 1f, 1f, 0.25f));
+            moon.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-170f, -90f), new Vector2(170f, 170f));
+
+            var title = UIKit.Txt("Title", panel, "Etiket Albümü", 54, UIKit.Orange);
             title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -30f), new Vector2(800f, 70f));
+            title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -30f), new Vector2(700f, 74f));
 
-            var close = UIKit.Btn("Close", panel, "X", new Color(0.75f, 0.3f, 0.35f), Close, 44);
+            var close = UIKit.Btn("Close", panel, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
             ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-24f, -24f), new Vector2(90f, 90f));
 
-            for (int i = 0; i < 3; i++)
+            BuildOverview();
+            BuildDetail();
+            gameObject.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------ overview
+        void BuildOverview()
+        {
+            overview = UIKit.Rect("Overview", panel);
+            UIKit.Stretch(overview, 0f, 0f, 120f, 0f);
+
+            // grand prize scroll
+            var scroll = UIKit.Img("Scroll", overview, ProcArt.Rounded, new Color(0.95f, 0.9f, 0.78f), true);
+            scroll.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -10f), new Vector2(900f, 440f));
+            var ink = new Color(0.45f, 0.25f, 0.15f);
+            var head = UIKit.Txt("Head", scroll.transform, "Tüm setleri tamamla, büyük ödülü kap:", 34, ink, TextAnchor.MiddleCenter, false);
+            head.fontStyle = FontStyle.Bold;
+            head.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -24f), new Vector2(860f, 50f));
+
+            Reward(scroll.transform, ProcArt.Coin, Stickers.GrandGold.ToString(), new Vector2(-250f, -150f));
+            Reward(scroll.transform, ProcArt.Stamp, Stickers.GrandStamps.ToString(), new Vector2(0f, -150f));
+            Reward(scroll.transform, ProcArt.Bolt, Stickers.GrandEnergy.ToString(), new Vector2(250f, -150f));
+
+            var barBg = UIKit.Img("Bar", scroll.transform, ProcArt.Rounded, new Color(0.35f, 0.28f, 0.42f), true);
+            barBg.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -262f), new Vector2(GrandBarW + 12f, 50f));
+            var fill = UIKit.Img("Fill", barBg.transform, ProcArt.Rounded, UIKit.Green, true);
+            grandFill = fill.rectTransform;
+            grandFill.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(6f, 0f), new Vector2(40f, 38f));
+            grandText = UIKit.Txt("Count", barBg.transform, "0/20", 32, Color.white);
+            UIKit.Stretch(grandText.rectTransform);
+            var album = UIKit.Img("AlbumIcon", barBg.transform, ProcArt.AlbumIcon, Color.white);
+            album.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(-10f, 0f), new Vector2(84f, 84f));
+
+            grandClaim = UIKit.Btn("GrandClaim", scroll.transform, "", UIKit.Disabled, ClaimGrand, 32);
+            grandImg = grandClaim.GetComponent<Image>();
+            ((RectTransform)grandClaim.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 22f), new Vector2(520f, 80f));
+        }
+
+        static void Reward(Transform parent, Sprite icon, string amount, Vector2 pos)
+        {
+            var img = UIKit.Img("Reward", parent, icon, Color.white);
+            img.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(pos, new Vector2(110f, 110f));
+            var t = UIKit.Txt("N", img.transform, amount, 36, Color.white);
+            t.fontStyle = FontStyle.Bold;
+            t.rectTransform.At(new Vector2(30f, -40f), new Vector2(120f, 46f));
+        }
+
+        void FillOverview()
+        {
+            for (int i = overview.childCount - 1; i >= 1; i--) Destroy(overview.GetChild(i).gameObject);
+
+            int have = 0, total = 0;
+            foreach (var s in Stickers.Sets) { have += GM.StickerCount(s); total += s.ids.Length; }
+            grandText.text = have + "/" + total;
+            grandFill.sizeDelta = new Vector2(Mathf.Max(40f, GrandBarW * have / total), 38f);
+            if (GM.IsGrandClaimed)
             {
-                int idx = i;
-                tabs[i] = UIKit.Btn("Tab" + i, panel, "", UIKit.PanelDark, () => Show(idx), 26);
-                ((RectTransform)tabs[i].transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f))
-                    .At(new Vector2((i - 1) * 315f, -125f), new Vector2(300f, 100f));
+                grandClaim.Label().text = "Büyük ödül alındı";
+                grandImg.color = UIKit.Disabled;
+                grandClaim.interactable = false;
+            }
+            else
+            {
+                bool ok = have >= total;
+                grandClaim.Label().text = ok ? "Büyük Ödülü Al!" : "Bütün etiketleri topla";
+                grandImg.color = ok ? UIKit.Orange : UIKit.Disabled;
+                grandClaim.interactable = ok;
             }
 
-            grid = UIKit.Rect("Grid", panel);
-            grid.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -250f), new Vector2(900f, 1040f));
+            for (int i = 0; i < Stickers.Sets.Length; i++)
+            {
+                int idx = i;
+                var set = Stickers.Sets[i];
+                var card = UIKit.Img("Set" + i, overview, ProcArt.Rounded, new Color(1f, 0.93f, 0.85f), true);
+                card.raycastTarget = true;
+                var rt = card.rectTransform;
+                rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2((i - 1) * 300f, -490f), new Vector2(280f, 420f));
+                var btn = card.gameObject.AddComponent<Button>();
+                btn.onClick.AddListener(() => ShowSet(idx));
 
-            progress = UIKit.Txt("Progress", panel, "", 34, UIKit.Cream);
+                var strip = UIKit.Img("Strip", rt, ProcArt.Rounded, setColors[i], true);
+                strip.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -12f), new Vector2(256f, 90f));
+                var name = UIKit.Txt("Name", strip.transform, set.name, 30, Color.white);
+                name.fontStyle = FontStyle.Bold;
+                UIKit.Stretch(name.rectTransform, 8f, 8f);
+
+                var cover = UIKit.Img("Cover", rt, ProcArt.Rounded, new Color(0.18f, 0.12f, 0.26f), true);
+                cover.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -112f), new Vector2(256f, 220f));
+                var glow = UIKit.Img("Glow", cover.transform, ProcArt.GlowSprite, new Color(setColors[i].r, setColors[i].g, setColors[i].b, 0.5f));
+                glow.rectTransform.sizeDelta = new Vector2(240f, 240f);
+                var icon = UIKit.Img("Icon", cover.transform, CoverIcon(set.id), Color.white);
+                icon.rectTransform.sizeDelta = new Vector2(170f, 170f);
+
+                int n = GM.StickerCount(set);
+                var bar = UIKit.Img("Bar", rt, ProcArt.Rounded, new Color(0.3f, 0.24f, 0.38f), true);
+                bar.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 26f), new Vector2(240f, 48f));
+                var bfill = UIKit.Img("Fill", bar.transform, ProcArt.Rounded, UIKit.Green, true);
+                bfill.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(4f, 0f), new Vector2(Mathf.Max(30f, 232f * n / set.ids.Length), 40f));
+                bfill.gameObject.SetActive(n > 0);
+                var cnt = UIKit.Txt("Count", bar.transform, n + "/" + set.ids.Length, 30, Color.white);
+                UIKit.Stretch(cnt.rectTransform);
+
+                if (GM.IsSetClaimable(set))
+                {
+                    var badge = UIKit.Img("Badge", rt, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+                    badge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-10f, -10f), new Vector2(56f, 56f));
+                    var bt = UIKit.Txt("!", badge.transform, "!", 38, Color.white);
+                    UIKit.Stretch(bt.rectTransform);
+                }
+                else if (GM.IsSetClaimed(set))
+                {
+                    var ok = UIKit.Img("Done", rt, ProcArt.Check, Color.white);
+                    ok.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-10f, -10f), new Vector2(60f, 60f));
+                }
+            }
+
+            var hint = UIKit.Txt("Hint", overview, "Etiketler siparişlerden, görevlerden ve kedilerden gelir. Bir sete dokun, içine bak.", 26,
+                new Color(1f, 1f, 1f, 0.6f));
+            hint.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -940f), new Vector2(880f, 80f));
+        }
+
+        static Sprite CoverIcon(string setId)
+        {
+            switch (setId)
+            {
+                case "ghosts": return ProcArt.Ghost(2);
+                case "cats": return ProcArt.KaraPatiHead;
+                default: return ProcArt.WitchItem("w_sapka");
+            }
+        }
+
+        // ------------------------------------------------------------------ set detail
+        void BuildDetail()
+        {
+            detail = UIKit.Rect("Detail", panel);
+            UIKit.Stretch(detail, 0f, 0f, 120f, 0f);
+
+            var back = UIKit.Btn("Back", detail, "<", UIKit.PanelDark, () => ShowOverview(), 50);
+            ((RectTransform)back.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -6f), new Vector2(90f, 90f));
+            detailTitle = UIKit.Txt("SetTitle", detail, "", 40, UIKit.Cream);
+            detailTitle.fontStyle = FontStyle.Bold;
+            detailTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -10f), new Vector2(700f, 80f));
+
+            grid = UIKit.Rect("Grid", detail);
+            grid.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -120f), new Vector2(900f, 1040f));
+
+            progress = UIKit.Txt("Progress", detail, "", 34, UIKit.Cream);
             progress.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 150f), new Vector2(900f, 50f));
 
-            claim = UIKit.Btn("Claim", panel, "", UIKit.Disabled, Claim, 32);
+            claim = UIKit.Btn("Claim", detail, "", UIKit.Disabled, Claim, 32);
             claimImg = claim.GetComponent<Image>();
             ((RectTransform)claim.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 40f), new Vector2(760f, 100f));
-
-            gameObject.SetActive(false);
         }
 
         public void Open()
         {
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
-            // jump to the first set that has a reward waiting
-            for (int i = 0; i < Stickers.Sets.Length; i++)
-                if (GM.IsSetClaimable(Stickers.Sets[i])) { setIndex = i; break; }
-            Show(setIndex);
+            ShowOverview();
             Tween.Pop(panel, 0.3f);
         }
 
@@ -79,17 +220,21 @@ namespace KaraPati
             GM.OnAlbumClosed();
         }
 
-        void Show(int i)
+        void ShowOverview()
+        {
+            overview.gameObject.SetActive(true);
+            detail.gameObject.SetActive(false);
+            FillOverview();
+        }
+
+        void ShowSet(int i)
         {
             setIndex = i;
+            overview.gameObject.SetActive(false);
+            detail.gameObject.SetActive(true);
             var set = Stickers.Sets[i];
-
-            for (int k = 0; k < tabs.Length; k++)
-            {
-                var s = Stickers.Sets[k];
-                tabs[k].Label().text = s.name + "\n" + GM.StickerCount(s) + "/" + s.ids.Length;
-                tabs[k].GetComponent<Image>().color = k == i ? UIKit.Orange : UIKit.PanelDark;
-            }
+            detailTitle.text = set.name;
+            detailTitle.color = setColors[i];
 
             for (int c = grid.childCount - 1; c >= 0; c--) Destroy(grid.GetChild(c).gameObject);
             for (int n = 0; n < set.ids.Length; n++)
@@ -121,7 +266,7 @@ namespace KaraPati
             }
 
             int have = GM.StickerCount(set);
-            progress.text = set.name + ": " + have + "/" + set.ids.Length;
+            progress.text = have + "/" + set.ids.Length + " etiket";
             string reward = Stickers.SetRewardGold + " altın + " + Stickers.SetRewardStamps + " mühür";
             if (GM.IsSetClaimed(set))
             {
@@ -147,8 +292,17 @@ namespace KaraPati
         {
             if (GM.ClaimSet(Stickers.Sets[setIndex]))
             {
-                Show(setIndex);
+                ShowSet(setIndex);
                 Tween.Punch(claim.transform, 0.12f, 0.3f);
+            }
+        }
+
+        void ClaimGrand()
+        {
+            if (GM.ClaimGrand())
+            {
+                FillOverview();
+                Tween.Punch(grandClaim.transform, 0.15f, 0.35f);
             }
         }
     }

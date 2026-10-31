@@ -158,6 +158,15 @@ namespace KaraPati
             return all;
         }
 
+        public void MarkNeeded(HashSet<Vector2Int> cells)
+        {
+            foreach (var c in AllCells())
+            {
+                var v = views[c.x, c.y];
+                if (v) v.SetNeeded(cells.Contains(c));
+            }
+        }
+
         // ---------------------------------------------------------------- mutation
         public ItemView Set(Vector2Int c, ItemData d, bool pop = false)
         {

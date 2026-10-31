@@ -40,16 +40,18 @@ namespace KaraPati
         bool introSeen;
         readonly HashSet<string> stickers = new HashSet<string>();
         readonly HashSet<string> claimedSets = new HashSet<string>();
+        readonly HashSet<string> clues = new HashSet<string>();
 
         public RectTransform Root { get; private set; }
         public BoardController Board { get; private set; }
         public OrderPanel Orders { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
+        CaseFilePanel caseFile;
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
@@ -236,6 +238,10 @@ namespace KaraPati
             album = albumRt.gameObject.AddComponent<AlbumPanel>();
             album.Build();
 
+            var caseRt = UIKit.Rect("CaseFile", canvasRt);
+            caseFile = caseRt.gameObject.AddComponent<CaseFilePanel>();
+            caseFile.Build();
+
             BuildDialog(canvasRt);
 
             Cats = gameObject.AddComponent<KittenChaos>();
@@ -397,6 +403,23 @@ namespace KaraPati
         }
 
         public void OpenAlbum() => album.Open();
+        public void OpenCaseFile() => caseFile.Open();
+
+        // ------------------------------------------------------------------ clues
+        public bool HasClue(string id) => clues.Contains(id);
+
+        public void FindClue(Clue c)
+        {
+            if (clues.Contains(c.id)) return;
+            clues.Add(c.id);
+            AddStamps(1);
+            Save();
+            ShowDialog(c.title, c.text, () =>
+            {
+                Toast("İpucu Cadı Dosyası'na eklendi: +1 Pati Mührü", UIKit.Orange);
+                home.Refresh(false);
+            });
+        }
         public void OnAlbumClosed() { if (!OnBoard) home.Refresh(false); }
 
         // ------------------------------------------------------------------ dialog
@@ -434,30 +457,50 @@ namespace KaraPati
         // ------------------------------------------------------------------ story
         public void DoTask(int idx)
         {
-            if (idx != TasksDone || idx >= Story.Tasks.Length) return;
-            var task = Story.Tasks[idx];
+            if (idx != TasksDone || idx >= Story.TotalTasks) return;
+            var task = Story.TaskAt(idx);
             if (Stamps < task.cost)
             {
                 Toast(task.cost + " Pati Mührü gerekiyor. 'Dükkânı Aç'a bas, sipariş hazırla!", new Color(1f, 0.6f, 0.5f));
                 Tween.Punch(stampIcon, 0.3f, 0.3f);
                 return;
             }
+            int chapter = Story.CurrentChapter(idx);
             Stamps -= task.cost;
             TasksDone++;
             RefreshHud();
             home.Refresh(true);
             Save();
+            bool chapterDone = TasksDone == Story.ChapterStart(chapter) + Story.Chapters[chapter].tasks.Length;
             StartCoroutine(After(0.7f, () =>
             {
                 ShowDialog(task.speaker, task.line, () =>
                 {
                     GiveRandomMissing(Stickers.Sets[2]);
                     if (task.id == "yatak") GiveSticker("c_karapati", false);
-                    if (TasksDone >= Story.Tasks.Length) ShowDialog("Kara Pati", Story.EndLine);
-                    else if (Stamps < Story.Tasks[TasksDone].cost && TasksDone <= 2) Toast(Story.FirstBoardHint, UIKit.Orange, 4.5f);
                     home.Refresh(false);
+                    if (chapterDone)
+                    {
+                        ShowDialog("Kara Pati", Story.Chapters[chapter].endLine, () =>
+                        {
+                            if (chapter + 1 < Story.Chapters.Length)
+                            {
+                                home.ShowChapter(chapter + 1);
+                                Toast(Story.Chapters[chapter + 1].name + " açıldı!", UIKit.Orange, 4f);
+                            }
+                        });
+                    }
+                    else if (Stamps < Story.TaskAt(TasksDone).cost && TasksDone <= 2) Toast(Story.FirstBoardHint, UIKit.Orange, 4.5f);
+                    else if (HasNewClue()) Toast("Göz düğmesine bas: yeni bir ipucu belirdi!", UIKit.Orange, 4f);
                 });
             }));
+        }
+
+        bool HasNewClue()
+        {
+            foreach (var c in Story.Clues)
+                if (c.afterTasks == TasksDone && !clues.Contains(c.id)) return true;
+            return false;
         }
 
         static IEnumerator After(float s, Action a)
@@ -476,8 +519,31 @@ namespace KaraPati
             get
             {
                 foreach (var s in Stickers.Sets) if (IsSetClaimable(s)) return true;
-                return false;
+                return AllStickersCollected && !IsGrandClaimed;
             }
+        }
+
+        public bool IsGrandClaimed => claimedSets.Contains(Stickers.GrandId);
+
+        public bool AllStickersCollected
+        {
+            get
+            {
+                foreach (var s in Stickers.Sets) if (StickerCount(s) < s.ids.Length) return false;
+                return true;
+            }
+        }
+
+        public bool ClaimGrand()
+        {
+            if (!AllStickersCollected || IsGrandClaimed) return false;
+            claimedSets.Add(Stickers.GrandId);
+            Gold += Stickers.GrandGold;
+            Energy += Stickers.GrandEnergy;
+            AddStamps(Stickers.GrandStamps);
+            Toast("Büyük ödül! +" + Stickers.GrandGold + " altın, +" + Stickers.GrandStamps + " mühür, +" + Stickers.GrandEnergy + " enerji", UIKit.Orange, 4.5f);
+            Save();
+            return true;
         }
 
         public int StickerCount(StickerSet s)
@@ -686,6 +752,7 @@ namespace KaraPati
             RefreshHud();
             if (stampIcon) Tween.Punch(stampIcon, 0.3f, 0.35f);
             MarkDirty();
+            if (!OnBoard && home) home.Refresh(false);
         }
 
         public bool TrySpendEnergy(int amount)
@@ -776,6 +843,7 @@ namespace KaraPati
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
+            clues.Clear();
 
             Cats.ClearAll();
             Board.ClearAll();
@@ -792,6 +860,7 @@ namespace KaraPati
             RefreshHud();
             ShowInfo(null);
             if (OnBoard) GoHome();
+            home.ShowChapter(0);
             home.Refresh(false);
             Save();
             ShowIntro();
@@ -819,6 +888,7 @@ namespace KaraPati
                 tasksDone = TasksDone,
                 introSeen = introSeen,
                 stickers = new List<string>(stickers),
+                clues = new List<string>(clues),
                 claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
@@ -840,7 +910,9 @@ namespace KaraPati
                 Served = s.served;
                 KittenHintShown = s.kittenHint;
                 Stamps = s.stamps;
-                TasksDone = Mathf.Clamp(s.tasksDone, 0, Story.Tasks.Length);
+                TasksDone = Mathf.Clamp(s.tasksDone, 0, Story.TotalTasks);
+                clues.Clear();
+                if (s.clues != null) foreach (var id in s.clues) clues.Add(id);
                 introSeen = s.introSeen;
                 stickers.Clear();
                 if (s.stickers != null) foreach (var id in s.stickers) stickers.Add(id);

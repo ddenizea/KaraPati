@@ -75,7 +75,7 @@ namespace KaraPati
     [Serializable]
     public class SaveData
     {
-        public int version = 2;
+        public int version = 3;
         public int gold;
         public int energy;
         public float energyTimer;
@@ -85,6 +85,7 @@ namespace KaraPati
         public int stamps;      // Pati Mührü
         public int tasksDone;
         public bool introSeen;
+        public List<string> clues = new List<string>();
         public List<CellSave> cells = new List<CellSave>();
         public List<OrderSave> orders = new List<OrderSave>();
         public List<KittenSave> kittens = new List<KittenSave>();
@@ -101,6 +102,8 @@ namespace KaraPati
     public static class Stickers
     {
         public const int SetRewardGold = 100, SetRewardStamps = 3;
+        public const int GrandGold = 300, GrandStamps = 10, GrandEnergy = 30;
+        public const string GrandId = "all";
 
         public static readonly StickerSet[] Sets =
         {
@@ -138,37 +141,143 @@ namespace KaraPati
         public int cost;
     }
 
+    public class Chapter
+    {
+        public string id, name, endLine;
+        public StoryTask[] tasks;
+    }
+
+    /// <summary>A hidden clue in a scene. Becomes findable once enough story tasks are done.</summary>
+    public class Clue
+    {
+        public string id, title, text;
+        public int chapter;
+        public float x, y;          // position in the scene (scene-local units)
+        public int afterTasks;      // global number of finished tasks needed before it shows up
+    }
+
     public static class Story
     {
-        public const string ChapterName = "Bölüm 1: Tozlu Dükkân";
-
         public const string IntroLine =
             "Cadı ortadan kayboldu, dükkân da toz içinde kaldı. Hayaletlere iksir malzemesi verip Pati Mührü kazanalım, " +
             "dükkânı adım adım toparlayalım. İlk iş: şu örümcek ağları!";
 
         public const string FirstBoardHint = "Mühür bitti! 'Dükkânı Aç'a bas, hayaletlerin siparişlerini hazırla.";
 
-        public const string EndLine = "Bölüm 1 bitti, dükkân pırıl pırıl! Ama mahzen kapısı kilitli... Bölüm 2 yakında.";
-
-        public static readonly StoryTask[] Tasks =
+        public static readonly Chapter[] Chapters =
         {
-            new StoryTask { id = "ag", title = "Örümcek ağlarını temizle", cost = 1, speaker = "Kara Pati",
-                line = "Hapşu! Cadı gittiğinden beri örümcekler dükkânı kendi evleri sanmış." },
-            new StoryTask { id = "pencere", title = "Pencereyi sil", cost = 2, speaker = "Kara Pati",
-                line = "Ay ışığı içeri süzülünce dükkân bambaşka oldu. Cadı her gece aya bakardı..." },
-            new StoryTask { id = "raf", title = "Rafları onar", cost = 2, speaker = "Kara Pati",
-                line = "Rafın arkasından buruşuk bir not düştü: 'Mahzenin anahtarı... kedide.' Kedide mi?!" },
-            new StoryTask { id = "kazan", title = "Kazanı yak", cost = 3, speaker = "Minik Boo",
-                line = "Kazan yeniden fokurduyor! Kasabadaki bütün hayaletler bu sesi duydu, hepsi geliyor!" },
-            new StoryTask { id = "hali", title = "Halıyı ser", cost = 2, speaker = "Kara Pati",
-                line = "Halının altında pati izleri var... ama benimkilerden çok daha büyük. Hmm." },
-            new StoryTask { id = "fener", title = "Fenerleri yak", cost = 3, speaker = "Sis Teyze",
-                line = "Fener ışığında duvarda bir harita belirdi canım! Ok işareti... aşağıyı gösteriyor." },
-            new StoryTask { id = "tezgah", title = "Tezgâhı onar", cost = 3, speaker = "Kara Pati",
-                line = "Çekmecede cadının günlüğü! Son sayfa: 'Mahzene iniyorum. Dükkâna Kara Pati baksın.'" },
-            new StoryTask { id = "yatak", title = "Kara Pati'ye yatak al", cost = 4, speaker = "Kara Pati",
-                line = "Ohh, kendime ait bir yatak... Biraz kestireyim, sonra o mahzene ineceğiz." },
+            new Chapter
+            {
+                id = "dukkan", name = "Bölüm 1: Tozlu Dükkân",
+                endLine = "Bölüm 1 bitti, dükkân pırıl pırıl! Sıra mahzende... ama kapı kilitli. Notta ne yazıyordu? 'Anahtar kedide.'",
+                tasks = new[]
+                {
+                    new StoryTask { id = "ag", title = "Örümcek ağlarını temizle", cost = 1, speaker = "Kara Pati",
+                        line = "Hapşu! Cadı gittiğinden beri örümcekler dükkânı kendi evleri sanmış." },
+                    new StoryTask { id = "pencere", title = "Pencereyi sil", cost = 2, speaker = "Kara Pati",
+                        line = "Ay ışığı içeri süzülünce dükkân bambaşka oldu. Cadı her gece aya bakardı..." },
+                    new StoryTask { id = "raf", title = "Rafları onar", cost = 2, speaker = "Kara Pati",
+                        line = "Rafın arkasından buruşuk bir not düştü: 'Mahzenin anahtarı... kedide.' Kedide mi?!" },
+                    new StoryTask { id = "kazan", title = "Kazanı yak", cost = 3, speaker = "Minik Boo",
+                        line = "Kazan yeniden fokurduyor! Kasabadaki bütün hayaletler bu sesi duydu, hepsi geliyor!" },
+                    new StoryTask { id = "hali", title = "Halıyı ser", cost = 2, speaker = "Kara Pati",
+                        line = "Halının altında pati izleri var... ama benimkilerden çok daha büyük. Hmm." },
+                    new StoryTask { id = "fener", title = "Fenerleri yak", cost = 3, speaker = "Sis Teyze",
+                        line = "Fener ışığında duvarda bir harita belirdi canım! Ok işareti... aşağıyı gösteriyor." },
+                    new StoryTask { id = "tezgah", title = "Tezgâhı onar", cost = 3, speaker = "Kara Pati",
+                        line = "Çekmecede cadının günlüğü! Son sayfa: 'Mahzene iniyorum. Dükkâna Kara Pati baksın.'" },
+                    new StoryTask { id = "yatak", title = "Kara Pati'ye yatak al", cost = 4, speaker = "Kara Pati",
+                        line = "Ohh, kendime ait bir yatak... Biraz kestireyim, sonra o mahzene ineceğiz." },
+                }
+            },
+            new Chapter
+            {
+                id = "mahzen", name = "Bölüm 2: Mahzenin Sırrı",
+                endLine = "Aynadan cadının sesi yankılandı: 'Kara Pati! Aynanın içinde sıkışıp kaldım. Dolunayda beni çıkarabilirsin...' Bölüm 3 yakında!",
+                tasks = new[]
+                {
+                    new StoryTask { id = "kapi", title = "Mahzen kapısını aç", cost = 2, speaker = "Kara Pati",
+                        line = "Tasmamda tıngırdayan o şey... anahtarmış! Not haklıymış: anahtar kedideymiş. Yani bendeymiş!" },
+                    new StoryTask { id = "mum", title = "Mumları yak", cost = 2, speaker = "Kara Pati",
+                        line = "Mumlar yanınca duvardaki gölgeler kıpırdadı. Sadece gölge... değil mi? Değil mi?!" },
+                    new StoryTask { id = "kavanoz", title = "Kavanoz rafını düzelt", cost = 3, speaker = "Profesör Uğultu",
+                        line = "Şu etiketlere bak: 'Dolunay Tozu', 'Ayna Cilası'... Cadı büyük bir büyü hazırlıyormuş!" },
+                    new StoryTask { id = "masa", title = "Çalışma masasını topla", cost = 3, speaker = "Kara Pati",
+                        line = "Masadaki kâğıtların hepsi aynı şeyi çizmiş: bir ayna, bir kedi ve dolunay." },
+                    new StoryTask { id = "zincir", title = "Zincirli sandığı aç", cost = 4, speaker = "Kont Gıcırtı",
+                        line = "Gıcırrr... Bu zincirleri ben bile açamazdım! İçinde ne var bakalım, ne var?" },
+                    new StoryTask { id = "daire", title = "Büyü dairesini temizle", cost = 3, speaker = "Leydi Ürperti",
+                        line = "Daire parlıyor! Bu bir geçit büyüsü tatlım. Biri buradan bir yerlere gitmiş." },
+                    new StoryTask { id = "portre", title = "Tozlu portreyi sil", cost = 3, speaker = "Sis Teyze",
+                        line = "Aa, bu cadının portresi! Kucağındaki kara kediye bak canım... sen değil misin o?" },
+                    new StoryTask { id = "ayna", title = "Sihirli aynayı onar", cost = 5, speaker = "Kara Pati",
+                        line = "Ayna titredi ve camın ardında bir yüz belirdi... Cadı! Aynanın içinde!" },
+                }
+            },
         };
+
+        public static readonly Clue[] Clues =
+        {
+            new Clue { id = "c1_not", chapter = 0, x = 400f, y = 60f, afterTasks = 3, title = "Buruşuk Not",
+                text = "'Mahzenin anahtarı kedide.' Cadının el yazısı... ama çok aceleyle yazılmış." },
+            new Clue { id = "c1_iz", chapter = 0, x = 200f, y = -430f, afterTasks = 5, title = "Dev Pati İzi",
+                text = "Bu iz kocaman! Bir kedinin ama dev gibi bir kedinin. Cadının başka bir yardımcısı mı vardı?" },
+            new Clue { id = "c1_gunluk", chapter = 0, x = 200f, y = -150f, afterTasks = 7, title = "Günlük Sayfası",
+                text = "'Ayna çatladığı gece bir şeyler ters gitti. Kara Pati'yi korumalıyım, ne olursa olsun.'" },
+            new Clue { id = "c2_supurge", chapter = 1, x = -400f, y = -390f, afterTasks = 10, title = "Kırık Süpürge",
+                text = "Cadının süpürgesi ikiye ayrılmış. Buradan aceleyle kaçmış olmalı... ya da biri onu çekmiş." },
+            new Clue { id = "c2_takvim", chapter = 1, x = 170f, y = -40f, afterTasks = 12, title = "Ay Takvimi",
+                text = "Dolunay günleri kırmızıyla daire içine alınmış. Bir sonraki dolunay... çok yakında!" },
+            new Clue { id = "c2_tasma", chapter = 1, x = -20f, y = -170f, afterTasks = 13, title = "Gümüş Tasma",
+                text = "Sandıktan minik bir gümüş tasma çıktı. Üzerinde 'K.P.' yazıyor. Bu benim bebeklik tasmam mı?!" },
+            new Clue { id = "c2_iz", chapter = 1, x = 220f, y = -430f, afterTasks = 14, title = "Parlayan İzler",
+                text = "Büyü dairesinden aynaya doğru uzanan parlak pati izleri. Dev kedi buradan geçmiş!" },
+            new Clue { id = "c2_mektup", chapter = 1, x = 170f, y = 380f, afterTasks = 15, title = "Mühürlü Mektup",
+                text = "Portrenin arkasında bir mektup: 'Aynayı onaran, beni geri getirir. -C.'" },
+        };
+
+        public static int TotalTasks
+        {
+            get
+            {
+                int n = 0;
+                foreach (var c in Chapters) n += c.tasks.Length;
+                return n;
+            }
+        }
+
+        public static int ChapterStart(int ch)
+        {
+            int n = 0;
+            for (int i = 0; i < ch && i < Chapters.Length; i++) n += Chapters[i].tasks.Length;
+            return n;
+        }
+
+        /// <summary>The chapter the player is currently working on (last one when everything is done).</summary>
+        public static int CurrentChapter(int done)
+        {
+            for (int i = 0; i < Chapters.Length; i++)
+                if (done < ChapterStart(i) + Chapters[i].tasks.Length) return i;
+            return Chapters.Length - 1;
+        }
+
+        public static StoryTask TaskAt(int global)
+        {
+            int ch = 0;
+            while (ch < Chapters.Length - 1 && global >= Chapters[ch].tasks.Length)
+            {
+                global -= Chapters[ch].tasks.Length;
+                ch++;
+            }
+            return Chapters[ch].tasks[Mathf.Clamp(global, 0, Chapters[ch].tasks.Length - 1)];
+        }
+
+        public static bool IsDone(string id, int done)
+        {
+            for (int i = 0; i < done && i < TotalTasks; i++)
+                if (TaskAt(i).id == id) return true;
+            return false;
+        }
     }
 
     public static class Ghosts

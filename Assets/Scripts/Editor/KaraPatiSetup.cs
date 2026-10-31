@@ -16,6 +16,20 @@ namespace KaraPati.EditorTools
             }
         }
 
+        [MenuItem("KaraPati/Test/+30 Pati Mührü (Play modunda)")]
+        static void GiveStamps()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.AddStamps(30);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/+500 Altın (Play modunda)")]
+        static void GiveGold()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.AddGold(500);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {

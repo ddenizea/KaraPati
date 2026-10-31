@@ -4,23 +4,44 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>Main screen: the witch's shop. Spend Pati Mührü on story tasks that restore it piece by piece.</summary>
+    /// <summary>
+    /// Main screen. One scene per chapter (the shop, then the cellar). Spend Pati Mührü on story tasks that restore
+    /// the scene piece by piece, and look for hidden clues with the eye button.
+    /// </summary>
     public class HomeScreen : MonoBehaviour
     {
         GameManager GM => GameManager.I;
 
         Text chapterTitle, progressText;
         RectTransform progressFill;
-        const float ProgressW = 640f;
+        Button prevBtn, nextBtn;
+        Image nextLock;
+        const float ProgressW = 600f;
+        int view = -1;
 
-        RectTransform scene, ghostLayer;
-        Image dim;
+        RectTransform sceneArea;
+        readonly RectTransform[] scenes = new RectTransform[2];
+        readonly Image[] dims = new Image[2];
+        readonly RectTransform[] clueLayers = new RectTransform[2];
+        RectTransform ghostLayer;
+
+        // shop (chapter 1)
         GameObject webs, dirt, rug, bottles, counterStuff, bed;
         Image cauldron, cauldronGlow, lanternA, lanternB, glowA, glowB, plankTop, plankBottom, counterTop, counterBody, karaPati;
+
+        // cellar (chapter 2)
+        Image door, doorLight, jarTop, jarBottom, circle, circleGlow, portraitDust, mirror, mirrorGlow, chest, chestGlow, cellarCat, deskTop;
+        GameObject jars, messyPapers, tidyPapers, chains, portraitArt, crate;
+        readonly List<Image> candles = new List<Image>();
+        readonly List<Image> candleGlows = new List<Image>();
+
         RectTransform taskList;
-        Image albumBadge;
+        Image albumBadge, caseBadge;
+        Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
+        readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
         int shownDone = -1;
+        float eyeUntil;
 
         static readonly string[] catLines =
         {
@@ -28,25 +49,45 @@ namespace KaraPati
             "Cadı bir yerlerde... bıyıklarımda hissediyorum.",
             "Mırr. Kulağımın arkasını kaşı, sonra işe dön.",
             "Hayaletlerden korkma, çoğu sadece sohbet etmek istiyor.",
+            "Göz düğmesine bas, gizli şeyleri birlikte bulalım.",
         };
 
         // ------------------------------------------------------------------ build
         public void Build(RectTransform root)
         {
-            // header
+            // header with chapter switcher
             var header = UIKit.Section(root, "Header", 140f, 120f);
-            chapterTitle = UIKit.Txt("Chapter", header, Story.ChapterName, 42, UIKit.Orange);
+            chapterTitle = UIKit.Txt("Chapter", header, "", 40, UIKit.Orange);
             chapterTitle.fontStyle = FontStyle.Bold;
-            chapterTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(1000f, 56f));
+            chapterTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(800f, 56f));
             var barBg = UIKit.Img("Bar", header, ProcArt.Rounded, UIKit.PanelDark, true);
             barBg.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(-50f, -74f), new Vector2(ProgressW + 12f, 36f));
             var fill = UIKit.Img("Fill", barBg.transform, ProcArt.Rounded, UIKit.Orange, true);
             progressFill = fill.rectTransform;
             progressFill.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(6f, 0f), new Vector2(40f, 24f));
             progressText = UIKit.Txt("Count", header, "0/8", 32, UIKit.Cream);
-            progressText.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(345f, -74f), new Vector2(120f, 40f));
+            progressText.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(325f, -74f), new Vector2(120f, 40f));
 
-            BuildScene(UIKit.Section(root, "Shop", 272f, 940f));
+            prevBtn = UIKit.Btn("Prev", header, "<", UIKit.PanelDark, () => ShowChapter(view - 1, true), 54);
+            ((RectTransform)prevBtn.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(96f, 100f));
+            nextBtn = UIKit.Btn("Next", header, ">", UIKit.PanelDark, () => ShowChapter(view + 1, true), 54);
+            ((RectTransform)nextBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(96f, 100f));
+            nextLock = UIKit.Img("Lock", nextBtn.transform, ProcArt.Lock, Color.white);
+            nextLock.rectTransform.At(new Vector2(26f, -30f), new Vector2(46f, 46f));
+
+            // scenes
+            sceneArea = UIKit.Section(root, "Scene", 272f, 940f);
+            scenes[0] = BuildShop(sceneArea);
+            scenes[1] = BuildCellar(sceneArea);
+            for (int i = 0; i < scenes.Length; i++) BuildClues(i);
+
+            // investigation buttons on top of the scene
+            var caseBtn = RoundButton(sceneArea, "CaseFile", ProcArt.CaseFile, new Vector2(0f, 1f), new Vector2(66f, -60f), () => GM.OpenCaseFile());
+            caseBadge = UIKit.Img("Badge", caseBtn.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            caseBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(caseBadgeText.rectTransform);
+            RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
 
             // tasks
             var tasks = UIKit.Section(root, "Tasks", 1228f, 515f);
@@ -81,19 +122,39 @@ namespace KaraPati
             pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 4f), new Vector2(110f, 110f));
         }
 
-        Image Part(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false)
+        Button RoundButton(RectTransform parent, string name, Sprite icon, Vector2 anchor, Vector2 pos, System.Action onClick)
+        {
+            var bg = UIKit.Img(name, parent, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f, 0.85f));
+            bg.raycastTarget = true;
+            bg.rectTransform.Anchor(anchor, new Vector2(0.5f, 0.5f)).At(pos, new Vector2(110f, 110f));
+            var ring = UIKit.Img("Ring", bg.transform, ProcArt.Circle, new Color(1f, 0.66f, 0.3f, 0.5f));
+            ring.rectTransform.sizeDelta = new Vector2(118f, 118f);
+            ring.transform.SetAsFirstSibling();
+            var ic = UIKit.Img("Icon", bg.transform, icon, Color.white);
+            ic.rectTransform.sizeDelta = new Vector2(74f, 74f);
+            var b = bg.gameObject.AddComponent<Button>();
+            b.onClick.AddListener(() => { Tween.Punch(bg.transform, 0.12f, 0.25f); onClick(); });
+            return b;
+        }
+
+        static Image Part(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false)
         {
             var img = UIKit.Img(name, parent, s, c, sliced);
             img.rectTransform.At(pos, size);
             return img;
         }
 
-        void BuildScene(RectTransform area)
+        RectTransform NewScene(string name)
         {
-            scene = UIKit.Rect("Scene", area).At(Vector2.zero, new Vector2(1020f, 940f));
+            return UIKit.Rect(name, sceneArea).At(Vector2.zero, new Vector2(1020f, 940f));
+        }
+
+        // ------------------------------------------------------------------ chapter 1: shop
+        RectTransform BuildShop(RectTransform area)
+        {
+            var scene = NewScene("Shop");
             var wood = new Color(0.45f, 0.3f, 0.2f);
 
-            // wall + floor
             Part("Wall", scene, ProcArt.Rounded, new Color(0.3f, 0.21f, 0.36f), Vector2.zero, new Vector2(1020f, 940f), true);
             for (int i = 0; i < 9; i++)
                 Part("Stripe", scene, null, new Color(1f, 0.95f, 0.85f, 0.05f), new Vector2(-440f + i * 110f, 120f), new Vector2(20f, 660f));
@@ -101,7 +162,6 @@ namespace KaraPati
             for (int i = 0; i < 3; i++)
                 Part("Plank", scene, null, new Color(0f, 0f, 0f, 0.15f), new Vector2(0f, -250f - i * 75f), new Vector2(1000f, 4f));
 
-            // window
             Part("WinFrame", scene, ProcArt.Rounded, new Color(0.35f, 0.22f, 0.15f), new Vector2(-290f, 190f), new Vector2(260f, 290f), true);
             Part("Glass", scene, ProcArt.Rounded, new Color(0.1f, 0.12f, 0.3f), new Vector2(-290f, 190f), new Vector2(214f, 244f), true);
             Part("Moon", scene, ProcArt.Moon, Color.white, new Vector2(-320f, 225f), new Vector2(110f, 110f));
@@ -115,7 +175,6 @@ namespace KaraPati
             Part("BarV", scene, null, new Color(0.35f, 0.22f, 0.15f), new Vector2(-290f, 190f), new Vector2(12f, 244f));
             Part("BarH", scene, null, new Color(0.35f, 0.22f, 0.15f), new Vector2(-290f, 190f), new Vector2(214f, 12f));
 
-            // shelves + bottles
             plankTop = Part("ShelfTop", scene, ProcArt.Rounded, wood, new Vector2(250f, 280f), new Vector2(360f, 28f), true);
             plankBottom = Part("ShelfBottom", scene, ProcArt.Rounded, wood, new Vector2(250f, 140f), new Vector2(360f, 28f), true);
             bottles = UIKit.Rect("Bottles", scene).gameObject;
@@ -125,7 +184,6 @@ namespace KaraPati
             Part("Bottle", bottles.transform, ProcArt.Bottle(1), Color.white, new Vector2(220f, 192f), new Vector2(80f, 80f));
             Part("Book", bottles.transform, ProcArt.WitchItem("w_kitap"), Color.white, new Vector2(330f, 196f), new Vector2(84f, 84f));
 
-            // lanterns
             Part("String", scene, null, new Color(0.2f, 0.15f, 0.2f), new Vector2(-90f, 425f), new Vector2(4f, 90f));
             Part("String", scene, null, new Color(0.2f, 0.15f, 0.2f), new Vector2(110f, 425f), new Vector2(4f, 90f));
             glowA = Part("GlowA", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(-90f, 345f), new Vector2(320f, 320f));
@@ -133,7 +191,6 @@ namespace KaraPati
             lanternA = Part("LanternA", scene, ProcArt.Lantern(false), Color.white, new Vector2(-90f, 345f), new Vector2(100f, 110f));
             lanternB = Part("LanternB", scene, ProcArt.Lantern(false), Color.white, new Vector2(110f, 345f), new Vector2(100f, 110f));
 
-            // rug + cauldron
             rug = UIKit.Rect("Rug", scene).gameObject;
             Part("RugOuter", rug.transform, ProcArt.Circle, new Color(0.6f, 0.2f, 0.3f), new Vector2(0f, -365f), new Vector2(620f, 170f));
             Part("RugMid", rug.transform, ProcArt.Circle, new Color(0.8f, 0.4f, 0.42f), new Vector2(0f, -365f), new Vector2(540f, 130f));
@@ -141,48 +198,240 @@ namespace KaraPati
             cauldronGlow = Part("CauldronGlow", scene, ProcArt.GlowSprite, new Color(0.4f, 1f, 0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(480f, 480f));
             cauldron = Part("Cauldron", scene, ProcArt.Item(Chains.Kazan, 1), Color.white, new Vector2(0f, -230f), new Vector2(300f, 300f));
 
-            // counter
             counterBody = Part("CounterBody", scene, ProcArt.Rounded, new Color(0.42f, 0.28f, 0.2f), new Vector2(340f, -255f), new Vector2(260f, 180f), true);
             counterTop = Part("CounterTop", scene, ProcArt.Rounded, wood, new Vector2(340f, -155f), new Vector2(310f, 32f), true);
             counterStuff = UIKit.Rect("CounterStuff", scene).gameObject;
             Part("Ball", counterStuff.transform, ProcArt.WitchItem("w_kure"), Color.white, new Vector2(300f, -95f), new Vector2(100f, 100f));
             Part("Letter", counterStuff.transform, ProcArt.WitchItem("w_mektup"), Color.white, new Vector2(400f, -118f), new Vector2(70f, 70f));
 
-            // cobwebs
             webs = UIKit.Rect("Webs", scene).gameObject;
             Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(-430f, 390f), new Vector2(200f, 200f));
             Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(430f, 390f), new Vector2(200f, 200f));
             Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(-30f, 420f), new Vector2(130f, 130f));
             Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(420f, -100f), new Vector2(120f, 120f));
 
-            // Kara Pati + bed
             bed = UIKit.Rect("Bed", scene).gameObject;
             Part("BedBase", bed.transform, ProcArt.Circle, new Color(0.7f, 0.25f, 0.3f), new Vector2(-330f, -350f), new Vector2(280f, 120f));
             Part("Cushion", bed.transform, ProcArt.Circle, new Color(0.95f, 0.65f, 0.6f), new Vector2(-330f, -345f), new Vector2(230f, 80f));
             karaPati = Part("KaraPati", scene, ProcArt.SideCat(0, 4), Color.white, new Vector2(-330f, -290f), new Vector2(190f, 190f));
-            karaPati.raycastTarget = true;
-            var catBtn = karaPati.gameObject.AddComponent<Button>();
+            MakeCatTappable(karaPati);
+
+            ghostLayer = UIKit.Rect("Ghosts", scene).At(Vector2.zero, scene.sizeDelta);
+            dims[0] = Part("Dust", scene, ProcArt.Rounded, new Color(0.05f, 0.03f, 0.08f, 0.45f), Vector2.zero, new Vector2(1020f, 940f), true);
+            return scene;
+        }
+
+        void MakeCatTappable(Image cat)
+        {
+            cat.raycastTarget = true;
+            var catBtn = cat.gameObject.AddComponent<Button>();
             catBtn.transition = Selectable.Transition.None;
             catBtn.onClick.AddListener(() =>
             {
-                Tween.Punch(karaPati.transform, 0.15f, 0.3f);
+                Tween.Punch(cat.transform, 0.15f, 0.3f);
                 GM.Toast("Kara Pati: \"" + catLines[Random.Range(0, catLines.Length)] + "\"");
             });
+        }
 
-            ghostLayer = UIKit.Rect("Ghosts", scene).At(Vector2.zero, scene.sizeDelta);
+        // ------------------------------------------------------------------ chapter 2: cellar
+        RectTransform BuildCellar(RectTransform area)
+        {
+            var scene = NewScene("Cellar");
+            var stone = new Color(0.17f, 0.16f, 0.23f);
+            Part("Wall", scene, ProcArt.Rounded, stone, Vector2.zero, new Vector2(1020f, 940f), true);
 
-            // everything gets brighter as the shop is restored
-            dim = Part("Dust", scene, ProcArt.Rounded, new Color(0.05f, 0.03f, 0.08f, 0.45f), Vector2.zero, new Vector2(1020f, 940f), true);
+            // stone blocks
+            for (int r = 0; r < 9; r++)
+            for (int c = 0; c < 9; c++)
+            {
+                float x = -440f + c * 112f + (r % 2 == 0 ? 0f : 56f);
+                float y = 430f - r * 72f;
+                if (x > 445f) continue;
+                float v = 0.19f + ((c * 7 + r * 13) % 5) * 0.012f;
+                Part("Stone", scene, ProcArt.Rounded, new Color(v, v * 0.95f, v * 1.3f, 0.9f), new Vector2(x, y), new Vector2(100f, 62f), true);
+            }
+            Part("Floor", scene, ProcArt.Rounded, new Color(0.12f, 0.11f, 0.16f), new Vector2(0f, -330f), new Vector2(1020f, 280f), true);
+            for (int i = 0; i < 4; i++)
+                Part("Crack", scene, null, new Color(0f, 0f, 0f, 0.25f), new Vector2(-380f + i * 250f, -300f - (i % 2) * 70f), new Vector2(150f, 3f));
+
+            // stairs + door (top-left)
+            for (int i = 0; i < 6; i++)
+                Part("Step", scene, ProcArt.Rounded, new Color(0.27f, 0.25f, 0.33f), new Vector2(-440f + i * 22f, 230f - i * 78f), new Vector2(170f, 34f), true);
+            doorLight = Part("DoorLight", scene, ProcArt.GlowSprite, new Color(1f, 0.85f, 0.5f, 0.6f), new Vector2(-400f, 360f), new Vector2(360f, 360f));
+            Part("Doorway", scene, ProcArt.Rounded, new Color(0.05f, 0.04f, 0.07f), new Vector2(-400f, 350f), new Vector2(150f, 180f), true);
+            door = Part("Door", scene, ProcArt.Rounded, new Color(0.4f, 0.26f, 0.17f), new Vector2(-400f, 350f), new Vector2(150f, 180f), true);
+            Part("Knob", door.transform, ProcArt.Circle, new Color(1f, 0.8f, 0.3f), new Vector2(46f, -10f), new Vector2(22f, 22f));
+
+            // mirror
+            mirrorGlow = Part("MirrorGlow", scene, ProcArt.GlowSprite, new Color(0.7f, 0.5f, 1f, 0.6f), new Vector2(-150f, 230f), new Vector2(380f, 420f));
+            mirror = Part("Mirror", scene, ProcArt.Mirror(false), Color.white, new Vector2(-150f, 230f), new Vector2(200f, 280f));
+
+            // portrait
+            Part("Frame", scene, ProcArt.Rounded, new Color(0.6f, 0.42f, 0.22f), new Vector2(80f, 290f), new Vector2(200f, 240f), true);
+            Part("Canvas", scene, ProcArt.Rounded, new Color(0.3f, 0.2f, 0.35f), new Vector2(80f, 290f), new Vector2(170f, 210f), true);
+            portraitArt = UIKit.Rect("PortraitArt", scene).gameObject;
+            Part("Hat", portraitArt.transform, ProcArt.WitchItem("w_sapka"), Color.white, new Vector2(60f, 330f), new Vector2(110f, 110f));
+            Part("Cat", portraitArt.transform, ProcArt.SideCat(0, 4), Color.white, new Vector2(110f, 240f), new Vector2(100f, 100f));
+            portraitDust = Part("Dust", scene, ProcArt.Rounded, new Color(0.42f, 0.4f, 0.42f, 0.95f), new Vector2(80f, 290f), new Vector2(170f, 210f), true);
+
+            // jar shelf (right)
+            jarTop = Part("JarShelfTop", scene, ProcArt.Rounded, new Color(0.38f, 0.26f, 0.18f), new Vector2(350f, 300f), new Vector2(280f, 26f), true);
+            jarBottom = Part("JarShelfBottom", scene, ProcArt.Rounded, new Color(0.38f, 0.26f, 0.18f), new Vector2(350f, 170f), new Vector2(280f, 26f), true);
+            jars = UIKit.Rect("Jars", scene).gameObject;
+            for (int i = 0; i < 3; i++)
+                Part("Jar", jars.transform, ProcArt.Bottle(i + 1), new Color(0.85f, 0.9f, 0.85f), new Vector2(270f + i * 85f, 352f), new Vector2(84f, 84f));
+            for (int i = 0; i < 3; i++)
+                Part("Jar", jars.transform, ProcArt.Bottle(i + 2), new Color(0.85f, 0.85f, 0.95f), new Vector2(280f + i * 80f, 222f), new Vector2(80f, 80f));
+
+            // magic circle on the floor
+            circleGlow = Part("CircleGlow", scene, ProcArt.GlowSprite, new Color(0.7f, 0.4f, 1f, 0.55f), new Vector2(40f, -390f), new Vector2(560f, 200f));
+            circle = Part("Circle", scene, ProcArt.MagicCircle, new Color(0.6f, 0.6f, 0.65f, 0.3f), new Vector2(40f, -390f), new Vector2(440f, 130f));
+
+            // desk (right, bottom)
+            deskTop = Part("DeskTop", scene, ProcArt.Rounded, new Color(0.42f, 0.28f, 0.2f), new Vector2(330f, -120f), new Vector2(320f, 30f), true);
+            Part("LegL", scene, null, new Color(0.33f, 0.22f, 0.16f), new Vector2(200f, -200f), new Vector2(22f, 140f));
+            Part("LegR", scene, null, new Color(0.33f, 0.22f, 0.16f), new Vector2(460f, -200f), new Vector2(22f, 140f));
+            messyPapers = UIKit.Rect("MessyPapers", scene).gameObject;
+            for (int i = 0; i < 6; i++)
+            {
+                var paper = Part("Paper", messyPapers.transform, null, new Color(0.92f, 0.88f, 0.78f), new Vector2(150f + i * 60f, -300f - (i % 3) * 40f), new Vector2(60f, 44f));
+                paper.rectTransform.localEulerAngles = new Vector3(0f, 0f, -30f + i * 17f);
+            }
+            tidyPapers = UIKit.Rect("TidyPapers", scene).gameObject;
+            Part("Stack", tidyPapers.transform, null, new Color(0.92f, 0.88f, 0.78f), new Vector2(260f, -92f), new Vector2(90f, 26f));
+            Part("Book", tidyPapers.transform, ProcArt.WitchItem("w_kitap"), Color.white, new Vector2(400f, -80f), new Vector2(80f, 80f));
+
+            // chained chest (centre)
+            chestGlow = Part("ChestGlow", scene, ProcArt.GlowSprite, new Color(1f, 0.85f, 0.4f, 0.55f), new Vector2(-110f, -220f), new Vector2(320f, 320f));
+            chest = Part("Chest", scene, ProcArt.Item(Chains.Sandik, 1), Color.white, new Vector2(-110f, -230f), new Vector2(190f, 190f));
+            chains = UIKit.Rect("Chains", scene).gameObject;
+            var ch1 = Part("ChainA", chains.transform, ProcArt.Chain, Color.white, new Vector2(-110f, -235f), new Vector2(200f, 60f));
+            ch1.rectTransform.localEulerAngles = new Vector3(0f, 0f, 35f);
+            var ch2 = Part("ChainB", chains.transform, ProcArt.Chain, Color.white, new Vector2(-110f, -235f), new Vector2(200f, 60f));
+            ch2.rectTransform.localEulerAngles = new Vector3(0f, 0f, -35f);
+            crate = UIKit.Rect("Crate", scene).gameObject;
+            Part("Box", crate.transform, ProcArt.Rounded, new Color(0.3f, 0.22f, 0.16f), new Vector2(-330f, -250f), new Vector2(150f, 120f), true);
+
+            // candles
+            var candlePos = new[] { new Vector2(-250f, -330f), new Vector2(190f, -410f), new Vector2(330f, -60f), new Vector2(-30f, 130f) };
+            foreach (var cp in candlePos)
+            {
+                candleGlows.Add(Part("CandleGlow", scene, ProcArt.GlowSprite, new Color(1f, 0.75f, 0.35f, 0.5f), cp + new Vector2(0f, 20f), new Vector2(260f, 260f)));
+                candles.Add(Part("Candle", scene, ProcArt.Candle(false), Color.white, cp, new Vector2(110f, 124f)));
+            }
+
+            // a few permanent cobwebs for the mood
+            Part("Web", scene, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.3f), new Vector2(250f, 420f), new Vector2(150f, 150f));
+            Part("Web", scene, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(-250f, 420f), new Vector2(120f, 120f));
+
+            cellarCat = Part("KaraPati", scene, ProcArt.SideCat(0, 4), Color.white, new Vector2(-260f, -150f), new Vector2(150f, 150f));
+            MakeCatTappable(cellarCat);
+
+            dims[1] = Part("Dark", scene, ProcArt.Rounded, new Color(0.02f, 0.01f, 0.05f, 0.7f), Vector2.zero, new Vector2(1020f, 940f), true);
+            return scene;
+        }
+
+        // ------------------------------------------------------------------ clues
+        void BuildClues(int ch)
+        {
+            // clues sit above the darkness overlay so they can be spotted
+            clueLayers[ch] = UIKit.Rect("Clues", scenes[ch]).At(Vector2.zero, new Vector2(1020f, 940f));
+            foreach (var clue in Story.Clues)
+            {
+                if (clue.chapter != ch) continue;
+                var c = clue;
+                var img = Part("Clue_" + c.id, clueLayers[ch], ProcArt.Sparkle, new Color(1f, 0.95f, 0.75f, 0.3f), new Vector2(c.x, c.y), new Vector2(70f, 70f));
+                img.raycastTarget = true;
+                var b = img.gameObject.AddComponent<Button>();
+                b.transition = Selectable.Transition.None;
+                b.onClick.AddListener(() => OnClueTapped(c, img));
+                clueSpots[c.id] = img;
+            }
+        }
+
+        void OnClueTapped(Clue c, Image img)
+        {
+            if (GM.HasClue(c.id)) { GM.ShowDialog(c.title, c.text); return; }
+            img.sprite = ProcArt.ClueIcon(c.id);
+            img.color = Color.white;
+            img.rectTransform.sizeDelta = new Vector2(90f, 90f);
+            img.rectTransform.localEulerAngles = Vector3.zero;
+            Tween.Pop(img.transform, 0.4f);
+            FX.Burst(clueLayers[c.chapter], img.rectTransform.anchoredPosition, new Color(1f, 0.9f, 0.5f), 10);
+            GM.FindClue(c);
+        }
+
+        bool ClueAvailable(Clue c) => GM.TasksDone >= c.afterTasks;
+
+        void RefreshClues()
+        {
+            foreach (var c in Story.Clues)
+            {
+                if (!clueSpots.TryGetValue(c.id, out var img)) continue;
+                bool found = GM.HasClue(c.id);
+                bool avail = ClueAvailable(c);
+                img.gameObject.SetActive(found || avail);
+                if (found)
+                {
+                    img.sprite = ProcArt.ClueIcon(c.id);
+                    img.color = c.id.EndsWith("_iz") ? new Color(0.6f, 0.9f, 1f, 0.8f) : Color.white;
+                    img.rectTransform.sizeDelta = new Vector2(90f, 90f);
+                    img.rectTransform.localEulerAngles = Vector3.zero;
+                    img.rectTransform.localScale = Vector3.one;
+                }
+            }
+            int found2 = 0;
+            foreach (var c in Story.Clues) if (GM.HasClue(c.id)) found2++;
+            caseBadge.gameObject.SetActive(found2 > 0);
+            caseBadgeText.text = found2.ToString();
+        }
+
+        void UseEye()
+        {
+            int waiting = 0;
+            foreach (var c in Story.Clues)
+                if (c.chapter == view && ClueAvailable(c) && !GM.HasClue(c.id)) waiting++;
+            if (waiting == 0)
+            {
+                bool more = false;
+                foreach (var c in Story.Clues) if (c.chapter == view && !ClueAvailable(c)) more = true;
+                GM.Toast(more ? "Şimdilik gizli bir şey yok. Görevleri ilerlet, yenileri belirir." : "Buradaki bütün ipuçlarını buldun!");
+                return;
+            }
+            eyeUntil = Time.time + 4f;
+            GM.Toast("Parlayan yerlere dokun! (" + waiting + " ipucu)", UIKit.Orange);
         }
 
         // ------------------------------------------------------------------ state
+        public void ShowChapter(int ch, bool fromButton = false)
+        {
+            int current = Story.CurrentChapter(GM.TasksDone);
+            ch = Mathf.Clamp(ch, 0, Story.Chapters.Length - 1);
+            if (ch > current)
+            {
+                if (fromButton) GM.Toast("Önce " + Story.Chapters[current].name + " bitmeli.");
+                return;
+            }
+            bool changed = ch != view;
+            view = ch;
+            if (changed && fromButton) Tween.Pop(scenes[ch], 0.3f);
+            Refresh(false);
+        }
+
         public void Refresh(bool animate)
         {
             int done = GM.TasksDone;
-            int total = Story.Tasks.Length;
+            int current = Story.CurrentChapter(done);
+            if (view < 0) view = current;
 
-            progressText.text = done + "/" + total;
-            float fw = Mathf.Max(24f, ProgressW * done / (float)total);
+            for (int i = 0; i < scenes.Length; i++) scenes[i].gameObject.SetActive(i == view);
+
+            var chapter = Story.Chapters[view];
+            int start = Story.ChapterStart(view);
+            int inChapter = Mathf.Clamp(done - start, 0, chapter.tasks.Length);
+            chapterTitle.text = chapter.name;
+            progressText.text = inChapter + "/" + chapter.tasks.Length;
+            float fw = Mathf.Max(24f, ProgressW * inChapter / chapter.tasks.Length);
             if (animate)
             {
                 float from = progressFill.sizeDelta.x;
@@ -191,21 +440,26 @@ namespace KaraPati
             }
             else progressFill.sizeDelta = new Vector2(fw, 24f);
 
-            ApplyScene(done, animate && shownDone >= 0 && done > shownDone);
+            prevBtn.gameObject.SetActive(view > 0);
+            bool hasNext = view < Story.Chapters.Length - 1;
+            nextBtn.gameObject.SetActive(hasNext);
+            nextLock.gameObject.SetActive(hasNext && view + 1 > current);
+
+            bool justDid = animate && shownDone >= 0 && done > shownDone;
+            ApplyShop(done);
+            ApplyCellar(done);
+            if (justDid) HighlightTask(Story.TaskAt(done - 1).id);
             shownDone = done;
+
             BuildTasks();
             RefreshGhosts();
+            RefreshClues();
             albumBadge.gameObject.SetActive(GM.AnyClaimableSet);
         }
 
-        bool Done(string id, int done)
-        {
-            for (int i = 0; i < done && i < Story.Tasks.Length; i++)
-                if (Story.Tasks[i].id == id) return true;
-            return false;
-        }
+        bool Done(string id, int done) => Story.IsDone(id, done);
 
-        void ApplyScene(int done, bool animate)
+        void ApplyShop(int done)
         {
             webs.SetActive(!Done("ag", done));
             dirt.SetActive(!Done("pencere", done));
@@ -237,11 +491,80 @@ namespace KaraPati
             karaPati.sprite = ProcArt.SideCat(0, hasBed ? 5 : 4);
             karaPati.rectTransform.anchoredPosition = hasBed ? new Vector2(-330f, -318f) : new Vector2(-330f, -290f);
 
-            float a = 0.45f * (1f - done / (float)Story.Tasks.Length);
-            dim.color = new Color(0.05f, 0.03f, 0.08f, a);
+            int inCh = Mathf.Clamp(done, 0, Story.Chapters[0].tasks.Length);
+            dims[0].color = new Color(0.05f, 0.03f, 0.08f, 0.45f * (1f - inCh / (float)Story.Chapters[0].tasks.Length));
+        }
 
-            if (!animate || done <= 0) return;
-            var target = TaskTarget(Story.Tasks[done - 1].id);
+        void ApplyCellar(int done)
+        {
+            bool open = Done("kapi", done);
+            door.rectTransform.anchoredPosition = open ? new Vector2(-480f, 350f) : new Vector2(-400f, 350f);
+            door.rectTransform.sizeDelta = open ? new Vector2(40f, 180f) : new Vector2(150f, 180f);
+            doorLight.gameObject.SetActive(open);
+
+            bool lit = Done("mum", done);
+            for (int i = 0; i < candles.Count; i++)
+            {
+                candles[i].sprite = ProcArt.Candle(lit);
+                candleGlows[i].gameObject.SetActive(lit);
+            }
+
+            bool jarsOk = Done("kavanoz", done);
+            jarTop.rectTransform.localEulerAngles = new Vector3(0, 0, jarsOk ? 0f : 12f);
+            jarBottom.rectTransform.localEulerAngles = new Vector3(0, 0, jarsOk ? 0f : -9f);
+            jars.SetActive(jarsOk);
+
+            bool desk = Done("masa", done);
+            messyPapers.SetActive(!desk);
+            tidyPapers.SetActive(desk);
+
+            bool chestOpen = Done("zincir", done);
+            chains.SetActive(!chestOpen);
+            chestGlow.gameObject.SetActive(chestOpen);
+
+            bool circ = Done("daire", done);
+            circle.color = circ ? new Color(0.85f, 0.6f, 1f, 0.95f) : new Color(0.6f, 0.6f, 0.65f, 0.3f);
+            circleGlow.gameObject.SetActive(circ);
+
+            portraitDust.gameObject.SetActive(!Done("portre", done));
+
+            bool mirrorOk = Done("ayna", done);
+            mirror.sprite = ProcArt.Mirror(mirrorOk);
+            mirrorGlow.gameObject.SetActive(mirrorOk);
+
+            int start = Story.ChapterStart(1);
+            int inCh = Mathf.Clamp(done - start, 0, Story.Chapters[1].tasks.Length);
+            // still a cellar: it never gets fully bright
+            dims[1].color = new Color(0.02f, 0.01f, 0.05f, 0.15f + 0.55f * (1f - inCh / (float)Story.Chapters[1].tasks.Length));
+        }
+
+        Transform TaskTarget(string id)
+        {
+            switch (id)
+            {
+                case "pencere": return scenes[0].Find("Moon");
+                case "raf": return plankTop.transform;
+                case "kazan": return cauldron.transform;
+                case "hali": return rug.transform.GetChild(0);
+                case "fener": return lanternA.transform;
+                case "tezgah": return counterTop.transform;
+                case "yatak": return karaPati.transform;
+                case "kapi": return door.transform;
+                case "mum": return candles[0].transform;
+                case "kavanoz": return jarTop.transform;
+                case "masa": return deskTop.transform;
+                case "zincir": return chest.transform;
+                case "daire": return circle.transform;
+                case "portre": return portraitArt.transform.GetChild(0);
+                case "ayna": return mirror.transform;
+                default: return null;
+            }
+        }
+
+        void HighlightTask(string id)
+        {
+            var target = TaskTarget(id);
+            var scene = scenes[view];
             Vector2 local = new Vector2(0f, 380f);
             if (target)
             {
@@ -249,22 +572,6 @@ namespace KaraPati
                 local = scene.InverseTransformPoint(target.position);
             }
             FX.Burst(scene, local, UIKit.Orange, 12);
-        }
-
-        Transform TaskTarget(string id)
-        {
-            switch (id)
-            {
-                case "ag": return null;
-                case "pencere": return scene.Find("Moon");
-                case "raf": return plankTop.transform;
-                case "kazan": return cauldron.transform;
-                case "hali": return rug.transform.GetChild(0);
-                case "fener": return lanternA.transform;
-                case "tezgah": return counterTop.transform;
-                case "yatak": return karaPati.transform;
-                default: return null;
-            }
         }
 
         static Sprite TaskIcon(string id)
@@ -278,7 +585,15 @@ namespace KaraPati
                 case "hali": return ProcArt.Item(Chains.Ag, 4);
                 case "fener": return ProcArt.Lantern(true);
                 case "tezgah": return ProcArt.WitchItem("w_kure");
-                default: return ProcArt.SideCat(0, 5);
+                case "yatak": return ProcArt.SideCat(0, 5);
+                case "kapi": return ProcArt.Lock;
+                case "mum": return ProcArt.Candle(true);
+                case "kavanoz": return ProcArt.Bottle(2);
+                case "masa": return ProcArt.WitchItem("w_mektup");
+                case "zincir": return ProcArt.Chain;
+                case "daire": return ProcArt.MagicCircle;
+                case "portre": return ProcArt.WitchItem("w_sapka");
+                default: return ProcArt.Mirror(true);
             }
         }
 
@@ -286,19 +601,24 @@ namespace KaraPati
         {
             for (int i = taskList.childCount - 1; i >= 0; i--) Destroy(taskList.GetChild(i).gameObject);
             int done = GM.TasksDone;
+            var chapter = Story.Chapters[view];
+            int start = Story.ChapterStart(view);
+            int inChapter = done - start;
 
-            if (done >= Story.Tasks.Length)
+            if (inChapter >= chapter.tasks.Length)
             {
                 var row = Row(0);
-                var txt = UIKit.Txt("Done", row, "Bölüm tamamlandı!\nBölüm 2: Mahzen - yakında", 34, UIKit.Cream);
+                bool last = view == Story.Chapters.Length - 1;
+                string msg = last ? "Bölüm tamamlandı!\nBölüm 3: Dolunay - yakında" : "Bölüm tamamlandı!\nSıradaki bölüm için > düğmesine bas.";
+                var txt = UIKit.Txt("Done", row, msg, 34, UIKit.Cream);
                 UIKit.Stretch(txt.rectTransform, 20f, 20f);
                 return;
             }
 
-            for (int k = 0; k < 3 && done + k < Story.Tasks.Length; k++)
+            for (int k = 0; k < 3 && inChapter + k < chapter.tasks.Length; k++)
             {
-                int idx = done + k;
-                var task = Story.Tasks[idx];
+                int idx = start + inChapter + k;
+                var task = chapter.tasks[inChapter + k];
                 bool current = k == 0;
                 bool affordable = GM.Stamps >= task.cost;
                 var row = Row(k);
@@ -306,6 +626,7 @@ namespace KaraPati
 
                 var icon = UIKit.Img("Icon", row, TaskIcon(task.id), current ? Color.white : new Color(1f, 1f, 1f, 0.45f));
                 icon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 0f), new Vector2(94f, 94f));
+                if (task.id == "daire") icon.color = current ? new Color(0.85f, 0.6f, 1f) : new Color(0.85f, 0.6f, 1f, 0.45f);
 
                 var title = UIKit.Txt("Title", row, task.title, 32, current ? UIKit.Cream : new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleLeft);
                 title.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(124f, 0f), new Vector2(480f, 100f));
@@ -366,10 +687,25 @@ namespace KaraPati
             }
             if (cauldronGlow && cauldronGlow.gameObject.activeSelf)
                 cauldronGlow.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 3f) * 0.05f);
-            if (karaPati)
+            for (int i = 0; i < candleGlows.Count; i++)
+                if (candleGlows[i].gameObject.activeSelf)
+                    candleGlows[i].rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 7f + i * 2f) * 0.06f + Mathf.Sin(t * 13f + i) * 0.03f);
+            if (circleGlow && circleGlow.gameObject.activeSelf)
+                circleGlow.color = new Color(0.7f, 0.4f, 1f, 0.45f + Mathf.Sin(t * 2f) * 0.12f);
+            if (karaPati && GM != null && Story.IsDone("yatak", GM.TasksDone))
+                karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
+
+            // clue twinkle; the eye makes waiting clues pulse brightly
+            bool eye = t < eyeUntil;
+            foreach (var kv in clueSpots)
             {
-                bool sleeping = GM != null && GM.TasksDone >= Story.Tasks.Length;
-                if (sleeping) karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
+                var img = kv.Value;
+                if (!img || !img.gameObject.activeInHierarchy || GM == null || GM.HasClue(kv.Key)) continue;
+                float a = eye ? 0.75f + Mathf.Sin(t * 8f) * 0.25f : 0.18f + Mathf.Sin(t * 2.5f + img.rectTransform.anchoredPosition.x) * 0.1f;
+                img.color = new Color(1f, 0.95f, 0.7f, a);
+                float sc = eye ? 1.3f + Mathf.Sin(t * 8f) * 0.15f : 1f;
+                img.rectTransform.localScale = Vector3.one * sc;
+                img.rectTransform.localEulerAngles = new Vector3(0f, 0f, t * 40f);
             }
         }
     }

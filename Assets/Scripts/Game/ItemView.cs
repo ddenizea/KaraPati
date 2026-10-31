@@ -15,7 +15,7 @@ namespace KaraPati
         public bool IsPressed { get; private set; }
         public bool IsHeld => IsDragging || IsPressed;
 
-        Image icon, cooldown, napCat, badge;
+        Image icon, cooldown, napCat, badge, needed;
         Text badgeText, zzz;
         CanvasGroup cg;
         Vector2 dragOffset;
@@ -48,6 +48,10 @@ namespace KaraPati
             badgeText = UIKit.Txt("Lv", badge.transform, "1", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(badgeText.rectTransform);
 
+            needed = UIKit.Img("Needed", rt, ProcArt.Check, Color.white);
+            needed.rectTransform.At(new Vector2(-46f, -46f), new Vector2(38f, 38f));
+            needed.gameObject.SetActive(false);
+
             napCat = UIKit.Img("NapCat", rt, ProcArt.SleepCat, Color.white);
             napCat.rectTransform.At(new Vector2(26f, 24f), new Vector2(84f, 84f));
             zzz = UIKit.Txt("Zzz", napCat.transform, "z", 34, UIKit.Cream);
@@ -67,6 +71,12 @@ namespace KaraPati
             badgeText.text = data.level.ToString();
             cooldown.gameObject.SetActive(data.IsKitten && data.level >= 2);
             UpdateCooldown();
+        }
+
+        /// <summary>Green tick: a ghost customer is asking for this item.</summary>
+        public void SetNeeded(bool on)
+        {
+            if (needed && needed.gameObject.activeSelf != on) needed.gameObject.SetActive(on);
         }
 
         void UpdateCooldown()
