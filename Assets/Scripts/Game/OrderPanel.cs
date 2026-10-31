@@ -89,6 +89,21 @@ namespace KaraPati
             }
         }
 
+        // ------------------------------------------------------------ tutorial helpers
+        public RectTransform ReadyGiveButton()
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (ready[i] && orders[i] != null) return (RectTransform)cards[i].give.transform;
+            return null;
+        }
+
+        public RectTransform FirstReqTile()
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (orders[i] != null) return cards[i].tiles[0];
+            return null;
+        }
+
         // ------------------------------------------------------------ orders
         OrderSave Generate()
         {
@@ -212,6 +227,7 @@ namespace KaraPati
             var card = cards[i];
             Vector3 target = card.root.TransformPoint(new Vector3(0f, -60f, 0f));
             foreach (var c in cells) GM.Board.FlyAway(c, target);
+            GM.Tut?.Notify("deliver");
 
             int reward = Reward(o);
             GM.AddGold(reward);

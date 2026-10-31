@@ -189,6 +189,7 @@ namespace KaraPati
         public int stamps;      // Pati Mührü
         public int tasksDone;
         public bool introSeen;
+        public int tutorialStep;
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;

@@ -67,6 +67,7 @@ namespace KaraPati
         public RectTransform Root { get; private set; }
         public BoardController Board { get; private set; }
         public OrderPanel Orders { get; private set; }
+        public Tutorial Tut { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
         public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
@@ -304,6 +305,9 @@ namespace KaraPati
             Cats = gameObject.AddComponent<KittenChaos>();
             Cats.Init(Board.CatsLayer);
 
+            Tut = gameObject.AddComponent<Tutorial>();
+            Tut.Build(Root);
+
             // start on the shop screen
             OnBoard = false;
             boardCg.gameObject.SetActive(false);
@@ -476,6 +480,7 @@ namespace KaraPati
             Cross(homeCg, boardCg);
             Orders.Refresh();
             ShowInfo(null);
+            Tut.Begin();
         }
 
         public void GoHome()
@@ -1219,6 +1224,7 @@ namespace KaraPati
             TasksDone = 0;
             KittenHintShown = false;
             introSeen = false;
+            Tut.Step = 0;
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
@@ -1267,6 +1273,7 @@ namespace KaraPati
                 stamps = Stamps,
                 tasksDone = TasksDone,
                 introSeen = introSeen,
+                tutorialStep = Tut.Step,
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
                 level = Level,
@@ -1302,6 +1309,9 @@ namespace KaraPati
                 clues.Clear();
                 if (s.clues != null) foreach (var id in s.clues) clues.Add(id);
                 introSeen = s.introSeen;
+                Tut.Step = s.tutorialStep;
+                // players from before the guide existed already know the basics
+                if (Tut.Step == 0 && (s.served > 0 || s.tasksDone > 0)) Tut.Step = Tutorial.Done;
                 stickers.Clear();
                 if (s.stickers != null) foreach (var id in s.stickers) stickers.Add(id);
                 claimedSets.Clear();

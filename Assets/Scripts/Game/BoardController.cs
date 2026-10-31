@@ -81,6 +81,53 @@ namespace KaraPati
         }
 
         // ---------------------------------------------------------------- queries
+        public RectTransform ViewRect(Vector2Int c) { var v = ViewAt(c); return v ? v.rt : null; }
+
+        public bool FindFirst(System.Func<ItemData, bool> pred, out Vector2Int cell)
+        {
+            foreach (var c in AllCells())
+            {
+                var d = data[c.x, c.y];
+                if (d != null && pred(d)) { cell = c; return true; }
+            }
+            cell = new Vector2Int(-1, -1);
+            return false;
+        }
+
+        /// <summary>Two equal, free ingredients that can be merged (for the tutorial).</summary>
+        public bool FindPair(out Vector2Int a, out Vector2Int b)
+        {
+            foreach (var c1 in AllCells())
+            {
+                var d1 = data[c1.x, c1.y];
+                if (d1 == null || d1.Locked || !Chains.IsIngredient(d1.chain) || d1.level >= Chains.MaxLevel(d1.chain)) continue;
+                foreach (var c2 in AllCells())
+                {
+                    if (c2 == c1) continue;
+                    var d2 = data[c2.x, c2.y];
+                    if (d2 != null && !d2.Locked && d2.chain == d1.chain && d2.level == d1.level) { a = c1; b = c2; return true; }
+                }
+            }
+            a = b = new Vector2Int(-1, -1);
+            return false;
+        }
+
+        /// <summary>An ingredient on the table that the pot would accept right now.</summary>
+        public bool FindPotIngredient(ItemData pot, out Vector2Int cell)
+        {
+            cell = new Vector2Int(-1, -1);
+            if (pot == null || pot.brew > 0) return false;
+            int done = GM.TasksDone;
+            bool hasMix = Recipes.ParseKey(pot.mix, out var mc, out var ml);
+            foreach (var c in AllCells())
+            {
+                var d = data[c.x, c.y];
+                if (d == null || d.Locked || !Chains.IsIngredient(d.chain)) continue;
+                bool ok = hasMix ? Recipes.Match(mc, ml, d.chain, d.level, done) != null : Recipes.AnyUses(d.chain, d.level, done);
+                if (ok) { cell = c; return true; }
+            }
+            return false;
+        }
         public ItemData Get(Vector2Int c) => InBounds(c) ? data[c.x, c.y] : null;
         public ItemView ViewAt(Vector2Int c) => InBounds(c) ? views[c.x, c.y] : null;
         public bool IsDragging(Vector2Int c) { var v = ViewAt(c); return v != null && v.IsHeld; }
@@ -368,6 +415,7 @@ namespace KaraPati
             if (v) Tween.Punch(v.rt, 0.15f, 0.25f);
             SpawnFrom(c, e, new ItemData(chain, level));
             GM.OnBoardChanged();
+            GM.Tut?.Notify("spawn");
         }
 
         void Merge(Vector2Int from, Vector2Int to)
@@ -386,6 +434,7 @@ namespace KaraPati
             if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
             GM.OnBoardChanged();
+            GM.Tut?.Notify("merge");
         }
 
         public void SellSelected()
@@ -474,6 +523,7 @@ namespace KaraPati
             if (pv) Tween.Punch(pv.rt, 0.15f, 0.3f);
             Select(potCell);
             GM.OnBoardChanged();
+            GM.Tut?.Notify("pot");
         }
 
         void TapPot(Vector2Int c)
@@ -530,6 +580,7 @@ namespace KaraPati
                 return;
             }
             GM.OpenRecipes();
+            GM.Tut?.Notify("recipes");
         }
 
         /// <summary>Older saves have no cauldron yet: put one on the table.</summary>

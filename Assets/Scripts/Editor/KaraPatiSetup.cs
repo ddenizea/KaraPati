@@ -63,6 +63,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Rehberi Baştan Başlat (Play modunda)")]
+        static void RestartTutorial()
+        {
+            if (Application.isPlaying && GameManager.I != null && GameManager.I.Tut != null) { GameManager.I.Tut.Step = 1; GameManager.I.MarkDirty(); }
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Sonraki Bölüme Atla (Play modunda)")]
         static void SkipChapter()
         {
@@ -91,7 +98,7 @@ namespace KaraPati.EditorTools
             // 2) identity + 64-bit Android (required by modern phones)
             PlayerSettings.companyName = "KaraPati";
             PlayerSettings.productName = "Kara Pati";
-            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.bundleVersion = "0.3.0";
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.karapati.iksirdukkani");
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
