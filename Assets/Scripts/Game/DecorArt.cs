@@ -35,6 +35,12 @@ namespace KaraPati
             return Color.white;
         }
 
+        /// <summary>Touch area for a placed tower ornament.</summary>
+        public static Vector2 HitSize(int slot) => slot == 0 ? new Vector2(440f, 110f) : slot == 2 ? new Vector2(190f, 170f) : new Vector2(170f, 210f);
+
+        /// <summary>Where the touch area sits relative to the ornament's origin.</summary>
+        public static Vector2 HitOffset(int slot) => slot == 0 ? new Vector2(0f, -25f) : slot == 1 ? new Vector2(0f, 20f) : slot == 2 ? new Vector2(0f, 10f) : new Vector2(0f, 10f);
+
         /// <summary>Builds the ornament under `parent` at the slot's place. Returns null for "none".</summary>
         public static RectTransform Build(Transform parent, int slot, int variant, Vector3 place)
         {

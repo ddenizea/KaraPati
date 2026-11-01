@@ -28,6 +28,7 @@ namespace KaraPati
         public const float EnergyRegenSec = 8f;
         public const int EnergyPackCost = 20, EnergyPackAmount = 10;
         const string SaveKey = "karapati_save_v1";
+        const string BackupKey = "karapati_save_v1_backup";   // last save that loaded fine
         const float RefW = 1080f, RefH = 2060f;
 
         public int Gold { get; private set; }
@@ -71,6 +72,7 @@ namespace KaraPati
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
+        public TowerScreen TowerUI => tower;
         public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
@@ -83,8 +85,8 @@ namespace KaraPati
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
         int kazanLevel = 1, sandikLevel = 1;
-        readonly HashSet<string> decorOwned = new HashSet<string>();
-        readonly Dictionary<string, int> decorSelected = new Dictionary<string, int>();
+        readonly Dictionary<string, int> inventory = new Dictionary<string, int>();
+        readonly List<PlacedSave> placed = new List<PlacedSave>();
         DecorPanel decorPanel;
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg, towerCg;
@@ -549,6 +551,7 @@ namespace KaraPati
         {
             if (!OnTower) return;
             OnTower = false;
+            tower.Deselect();
             Sfx.Play("whoosh", 0.85f);
             home.Refresh(false);
             Cross(towerCg, homeCg);
@@ -675,35 +678,71 @@ namespace KaraPati
         public void ShowHomeChapter(int ch) => home.ShowChapter(ch, true);
         public void RefreshHome() => home.Refresh(false);
 
-        // ------------------------------------------------------------------ decoration (gold sink)
-        public void OpenDecor(int chapter) => decorPanel.Open(chapter);
+        // ------------------------------------------------------------------ tower decoration (gold sink)
+        public IReadOnlyList<PlacedSave> Placed => placed;
+        public int InventoryCount(string id) => inventory.TryGetValue(id, out var n) ? n : 0;
 
-        List<string> DecorSelectedList()
+        List<string> InventoryList()
         {
             var list = new List<string>();
-            foreach (var kv in decorSelected) list.Add(kv.Key + ":" + kv.Value);
+            foreach (var kv in inventory) if (kv.Value > 0) list.Add(kv.Key + ":" + kv.Value);
             return list;
         }
-        public bool DecorOwned(int c, int s, int v) => v == 0 || decorOwned.Contains(Decor.OwnedId(c, s, v));
-        public int DecorSelected(int c, int s) => decorSelected.TryGetValue(Decor.SlotId(c, s), out var v) ? v : 0;
+        public void OpenTowerDecor(int floor) => decorPanel.Open(floor);
 
-        public void SelectDecor(int c, int s, int v)
+        public bool BuyTowerDecor(int slot, int variant)
         {
-            if (!DecorOwned(c, s, v)) return;
-            decorSelected[Decor.SlotId(c, s)] = v;
-            home.RefreshDecor(c, s, true);
+            if (!TrySpendGold(Decor.TowerPrice(slot, variant))) return false;
+            string id = Decor.ItemId(slot, variant);
+            inventory[id] = InventoryCount(id) + 1;
+            Toast(Decor.ItemName(id) + " envantere eklendi!", UIKit.Orange);
+            Save();
+            return true;
+        }
+
+        /// <summary>Takes one ornament out of the inventory and puts it on a floor.</summary>
+        public PlacedSave PlaceTowerDecor(string id, int floor, Vector2 pos)
+        {
+            if (InventoryCount(id) <= 0 || floor < 0 || floor >= towerFloors) return null;
+            inventory[id] = InventoryCount(id) - 1;
+            if (inventory[id] <= 0) inventory.Remove(id);
+            var p = new PlacedSave { id = id, floor = floor, x = pos.x, y = pos.y };
+            placed.Add(p);
+            MarkDirty();
+            return p;
+        }
+
+        /// <summary>Puts a placed ornament back into the inventory.</summary>
+        public void StoreTowerDecor(PlacedSave p)
+        {
+            if (!placed.Remove(p)) return;
+            inventory[p.id] = InventoryCount(p.id) + 1;
             MarkDirty();
         }
 
-        public bool BuyDecor(int c, int s, int v)
+        /// <summary>Moves an ornament to the end of the list, so it is drawn in front of the others.</summary>
+        public void BringTowerDecorToFront(PlacedSave p)
         {
-            if (DecorOwned(c, s, v)) { SelectDecor(c, s, v); return true; }
-            if (!TrySpendGold(Decor.Price(c, s, v))) return false;
-            decorOwned.Add(Decor.OwnedId(c, s, v));
-            Toast(Decor.VariantNames[s][v] + " dükkâna yerleşti!", UIKit.Orange);
-            SelectDecor(c, s, v);
-            Save();
-            return true;
+            if (!placed.Remove(p)) return;
+            placed.Add(p);
+            MarkDirty();
+        }
+
+        /// <summary>Old saves bought ornaments for the story scenes; those now live in the tower inventory.</summary>
+        void MigrateSceneDecor(List<string> oldOwned)
+        {
+            if (oldOwned == null || oldOwned.Count == 0) return;
+            int moved = 0;
+            foreach (var k in oldOwned)
+            {
+                var parts = k.Split('_');
+                if (parts.Length != 3 || !int.TryParse(parts[1], out var s) || !int.TryParse(parts[2], out var v)) continue;
+                string id = Decor.ItemId(s, v);
+                if (!Decor.ParseItem(id, out _, out _)) continue;
+                inventory[id] = InventoryCount(id) + 1;
+                moved++;
+            }
+            if (moved > 0) StartCoroutine(After(1.5f, () => Toast(moved + " eski süsün Cadı Kulesi envanterine taşındı. Kuleye gidip yerleştir!", UIKit.Orange, 5f)));
         }
 
         // ------------------------------------------------------------------ generator upgrades (gold sink)
@@ -1486,8 +1525,8 @@ namespace KaraPati
             kazanLevel = sandikLevel = 1;
             towerFloors = 1;
             lastFed = lastWatered = 0;
-            decorOwned.Clear();
-            decorSelected.Clear();
+            inventory.Clear();
+            placed.Clear();
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
@@ -1512,6 +1551,7 @@ namespace KaraPati
             if (OnTower) LeaveTower();
             home.ShowChapter(0);
             home.Refresh(false);
+            tower.RebuildDecor();
             Save();
             ShowIntro();
         }
@@ -1545,8 +1585,8 @@ namespace KaraPati
                 towerFloors = towerFloors,
                 lastFed = lastFed,
                 lastWatered = lastWatered,
-                decorOwned = new List<string>(decorOwned),
-                decorSelected = DecorSelectedList(),
+                inventory = InventoryList(),
+                placed = new List<PlacedSave>(placed),
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
                 level = Level,
@@ -1559,6 +1599,9 @@ namespace KaraPati
                 claimedSets = new List<string>(claimedSets)
             };
             Board.WriteSave(s.cells);
+            // a real game always has machines on the table; an empty board means the game state was wiped
+            // (e.g. Unity reloaded scripts mid-play), so never overwrite a good save with it
+            if (s.cells.Count == 0) { Debug.LogWarning("KaraPati: masa boş görünüyor, kayıt atlandı."); return; }
             Orders.WriteSave(s.orders);
             foreach (var it in Storage) s.storage.Add(new ReqSave { chain = it.chain, level = it.level });
             Cats.WriteSave(s.kittens);
@@ -1566,14 +1609,36 @@ namespace KaraPati
             PlayerPrefs.Save();
         }
 
+        static bool IsValidSave(string json, out SaveData s)
+        {
+            s = null;
+            if (string.IsNullOrEmpty(json)) return false;
+            try { s = JsonUtility.FromJson<SaveData>(json); }
+            catch { return false; }
+            return s != null && s.cells != null && s.cells.Count > 0;
+        }
+
         void Load()
         {
             string json = PlayerPrefs.GetString(SaveKey, "");
+            // a broken or empty main save falls back to the backup copy before starting over
+            if (!IsValidSave(json, out var check))
+            {
+                string backup = PlayerPrefs.GetString(BackupKey, "");
+                if (IsValidSave(backup, out _))
+                {
+                    Debug.LogWarning("KaraPati: ana kayıt bozuk, yedek kayıttan yükleniyor.");
+                    json = backup;
+                }
+            }
             if (string.IsNullOrEmpty(json)) { NewGame(); return; }
             try
             {
                 var s = JsonUtility.FromJson<SaveData>(json);
                 if (s == null || s.cells == null || s.cells.Count == 0) { NewGame(); return; }
+                // this one is good: keep a copy
+                PlayerPrefs.SetString(BackupKey, json);
+                PlayerPrefs.Save();
                 Gold = s.gold;
                 Served = s.served;
                 KittenHintShown = s.kittenHint;
@@ -1592,15 +1657,18 @@ namespace KaraPati
                 towerFloors = Mathf.Clamp(s.towerFloors, 1, Tower.Floors);
                 lastFed = s.lastFed;
                 lastWatered = s.lastWatered;
-                decorOwned.Clear();
-                if (s.decorOwned != null) foreach (var k in s.decorOwned) decorOwned.Add(k);
-                decorSelected.Clear();
-                if (s.decorSelected != null)
-                    foreach (var k in s.decorSelected)
+                inventory.Clear();
+                if (s.inventory != null)
+                    foreach (var k in s.inventory)
                     {
                         int i = k.IndexOf(':');
-                        if (i > 0 && int.TryParse(k.Substring(i + 1), out var v)) decorSelected[k.Substring(0, i)] = v;
+                        if (i > 0 && int.TryParse(k.Substring(i + 1), out var n) && n > 0) inventory[k.Substring(0, i)] = n;
                     }
+                placed.Clear();
+                if (s.placed != null)
+                    foreach (var p in s.placed)
+                        if (p != null && Decor.ParseItem(p.id, out _, out _) && p.floor >= 0 && p.floor < towerFloors) placed.Add(p);
+                MigrateSceneDecor(s.decorOwned);
                 // players from before the guide existed already know the basics
                 if (Tut.Step == 0 && (s.served > 0 || s.tasksDone > 0)) Tut.Step = Tutorial.Done;
                 stickers.Clear();
@@ -1635,6 +1703,7 @@ namespace KaraPati
                 RefreshHud();
                 ShowInfo(null);
                 home.Refresh(false);
+                tower.RebuildDecor();
                 if (!introSeen) ShowIntro();
                 else
                 {

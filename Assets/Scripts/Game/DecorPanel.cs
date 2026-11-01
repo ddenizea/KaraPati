@@ -4,15 +4,17 @@ using UnityEngine.UI;
 namespace KaraPati
 {
     /// <summary>
-    /// Decoration sheet that slides up from the bottom while the scene stays visible above it.
-    /// Tap a bought ornament to place it; tap a new one twice to buy it.
+    /// Tower decoration sheet that slides up from the bottom. Two tabs:
+    /// "Envanter" (ornaments you own - tap to place on the floor in view) and "Dükkân" (buy ornaments, tap twice).
     /// </summary>
     public class DecorPanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
         RectTransform sheet, rows;
         Text title, goldText;
-        int chapter;
+        Button tabInv, tabShop;
+        bool shopTab;
+        int floor;
         int armedSlot = -1, armedVariant = -1;
         float armedUntil;
 
@@ -22,9 +24,8 @@ namespace KaraPati
         {
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
-            // light dim over the scene, tap it to close
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.15f);
+            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.2f);
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -36,15 +37,15 @@ namespace KaraPati
             sheet.anchorMin = new Vector2(0f, 0f);
             sheet.anchorMax = new Vector2(1f, 0f);
             sheet.pivot = new Vector2(0.5f, 0f);
-            sheet.sizeDelta = new Vector2(-20f, 860f);
+            sheet.sizeDelta = new Vector2(-20f, 980f);
             sheet.anchoredPosition = new Vector2(0f, 10f);
 
             var icon = UIKit.Img("Icon", sheet, ProcArt.Brush, Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(26f, -18f), new Vector2(84f, 84f));
             title = UIKit.Txt("Title", sheet, "", 40, UIKit.Orange, TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(124f, -16f), new Vector2(600f, 50f));
-            var sub = UIKit.Txt("Sub", sheet, "Alınan süsleri istediğin zaman ücretsiz değiştirebilirsin.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
+            title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(124f, -16f), new Vector2(560f, 50f));
+            var sub = UIKit.Txt("Sub", sheet, "Envanterden bir süse dokun, ekrandaki kata yerleşsin.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
             sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(126f, -66f), new Vector2(640f, 34f));
 
             var coin = UIKit.Img("Coin", sheet, ProcArt.Coin, Color.white);
@@ -55,37 +56,59 @@ namespace KaraPati
             var close = UIKit.Btn("Close", sheet, "X", new Color(0.8f, 0.3f, 0.35f), Close, 40);
             ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-18f, -18f), new Vector2(84f, 84f));
 
+            tabInv = UIKit.Btn("TabInv", sheet, "Envanter", UIKit.PanelDark, () => SetTab(false), 32);
+            ((RectTransform)tabInv.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(-180f, -116f), new Vector2(340f, 76f));
+            tabShop = UIKit.Btn("TabShop", sheet, "Dükkân", UIKit.PanelDark, () => SetTab(true), 32);
+            ((RectTransform)tabShop.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(180f, -116f), new Vector2(340f, 76f));
+
             rows = UIKit.Rect("Rows", sheet);
-            UIKit.Stretch(rows, 20f, 20f, 116f, 16f);
+            UIKit.Stretch(rows, 20f, 20f, 210f, 16f);
             gameObject.SetActive(false);
         }
 
-        public void Open(int ch)
+        public void Open(int targetFloor)
         {
             Sfx.Play("page");
-            chapter = ch;
+            floor = targetFloor;
             armedSlot = -1;
+            // start on the shop if there is nothing to place yet
+            shopTab = !HasInventory();
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             Fill();
-            // slide up
             var s = sheet;
-            Tween.Run(0.3f, t => { if (s) s.anchoredPosition = new Vector2(0f, Mathf.Lerp(-860f, 10f, Tween.OutCubic(t))); });
+            Tween.Run(0.3f, t => { if (s) s.anchoredPosition = new Vector2(0f, Mathf.Lerp(-980f, 10f, Tween.OutCubic(t))); });
         }
 
         public void Close() => gameObject.SetActive(false);
 
+        bool HasInventory()
+        {
+            for (int s = 0; s < Decor.Slots; s++)
+                for (int v = 1; v < Decor.Variants; v++)
+                    if (GM.InventoryCount(Decor.ItemId(s, v)) > 0) return true;
+            return false;
+        }
+
+        void SetTab(bool shop)
+        {
+            shopTab = shop;
+            armedSlot = -1;
+            Fill();
+        }
+
         void Update()
         {
-            // an unconfirmed purchase expires after a few seconds
             if (armedSlot >= 0 && Time.unscaledTime > armedUntil) { armedSlot = -1; Fill(); }
         }
 
         void Fill()
         {
             for (int i = rows.childCount - 1; i >= 0; i--) Destroy(rows.GetChild(i).gameObject);
-            title.text = "Dekorasyon  •  " + (chapter + 1) + ". Bölüm";
+            title.text = (floor + 1) + ". Kat  •  " + Tower.FloorNames[floor];
             goldText.text = GM.Gold.ToString();
+            tabInv.GetComponent<Image>().color = shopTab ? UIKit.PanelDark : UIKit.Orange;
+            tabShop.GetComponent<Image>().color = shopTab ? UIKit.Orange : UIKit.PanelDark;
 
             for (int slot = 0; slot < Decor.Slots; slot++)
             {
@@ -93,66 +116,84 @@ namespace KaraPati
                 row.anchorMin = new Vector2(0f, 1f);
                 row.anchorMax = new Vector2(1f, 1f);
                 row.pivot = new Vector2(0.5f, 1f);
-                row.anchoredPosition = new Vector2(0f, -slot * 182f);
-                row.sizeDelta = new Vector2(0f, 172f);
+                row.anchoredPosition = new Vector2(0f, -slot * 186f);
+                row.sizeDelta = new Vector2(0f, 176f);
 
                 var label = UIKit.Txt("Label", row, Decor.SlotNames[slot], 30, UIKit.Cream, TextAnchor.MiddleLeft, false);
                 label.fontStyle = FontStyle.Bold;
                 label.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(12f, 10f), new Vector2(200f, 60f));
 
-                int selected = GM.DecorSelected(chapter, slot);
-                for (int v = 0; v < Decor.Variants; v++)
-                    Tile(row, slot, v, 220f + v * 180f, selected == v);
+                for (int v = 1; v < Decor.Variants; v++)
+                    Tile(row, slot, v, 230f + (v - 1) * 230f);
             }
         }
 
-        void Tile(RectTransform row, int slot, int v, float x, bool selected)
+        void Tile(RectTransform row, int slot, int v, float x)
         {
-            bool owned = v == 0 || GM.DecorOwned(chapter, slot, v);
-            int price = Decor.Price(chapter, slot, v);
+            string id = Decor.ItemId(slot, v);
+            int have = GM.InventoryCount(id);
+            int price = Decor.TowerPrice(slot, v);
             bool armed = armedSlot == slot && armedVariant == v;
+            bool dim = !shopTab && have == 0;
 
-            var bg = UIKit.Img("Tile", row, ProcArt.Rounded,
-                armed ? UIKit.Orange : selected ? new Color(0.45f, 0.32f, 0.22f) : new Color(0.14f, 0.09f, 0.2f, 0.95f), true);
+            var bg = UIKit.Img("Tile", row, ProcArt.Rounded, armed ? UIKit.Orange : new Color(0.14f, 0.09f, 0.2f, 0.95f), true);
             var rt = bg.rectTransform;
-            rt.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(x, 0f), new Vector2(164f, 164f));
+            rt.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(x, 0f), new Vector2(210f, 168f));
             bg.raycastTarget = true;
             var b = bg.gameObject.AddComponent<Button>();
             b.transition = Selectable.Transition.None;
             int s0 = slot, v0 = v;
             b.onClick.AddListener(() => OnTile(s0, v0));
 
-            if (selected)
-            {
-                var fr = UIKit.Img("Frame", rt, ProcArt.Frame, UIKit.Orange, true);
-                fr.rectTransform.sizeDelta = new Vector2(176f, 176f);
-            }
-            var ic = UIKit.Img("Icon", rt, DecorArt.Icon(slot, v), v == 0 ? new Color(1f, 1f, 1f, 0.35f) : DecorArt.IconTint(slot, v));
-            ic.rectTransform.At(new Vector2(0f, 16f), new Vector2(v == 0 ? 64f : 100f, v == 0 ? 64f : 100f));
+            var tint = DecorArt.IconTint(slot, v);
+            if (dim) tint = new Color(tint.r, tint.g, tint.b, 0.3f);
+            var ic = UIKit.Img("Icon", rt, DecorArt.Icon(slot, v), tint);
+            ic.rectTransform.At(new Vector2(0f, 14f), new Vector2(96f, 96f));
             ic.preserveAspect = true;
 
-            string caption = armed ? "Emin misin?" : selected ? "Yerleşti" : owned ? (v == 0 ? "Yok" : "Senin") : price + " altın";
-            var cap = UIKit.Txt("Cap", rt, caption, 24, armed ? Color.white : owned ? UIKit.Cream : (GM.Gold >= price ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.55f, 0.5f)), TextAnchor.MiddleCenter, false);
-            cap.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 6f), new Vector2(160f, 34f));
-            var name = UIKit.Txt("Name", rt, Decor.VariantNames[slot][v], 20, new Color(1f, 1f, 1f, 0.6f), TextAnchor.MiddleCenter, false);
-            name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(160f, 26f));
+            var name = UIKit.Txt("Name", rt, Decor.VariantNames[slot][v], 22, new Color(1f, 1f, 1f, dim ? 0.35f : 0.75f), TextAnchor.MiddleCenter, false);
+            name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(200f, 28f));
+
+            string caption;
+            Color capColor;
+            if (shopTab)
+            {
+                caption = armed ? "Emin misin?" : price + " altın";
+                capColor = armed ? Color.white : GM.Gold >= price ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.55f, 0.5f);
+            }
+            else
+            {
+                caption = have > 0 ? "x" + have + "  Yerleştir" : "Yok";
+                capColor = have > 0 ? UIKit.Cream : new Color(1f, 1f, 1f, 0.35f);
+            }
+            var cap = UIKit.Txt("Cap", rt, caption, 24, capColor, TextAnchor.MiddleCenter, false);
+            cap.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 6f), new Vector2(200f, 34f));
+
+            // in the shop, show how many you already have in a corner badge
+            if (shopTab && have > 0)
+            {
+                var badge = UIKit.Img("Have", rt, ProcArt.Circle, UIKit.Green);
+                badge.rectTransform.At(new Vector2(80f, 50f), new Vector2(44f, 44f));
+                var bt = UIKit.Txt("N", badge.transform, have.ToString(), 24, Color.white, TextAnchor.MiddleCenter, false);
+                UIKit.Stretch(bt.rectTransform);
+            }
         }
 
         void OnTile(int slot, int v)
         {
-            bool owned = v == 0 || GM.DecorOwned(chapter, slot, v);
-            if (owned)
+            string id = Decor.ItemId(slot, v);
+            if (!shopTab)
             {
-                armedSlot = -1;
-                GM.SelectDecor(chapter, slot, v);
-                Fill();
+                if (GM.InventoryCount(id) <= 0) { GM.Toast("Bu süsten yok. Dükkân sekmesinden alabilirsin."); return; }
+                Close();
+                GM.TowerUI.PlaceFromInventory(id);
                 return;
             }
-            int price = Decor.Price(chapter, slot, v);
+            int price = Decor.TowerPrice(slot, v);
             if (armedSlot == slot && armedVariant == v && Time.unscaledTime <= armedUntil)
             {
                 armedSlot = -1;
-                if (GM.BuyDecor(chapter, slot, v)) Sfx.Play("gift");
+                if (GM.BuyTowerDecor(slot, v)) Sfx.Play("gift");
                 Fill();
                 return;
             }

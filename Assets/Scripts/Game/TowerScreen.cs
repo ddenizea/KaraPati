@@ -23,6 +23,12 @@ namespace KaraPati
         int armedFloor = -1;
         float armedUntil;
 
+        // free-placement decoration
+        readonly RectTransform[] decorLayers = new RectTransform[Tower.Floors];
+        readonly Dictionary<PlacedSave, DecorPiece> pieces = new Dictionary<PlacedSave, DecorPiece>();
+        DecorPiece selected;
+        RectTransform toolbar;
+
         // floor 1: Kara Pati and the bowls
         Image cat, foodBowlFill, waterBowlFill, moodFill, needBubble;
         RectTransform foodBowl, waterBowl;
@@ -72,6 +78,21 @@ namespace KaraPati
             for (int i = 0; i < Tower.Floors; i++) floors[i] = BuildFloor(i);
             BuildRoof();
             BuildCatRoom(floors[0]);
+            BuildToolbar();
+
+            // "Süsle" button: opens the ornament shop / inventory for the floor in view
+            var btn = UIKit.Img("Decorate", root, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f, 0.9f));
+            btn.raycastTarget = true;
+            btn.rectTransform.Anchor(new Vector2(0f, 0f), new Vector2(0.5f, 0.5f)).At(new Vector2(110f, 120f), new Vector2(170f, 170f));
+            var ring = UIKit.Img("Ring", btn.transform, ProcArt.Circle, new Color(1f, 0.66f, 0.3f, 0.7f));
+            ring.rectTransform.sizeDelta = new Vector2(180f, 180f);
+            ring.transform.SetAsFirstSibling();
+            var ic = UIKit.Img("Icon", btn.transform, ProcArt.Brush, Color.white);
+            ic.rectTransform.At(new Vector2(0f, 14f), new Vector2(100f, 100f));
+            var lbl = UIKit.Txt("Label", btn.transform, "Süsle", 30, UIKit.Cream);
+            lbl.rectTransform.At(new Vector2(0f, -54f), new Vector2(170f, 40f));
+            var b = btn.gameObject.AddComponent<Button>();
+            b.onClick.AddListener(() => { Sfx.Play("click"); Deselect(); GM.OpenTowerDecor(FloorInView()); });
         }
 
         RectTransform BuildFloor(int i)
@@ -111,6 +132,8 @@ namespace KaraPati
                 P("RailTop", f, ProcArt.Rounded, new Color(0.5f, 0.38f, 0.3f), new Vector2(0f, -110f), new Vector2(FloorW - 80f, 18f), true);
             }
             FloorFurniture(f, i);
+            // ornaments the player places live here: above the furniture, below the locked cover (and below the cat)
+            decorLayers[i] = UIKit.Rect("Decor", f).At(Vector2.zero, new Vector2(FloorW, FloorH));
 
             // name plaque
             var plaque = P("Plaque", f, ProcArt.Rounded, new Color(0.15f, 0.1f, 0.2f, 0.85f), new Vector2(i % 2 == 0 ? -300f : 300f, FloorH / 2f - 80f), new Vector2(360f, 64f), true);
@@ -327,7 +350,7 @@ namespace KaraPati
 
         void RefreshCare()
         {
-            if (!cat) return;
+            if (!cat || !GM) return;   // GM is already gone while Play mode is shutting down
             float food = GM.FoodLevel, water = GM.WaterLevel;
             foodBowlFill.rectTransform.localScale = new Vector3(Mathf.Lerp(0.55f, 1f, food), food, 1f);
             foodBowlFill.gameObject.SetActive(food > 0.02f);
@@ -348,7 +371,7 @@ namespace KaraPati
 
         void Update()
         {
-            if (!cat) return;
+            if (!cat || !GM) return;
             float t = Time.time;
             careTick -= Time.unscaledDeltaTime;
             if (careTick <= 0f) { careTick = 1f; RefreshCare(); if (armedFloor >= 0 && Time.unscaledTime >= armedUntil) { armedFloor = -1; Refresh(); } }
@@ -359,12 +382,137 @@ namespace KaraPati
             catIdle += Time.deltaTime;
         }
 
+        // ------------------------------------------------------------------ decoration
+        public static Vector2 ClampOnFloor(Vector2 p) =>
+            new Vector2(Mathf.Clamp(p.x, -FloorW / 2f + 90f, FloorW / 2f - 90f), Mathf.Clamp(p.y, -FloorH / 2f + 110f, FloorH / 2f - 110f));
+
+        /// <summary>The open floor closest to the middle of the screen.</summary>
+        public int FloorInView()
+        {
+            float viewH = ((RectTransform)scroll.transform).rect.height;
+            float centre = -content.anchoredPosition.y + viewH / 2f;
+            int i = Mathf.FloorToInt((centre - GroundH) / FloorH);
+            return Mathf.Clamp(i, 0, GM.TowerFloorsOpen - 1);
+        }
+
+        /// <summary>Rebuild every placed ornament from the save data (after loading or a new game).</summary>
+        public void RebuildDecor()
+        {
+            Deselect();
+            foreach (var kv in pieces) if (kv.Value) Destroy(kv.Value.gameObject);
+            pieces.Clear();
+            foreach (var p in GM.Placed) BuildPiece(p);
+        }
+
+        DecorPiece BuildPiece(PlacedSave p)
+        {
+            if (!Decor.ParseItem(p.id, out var slot, out var v) || p.floor < 0 || p.floor >= decorLayers.Length) return null;
+            var rt = DecorArt.Build(decorLayers[p.floor], slot, v, new Vector3(p.x, p.y, 420f));
+            if (!rt) return null;
+            var hit = UIKit.Img("Hit", rt, null, new Color(1f, 1f, 1f, 0.001f));
+            hit.rectTransform.At(DecorArt.HitOffset(slot), DecorArt.HitSize(slot));
+            hit.raycastTarget = true;
+            rt.localScale = new Vector3(p.flip ? -1f : 1f, 1f, 1f);
+            var piece = rt.gameObject.AddComponent<DecorPiece>();
+            piece.Init(this, p);
+            pieces[p] = piece;
+            return piece;
+        }
+
+        /// <summary>Called by the decoration sheet: put one ornament from the inventory on the floor in view.</summary>
+        public void PlaceFromInventory(string id)
+        {
+            int floor = FloorInView();
+            var pos = new Vector2(Random.Range(-60f, 120f), -FloorH / 2f + 200f);   // standing on the floorboards
+            if (Decor.ParseItem(id, out var slot, out _) && slot == 0) pos = new Vector2(0f, FloorH / 2f - 120f);
+            var p = GM.PlaceTowerDecor(id, floor, pos);
+            if (p == null) return;
+            var piece = BuildPiece(p);
+            if (!piece) return;
+            Tween.Pop(piece.transform, 0.4f);
+            FX.Burst(decorLayers[floor], pos, UIKit.Orange, 12);
+            Sfx.Play("pop", 1.2f);
+            Select(piece);
+            GM.Toast("Süsü parmağınla sürükle. Üstündeki düğmelerle çevir, öne al ya da kaldır.");
+        }
+
+        void BuildToolbar()
+        {
+            toolbar = UIKit.Rect("Toolbar", content).At(Vector2.zero, new Vector2(520f, 86f));
+            toolbar.anchorMin = toolbar.anchorMax = new Vector2(0.5f, 0f);
+            var bg = UIKit.Img("Bg", toolbar, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.92f), true);
+            UIKit.Stretch(bg.rectTransform);
+            string[] labels = { "Çevir", "Öne", "Kaldır", "Tamam" };
+            Color[] colors = { UIKit.PanelDark, UIKit.PanelDark, new Color(0.75f, 0.32f, 0.35f), UIKit.Green };
+            for (int i = 0; i < labels.Length; i++)
+            {
+                int k = i;
+                var b = UIKit.Btn(labels[i], toolbar, labels[i], colors[i], () => OnTool(k), 26);
+                ((RectTransform)b.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(8f + i * 128f, 0f), new Vector2(120f, 70f));
+            }
+            toolbar.gameObject.SetActive(false);
+        }
+
+        public void Select(DecorPiece piece)
+        {
+            if (selected == piece) { FollowSelection(); return; }
+            selected = piece;
+            toolbar.gameObject.SetActive(piece);
+            toolbar.SetAsLastSibling();
+            FollowSelection();
+        }
+
+        public void Deselect()
+        {
+            selected = null;
+            if (toolbar) toolbar.gameObject.SetActive(false);
+        }
+
+        /// <summary>Keep the tool bar just above the selected ornament.</summary>
+        public void FollowSelection()
+        {
+            if (!selected || !toolbar) return;
+            var p = selected.data;
+            float y = GroundH + p.floor * FloorH + FloorH / 2f + p.y + (p.y > FloorH / 2f - 220f ? -150f : 150f);
+            toolbar.anchoredPosition = new Vector2(Mathf.Clamp(p.x, -FloorW / 2f + 270f, FloorW / 2f - 270f), y);
+        }
+
+        void OnTool(int k)
+        {
+            if (!selected) return;
+            var p = selected.data;
+            var rt = (RectTransform)selected.transform;
+            switch (k)
+            {
+                case 0: // flip
+                    p.flip = !p.flip;
+                    rt.localScale = new Vector3(p.flip ? -1f : 1f, 1f, 1f);
+                    GM.MarkDirty();
+                    break;
+                case 1: // bring to front
+                    GM.BringTowerDecorToFront(p);
+                    rt.SetAsLastSibling();
+                    Tween.Punch(rt, 0.1f, 0.2f);
+                    break;
+                case 2: // back to the inventory
+                    GM.StoreTowerDecor(p);
+                    pieces.Remove(p);
+                    Destroy(selected.gameObject);
+                    Deselect();
+                    GM.Toast(Decor.ItemName(p.id) + " envantere kaldırıldı.");
+                    break;
+                default:
+                    Deselect();
+                    break;
+            }
+        }
+
         /// <summary>Scroll so floor i is in view.</summary>
         public void ScrollToFloor(int i, bool instant)
         {
             float viewH = ((RectTransform)scroll.transform).rect.height;
             float total = content.sizeDelta.y - viewH;
-            float target = total <= 0f ? 0f : Mathf.Clamp01((i * FloorH - (viewH - FloorH) / 2f) / total);
+            float target = total <= 0f ? 0f : Mathf.Clamp01((GroundH + i * FloorH - (viewH - FloorH) / 2f) / total);
             if (instant) { scroll.verticalNormalizedPosition = target; return; }
             float from = scroll.verticalNormalizedPosition;
             Tween.Run(0.4f, k => { if (scroll) scroll.verticalNormalizedPosition = Mathf.Lerp(from, target, Tween.OutCubic(k)); });

@@ -177,6 +177,7 @@ namespace KaraPati
 
     [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; }
     [Serializable] public class ReqSave { public string chain; public int level; }
+    [Serializable] public class PlacedSave { public string id; public int floor; public float x, y; public bool flip; }
 
     [Serializable]
     public class OrderSave
@@ -218,7 +219,9 @@ namespace KaraPati
         public List<string> decorOwned = new List<string>();      // "chapter_slot_variant"
         public List<string> decorSelected = new List<string>();   // "chapter_slot:variant" 
         public int towerFloors;                 // how many tower floors are open (0 in old saves = 1)
-        public long lastFed, lastWatered;       // UTC ticks when the bowls were last filled   // claimed progress-bar gifts, e.g. "2_1" 
+        public long lastFed, lastWatered;       // UTC ticks when the bowls were last filled
+        public List<string> inventory = new List<string>();      // tower ornaments not placed yet, "s0v1:2"
+        public List<PlacedSave> placed = new List<PlacedSave>(); // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -603,6 +606,23 @@ namespace KaraPati
             Mathf.RoundToInt(basePrice[slot][variant] * (1f + 0.5f * chapter) / 10f) * 10;
 
         public static string OwnedId(int chapter, int slot, int variant) => chapter + "_" + slot + "_" + variant;
+
+        // ---- free-placement ornaments for the witch's tower ----
+        public static string ItemId(int slot, int variant) => "s" + slot + "v" + variant;
+
+        public static bool ParseItem(string id, out int slot, out int variant)
+        {
+            slot = variant = 0;
+            if (string.IsNullOrEmpty(id) || id.Length < 4 || id[0] != 's') return false;
+            int v = id.IndexOf('v');
+            return v > 1 && int.TryParse(id.Substring(1, v - 1), out slot) && int.TryParse(id.Substring(v + 1), out variant)
+                   && slot >= 0 && slot < Slots && variant > 0 && variant < Variants;
+        }
+
+        public static string ItemName(string id) => ParseItem(id, out var s, out var v) ? VariantNames[s][v] : id;
+
+        /// <summary>Tower ornaments cost a bit more than the old scene ones, rounded to tens.</summary>
+        public static int TowerPrice(int slot, int variant) => Mathf.RoundToInt(basePrice[slot][variant] * 1.5f / 10f) * 10;
         public static string SlotId(int chapter, int slot) => chapter + "_" + slot;
 
         // where each slot sits in each chapter scene (scene is 1020 x 940, centre origin); garlands also get a width

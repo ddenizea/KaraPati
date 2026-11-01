@@ -19,6 +19,13 @@ namespace KaraPati.EditorTools
                 PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
                 Debug.Log("KaraPati: ekran yönü Dikey (Portrait) olarak ayarlandı.");
             }
+            // Script changes while playing: recompile only after Play stops. Recompiling mid-play wipes the
+            // game's in-memory state, which could then be saved over a good save.
+            if (EditorPrefs.GetInt("ScriptCompilationDuringPlay", 0) != 1)
+            {
+                EditorPrefs.SetInt("ScriptCompilationDuringPlay", 1);
+                Debug.Log("KaraPati: oyun sırasında kod değişirse derleme Play bitince yapılacak.");
+            }
         }
 
         [MenuItem("KaraPati/Test/+30 Pati Mührü (Play modunda)")]
