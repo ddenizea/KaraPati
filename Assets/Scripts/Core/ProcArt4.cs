@@ -212,5 +212,40 @@ namespace KaraPati
                 p.Fill(q => S.Poly(q - c, S.Star(5, 0.1f, 0.045f)), new Color(1f, 0.95f, 0.6f));
             }
         }
+            /// <summary>Sound toggle icon. mode 0 = all on (two waves), 1 = music off (one wave + note crossed), 2 = muted (cross).</summary>
+        public static Sprite Speaker(int mode) => Make("speaker_" + mode, Size, p =>
+        {
+            var body = new Color(1f, 0.92f, 0.8f);
+            var cone = new[] { new Vector2(-0.6f, -0.22f), new Vector2(-0.3f, -0.22f), new Vector2(0.05f, -0.55f), new Vector2(0.05f, 0.55f), new Vector2(-0.3f, 0.22f), new Vector2(-0.6f, 0.22f) };
+            p.FillOutlined(q => S.Poly(q, cone), body, 0.06f);
+            if (mode == 2)
+            {
+                var red = new Color(1f, 0.45f, 0.45f);
+                p.FillOutlined(q => S.U(S.Seg(q, new Vector2(0.25f, -0.3f), new Vector2(0.75f, 0.3f), 0.07f),
+                    S.Seg(q, new Vector2(0.25f, 0.3f), new Vector2(0.75f, -0.3f), 0.07f)), red, 0.05f);
+                return;
+            }
+            p.FillOutlined(q => S.I(S.Ring(S.Circle(q, new Vector2(0.05f, 0f), 0.35f), 0.05f), -(q.x - 0.15f)), body, 0.04f);
+            if (mode == 0)
+                p.FillOutlined(q => S.I(S.Ring(S.Circle(q, new Vector2(0.05f, 0f), 0.62f), 0.055f), -(q.x - 0.2f)), body, 0.04f);
+            else
+            {
+                // small music note with a slash: music is off
+                var nc = new Color(1f, 0.7f, 0.4f);
+                p.FillOutlined(q => S.U(S.Ellipse(q, new Vector2(0.55f, -0.35f), new Vector2(0.13f, 0.1f)), S.Box(q, new Vector2(0.66f, 0f), new Vector2(0.03f, 0.35f), 0.01f)), nc, 0.04f);
+                p.FillOutlined(q => S.Seg(q, new Vector2(0.35f, -0.55f), new Vector2(0.85f, 0.45f), 0.045f), new Color(1f, 0.45f, 0.45f), 0.03f);
+            }
+        });
+            /// <summary>Paint brush icon for the decoration button.</summary>
+        public static Sprite Brush => Make("brush", Size, p =>
+        {
+            var handle = new Color(0.65f, 0.42f, 0.25f);
+            p.FillOutlined(q => S.Seg(q, new Vector2(0.55f, 0.6f), new Vector2(-0.05f, 0f), 0.11f), handle, 0.05f);
+            p.FillOutlined(q => S.Seg(q, new Vector2(-0.05f, 0f), new Vector2(-0.18f, -0.13f), 0.14f), new Color(0.75f, 0.75f, 0.82f), 0.05f);
+            var tip = new[] { new Vector2(-0.12f, -0.28f), new Vector2(-0.32f, -0.08f), new Vector2(-0.7f, -0.62f) };
+            p.FillOutlined(q => S.Poly(q, tip), new Color(1f, 0.55f, 0.25f), 0.05f);
+            p.Fill(q => S.Circle(q, new Vector2(0.45f, -0.55f), 0.13f), new Color(0.65f, 0.4f, 0.95f));
+            p.Fill(q => S.Circle(q, new Vector2(0.7f, -0.25f), 0.09f), new Color(0.4f, 0.85f, 0.5f));
+        });
     }
 }

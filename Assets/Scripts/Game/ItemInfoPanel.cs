@@ -58,6 +58,7 @@ namespace KaraPati
 
         public void Open(ItemData d)
         {
+            Sfx.Play("page");
             if (d == null) return;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
@@ -237,7 +238,13 @@ namespace KaraPati
             Tile(row, 188f, ProcArt.Item(b, 1), GM.IsDiscovered(b, 1), false, Chains.Name(b, 1), 1);
             Tile(row, 376f, ProcArt.Item(a, 2), GM.IsDiscovered(a, 2), false, Chains.Name(a, 2), 2);
             Tile(row, 564f, ProcArt.Item(b, 2), GM.IsDiscovered(b, 2), false, Chains.Name(b, 2), 2);
-            Para("Her dokunuş 1 enerji. Çoğunlukla 1. seviye, bazen 2. seviye çıkar.", 50f);
+            int gl = GM.GeneratorLevel(d.chain);
+            sub.text = "Üretici  •  Seviye " + gl + "/" + Generators.MaxLevel;
+            Para("Her dokunuş 1 enerji. " + Generators.ChanceText(gl) + ".", 50f);
+            Heading("Yükseltme");
+            Para(gl < Generators.MaxLevel
+                ? "Sonraki seviye (" + Generators.UpgradeCost(gl) + " altın): " + Generators.ChanceText(gl + 1) + ".\nKutuyu seçip alttaki 'Yükselt'e bas."
+                : "En üst seviyede! Her dokunuş en verimli hâlinde.", 90f);
         }
     }
 }

@@ -96,7 +96,7 @@ namespace KaraPati
             colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
             colors.disabledColor = new Color(0.75f, 0.75f, 0.75f, 0.8f);
             b.colors = colors;
-            b.onClick.AddListener(() => onClick?.Invoke());
+            b.onClick.AddListener(() => { Sfx.Play("click"); onClick?.Invoke(); });
             var t = Txt("Label", img.transform, label, fontSize, Cream);
             Stretch(t.rectTransform, 6, 6, 4, 4);
             return b;

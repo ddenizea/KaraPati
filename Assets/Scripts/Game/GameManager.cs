@@ -70,7 +70,7 @@ namespace KaraPati
         public Tutorial Tut { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -81,6 +81,10 @@ namespace KaraPati
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
+        int kazanLevel = 1, sandikLevel = 1;
+        readonly HashSet<string> decorOwned = new HashSet<string>();
+        readonly Dictionary<string, int> decorSelected = new Dictionary<string, int>();
+        DecorPanel decorPanel;
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
@@ -137,6 +141,7 @@ namespace KaraPati
             if (I != null && I != this) { Destroy(gameObject); return; }
             I = this;
             Application.targetFrameRate = 60;
+            Sfx.Init();
             SetupCamera();
             EnsureEventSystem();
             BuildUI();
@@ -312,6 +317,10 @@ namespace KaraPati
             var chaptersRt = UIKit.Rect("ChapterPanel", canvasRt);
             chapterPanel = chaptersRt.gameObject.AddComponent<ChapterPanel>();
             chapterPanel.Build();
+
+            var decorRt = UIKit.Rect("DecorPanel", canvasRt);
+            decorPanel = decorRt.gameObject.AddComponent<DecorPanel>();
+            decorPanel.Build();
 
             BuildDialog(canvasRt);
 
@@ -495,6 +504,7 @@ namespace KaraPati
         {
             if (OnBoard) return;
             OnBoard = true;
+            Sfx.Play("whoosh");
             Cross(homeCg, boardCg);
             Orders.Refresh();
             ShowInfo(null);
@@ -505,6 +515,7 @@ namespace KaraPati
         {
             if (!OnBoard) return;
             OnBoard = false;
+            Sfx.Play("whoosh", 0.85f);
             Board.HideSelector();
             Cats.Deselect();
             infoKitten = null;
@@ -549,6 +560,7 @@ namespace KaraPati
                     break;
             }
             Toast("Günlük ödül: " + DailyRewards.Text(m), UIKit.Orange);
+            Sfx.Play("gift");
             lastDailyDay = DailyRewards.Today;
             DailyIndex = (DailyIndex + 1) % DailyRewards.Days.Length;
             Save();
@@ -584,6 +596,65 @@ namespace KaraPati
         public void ShowHomeChapter(int ch) => home.ShowChapter(ch, true);
         public void RefreshHome() => home.Refresh(false);
 
+        // ------------------------------------------------------------------ decoration (gold sink)
+        public void OpenDecor(int chapter) => decorPanel.Open(chapter);
+
+        List<string> DecorSelectedList()
+        {
+            var list = new List<string>();
+            foreach (var kv in decorSelected) list.Add(kv.Key + ":" + kv.Value);
+            return list;
+        }
+        public bool DecorOwned(int c, int s, int v) => v == 0 || decorOwned.Contains(Decor.OwnedId(c, s, v));
+        public int DecorSelected(int c, int s) => decorSelected.TryGetValue(Decor.SlotId(c, s), out var v) ? v : 0;
+
+        public void SelectDecor(int c, int s, int v)
+        {
+            if (!DecorOwned(c, s, v)) return;
+            decorSelected[Decor.SlotId(c, s)] = v;
+            home.RefreshDecor(c, s, true);
+            MarkDirty();
+        }
+
+        public bool BuyDecor(int c, int s, int v)
+        {
+            if (DecorOwned(c, s, v)) { SelectDecor(c, s, v); return true; }
+            if (!TrySpendGold(Decor.Price(c, s, v))) return false;
+            decorOwned.Add(Decor.OwnedId(c, s, v));
+            Toast(Decor.VariantNames[s][v] + " dükkâna yerleşti!", UIKit.Orange);
+            SelectDecor(c, s, v);
+            Save();
+            return true;
+        }
+
+        // ------------------------------------------------------------------ generator upgrades (gold sink)
+        public int GeneratorLevel(string chain) => chain == Chains.Kazan ? kazanLevel : chain == Chains.Sandik ? sandikLevel : 1;
+
+        public void UpgradeGenerator(string chain)
+        {
+            int lvl = GeneratorLevel(chain);
+            if (lvl >= Generators.MaxLevel) { Toast(Chains.Name(chain, 1) + " zaten en üst seviyede!"); return; }
+            int price = Generators.UpgradeCost(lvl);
+            if (!TrySpendGold(price)) return;
+            if (chain == Chains.Kazan) kazanLevel++; else sandikLevel++;
+            lvl++;
+            Toast(Chains.Name(chain, 1) + " " + lvl + ". seviyeye çıktı! " + Generators.ChanceText(lvl), UIKit.Orange, 4f);
+            Sfx.Play("levelup", 1.1f);
+            foreach (var c in Board.AllCells())
+            {
+                var d = Board.Get(c);
+                if (d != null && d.chain == chain)
+                {
+                    Board.RefreshView(c);
+                    var v = Board.ViewAt(c);
+                    if (v) Tween.Pop(v.rt, 0.4f);
+                    FX.Burst(Board.FxLayer, BoardController.CellPos(c), UIKit.Orange, 14);
+                }
+            }
+            Board.RefreshSelection();
+            Save();
+        }
+
         // ------------------------------------------------------------------ chapter gifts
         public bool GiftClaimed(int chapter, int gift) => chapterGifts.Contains(ChapterGifts.Id(chapter, gift));
 
@@ -614,6 +685,7 @@ namespace KaraPati
             if (ChapterGifts.Stamps(chapter, gift) > 0) AddStamps(ChapterGifts.Stamps(chapter, gift));
             if (ChapterGifts.Sticker(chapter, gift) && !GiveRandomMissingAny()) AddGold(50);
             Toast("Sandık açıldı: " + ChapterGifts.Text(chapter, gift), UIKit.Orange, 4f);
+            Sfx.Play("gift");
             Save();
         }
 
@@ -645,6 +717,7 @@ namespace KaraPati
         {
             if (clues.Contains(c.id)) return;
             clues.Add(c.id);
+            Sfx.Play("ready", 1.15f);
             AddStamps(1);
             AddXp(Levels.ClueXp);
             Save();
@@ -704,6 +777,8 @@ namespace KaraPati
             int chapter = Story.CurrentChapter(idx);
             Stamps -= task.cost;
             TasksDone++;
+            Sfx.Play("stamp");
+            Sfx.Play("ready", 1f, 0.6f);
             AddXp(Levels.TaskXp);
             AddPumpkins(2);
             RefreshHud();
@@ -799,6 +874,7 @@ namespace KaraPati
             AddStamps(Stickers.GrandStamps);
             Toast("Büyük ödül! +" + Stickers.GrandGold + " altın, +" + Stickers.GrandStamps + " mühür, +" + Stickers.GrandEnergy + " enerji", UIKit.Orange, 4.5f);
             Save();
+            Sfx.Play("gift");
             return true;
         }
 
@@ -856,11 +932,13 @@ namespace KaraPati
             AddStamps(Stickers.SetRewardStamps);
             Toast("\"" + s.name + "\" ödülü: +" + Stickers.SetRewardGold + " altın, +" + Stickers.SetRewardStamps + " mühür!", UIKit.Orange);
             Save();
+            Sfx.Play("gift");
             return true;
         }
 
         void ShowStickerPopup(string id)
         {
+            Sfx.Play("ready", 1.25f, 0.7f);
             stickerPopIcon.sprite = ProcArt.StickerIcon(id);
             var set = Stickers.SetOf(id);
             stickerPopText.text = "<b>Yeni etiket!</b>\n" + Stickers.Name(id) + (set != null ? "  <size=24>(" + set.name + ")</size>" : "");
@@ -958,7 +1036,21 @@ namespace KaraPati
             }
             if (Chains.IsGenerator(d.chain))
             {
-                infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") + " Dokun: 1 enerji.";
+                int gl = GeneratorLevel(d.chain);
+                infoTitle.text = d.Name + "  <size=26>(Sv. " + gl + "/" + Generators.MaxLevel + ")</size>";
+                infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") + " Dokun: 1 enerji.\n" + Generators.ChanceText(gl);
+                actionBtn.gameObject.SetActive(true);
+                if (gl < Generators.MaxLevel)
+                {
+                    int price = Generators.UpgradeCost(gl);
+                    actionBtn.Label().text = "Yükselt\n" + price + " altın";
+                    btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
+                }
+                else
+                {
+                    actionBtn.Label().text = "En üst\nseviye";
+                    btnImg.color = UIKit.Disabled;
+                }
                 return;
             }
             int max = Chains.MaxLevel(d.chain);
@@ -1023,6 +1115,7 @@ namespace KaraPati
             var d = Board.Get(Board.Selected);
             if (d != null && d.bubble) { Board.OpenBubble(Board.Selected); return; }
             if (d != null && Chains.IsStation(d.chain)) { Board.PotAction(); return; }
+            if (d != null && Chains.IsGenerator(d.chain)) { UpgradeGenerator(d.chain); return; }
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)
             {
@@ -1047,6 +1140,7 @@ namespace KaraPati
                 ups++;
                 int g = Levels.GoldReward(Level);
                 Gold += g;
+                Sfx.Play("levelup");
                 Stamps += 1;
                 Energy = Mathf.Max(Energy, MaxEnergy);
                 ShowDialog("Seviye " + Level + "!",
@@ -1163,6 +1257,7 @@ namespace KaraPati
             Toast(PumpkinEvent.Name + " ödülü: " + PumpkinEvent.RewardText(m), UIKit.Orange);
             RefreshEventButton();
             Save();
+            Sfx.Play("gift");
             return true;
         }
 
@@ -1191,6 +1286,7 @@ namespace KaraPati
             if (Gold < amount)
             {
                 Toast(amount + " altın gerekiyor.", new Color(1f, 0.6f, 0.5f));
+                Sfx.Play("error");
                 return false;
             }
             Gold -= amount;
@@ -1213,6 +1309,7 @@ namespace KaraPati
             if (Energy < amount)
             {
                 Toast("Enerjin bitti! Biraz bekle ya da altınla al (+).", new Color(1f, 0.6f, 0.5f));
+                Sfx.Play("error");
                 return false;
             }
             Energy -= amount;
@@ -1307,6 +1404,9 @@ namespace KaraPati
             Tut.Step = 0;
             discovered.Clear();
             chapterGifts.Clear();
+            kazanLevel = sandikLevel = 1;
+            decorOwned.Clear();
+            decorSelected.Clear();
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
@@ -1358,6 +1458,10 @@ namespace KaraPati
                 tutorialStep = Tut.Step,
                 discovered = new List<string>(discovered),
                 chapterGifts = new List<string>(chapterGifts),
+                kazanLevel = kazanLevel,
+                sandikLevel = sandikLevel,
+                decorOwned = new List<string>(decorOwned),
+                decorSelected = DecorSelectedList(),
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
                 level = Level,
@@ -1398,6 +1502,17 @@ namespace KaraPati
                 if (s.discovered != null) foreach (var k in s.discovered) discovered.Add(k);
                 chapterGifts.Clear();
                 if (s.chapterGifts != null) foreach (var k in s.chapterGifts) chapterGifts.Add(k);
+                kazanLevel = Mathf.Clamp(s.kazanLevel, 1, Generators.MaxLevel);
+                sandikLevel = Mathf.Clamp(s.sandikLevel, 1, Generators.MaxLevel);
+                decorOwned.Clear();
+                if (s.decorOwned != null) foreach (var k in s.decorOwned) decorOwned.Add(k);
+                decorSelected.Clear();
+                if (s.decorSelected != null)
+                    foreach (var k in s.decorSelected)
+                    {
+                        int i = k.IndexOf(':');
+                        if (i > 0 && int.TryParse(k.Substring(i + 1), out var v)) decorSelected[k.Substring(0, i)] = v;
+                    }
                 // players from before the guide existed already know the basics
                 if (Tut.Step == 0 && (s.served > 0 || s.tasksDone > 0)) Tut.Step = Tutorial.Done;
                 stickers.Clear();

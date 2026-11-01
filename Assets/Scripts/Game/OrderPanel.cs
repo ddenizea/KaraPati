@@ -230,6 +230,7 @@ namespace KaraPati
             GM.Tut?.Notify("deliver");
 
             int reward = Reward(o);
+            Sfx.Play("coin");
             GM.AddGold(reward);
             GM.AddStamps(StampReward(o));
             GM.AddPumpkins(o.reqs.Count + (o.reqs.Count > 1 ? 1 : 0));

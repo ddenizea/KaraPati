@@ -65,6 +65,7 @@ namespace KaraPati
 
         public void Open()
         {
+            Sfx.Play("page");
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             Fill();

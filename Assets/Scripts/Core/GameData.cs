@@ -213,7 +213,10 @@ namespace KaraPati
         public bool introSeen;
         public int tutorialStep;
         public List<string> discovered = new List<string>();
-        public List<string> chapterGifts = new List<string>();   // claimed progress-bar gifts, e.g. "2_1" 
+        public List<string> chapterGifts = new List<string>();
+        public int kazanLevel, sandikLevel;   // generator upgrades (0 in old saves = level 1)
+        public List<string> decorOwned = new List<string>();      // "chapter_slot_variant"
+        public List<string> decorSelected = new List<string>();   // "chapter_slot:variant"    // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -544,6 +547,74 @@ namespace KaraPati
     }
 
     /// <summary>Player level curve and what each level gives.</summary>
+    /// <summary>
+    /// Shop decoration: every chapter scene has 4 slots (garland, plant, cat corner, light);
+    /// each slot has "none" (free) plus 3 ornaments bought with gold. Bought ornaments can be swapped for free.
+    /// </summary>
+    public static class Decor
+    {
+        public const int Slots = 4, Variants = 4;   // variant 0 = empty
+        public static readonly string[] SlotNames = { "Süs Zinciri", "Saksı", "Kedi Köşesi", "Işık" };
+        public static readonly string[][] VariantNames =
+        {
+            new[] { "Yok", "Bayraklar", "Balkabakları", "Yıldızlar" },
+            new[] { "Yok", "Ay Çiçeği", "Peri Mantarı", "Kristal Küme" },
+            new[] { "Yok", "Minder", "Yumak Sepeti", "Kedi Kulesi" },
+            new[] { "Yok", "Mumlar", "Fener", "Kristal Küre" },
+        };
+        static readonly int[][] basePrice =
+        {
+            new[] { 0, 120, 250, 400 },
+            new[] { 0, 150, 300, 500 },
+            new[] { 0, 200, 400, 700 },
+            new[] { 0, 180, 350, 600 },
+        };
+
+        /// <summary>Later chapters are fancier and cost more (x1 .. x3.5), rounded to tens.</summary>
+        public static int Price(int chapter, int slot, int variant) =>
+            Mathf.RoundToInt(basePrice[slot][variant] * (1f + 0.5f * chapter) / 10f) * 10;
+
+        public static string OwnedId(int chapter, int slot, int variant) => chapter + "_" + slot + "_" + variant;
+        public static string SlotId(int chapter, int slot) => chapter + "_" + slot;
+
+        // where each slot sits in each chapter scene (scene is 1020 x 940, centre origin); garlands also get a width
+        public static readonly Vector3[][] Places =
+        {
+            new[] { new Vector3(100f, 430f, 640f), new Vector3(455f, -395f), new Vector3(215f, -420f), new Vector3(-455f, -80f) },   // shop
+            new[] { new Vector3(60f, 440f, 560f), new Vector3(460f, -400f), new Vector3(-300f, -420f), new Vector3(230f, 40f) },     // cellar
+            new[] { new Vector3(-150f, 330f, 500f), new Vector3(200f, -300f), new Vector3(-320f, -410f), new Vector3(470f, 120f) },  // garden
+            new[] { new Vector3(-320f, 285f, 320f), new Vector3(-160f, -410f), new Vector3(330f, -420f), new Vector3(320f, 330f) },  // town
+            new[] { new Vector3(0f, 440f, 500f), new Vector3(450f, -380f), new Vector3(300f, -420f), new Vector3(-300f, 100f) },     // tower
+            new[] { new Vector3(0f, 440f, 600f), new Vector3(-140f, -430f), new Vector3(60f, -430f), new Vector3(-470f, 180f) },     // realm
+        };
+    }
+
+    /// <summary>Gold sink: upgrading the Kazan / Sandık makes them drop higher-level ingredients.</summary>
+    public static class Generators
+    {
+        public const int MaxLevel = 5;
+        static readonly int[] cost = { 0, 150, 400, 900, 1800 };   // price to go from level i to i+1
+
+        public static int UpgradeCost(int level) => level >= 1 && level < MaxLevel ? cost[level] : 0;
+        public static float Level2Chance(int level) => 0.12f + 0.08f * (level - 1);           // 12% .. 44%
+        public static float Level3Chance(int level) => level >= 3 ? 0.05f * (level - 2) : 0f;  // 0 .. 15%
+
+        public static int Roll(int level)
+        {
+            float r = UnityEngine.Random.value;
+            if (r < Level3Chance(level)) return 3;
+            if (r < Level3Chance(level) + Level2Chance(level)) return 2;
+            return 1;
+        }
+
+        public static string ChanceText(int level)
+        {
+            string t = "2. seviye şansı %" + Mathf.RoundToInt(Level2Chance(level) * 100f);
+            if (Level3Chance(level) > 0f) t += ", 3. seviye %" + Mathf.RoundToInt(Level3Chance(level) * 100f);
+            return t;
+        }
+    }
+
     /// <summary>Gift chests on the chapter progress bar: one halfway, one at the end.</summary>
     public static class ChapterGifts
     {

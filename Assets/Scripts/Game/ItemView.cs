@@ -86,8 +86,11 @@ namespace KaraPati
             icon.color = data.nap ? new Color(0.7f, 0.7f, 0.78f) : Color.white;
             napCat.gameObject.SetActive(false); // the sleeping kitten itself sits on top now
             bool gen = Chains.IsSpecial(data.chain);
-            badge.gameObject.SetActive(!gen);
-            badgeText.text = data.level.ToString();
+            bool machine = Chains.IsGenerator(data.chain);
+            badge.gameObject.SetActive(!gen || machine);
+            // machines show their upgrade level instead of an item level
+            badgeText.text = machine ? GameManager.I.GeneratorLevel(data.chain).ToString() : data.level.ToString();
+            badge.color = machine ? new Color(0.85f, 0.55f, 0.15f, 0.95f) : new Color(0.14f, 0.09f, 0.2f, 0.92f);
             cooldown.gameObject.SetActive((data.IsKitten && data.level >= 2) || data.Brewing);
             UpdateCooldown();
             RefreshPot();

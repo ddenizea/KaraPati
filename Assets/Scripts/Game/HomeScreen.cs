@@ -27,6 +27,9 @@ namespace KaraPati
         readonly Image[] dims = new Image[Story.Chapters.Length];
         readonly RectTransform[] clueLayers = new RectTransform[Story.Chapters.Length];
         readonly ChapterScene[] extra = new ChapterScene[Story.Chapters.Length];
+        readonly RectTransform[] decorLayers = new RectTransform[Story.Chapters.Length];
+        readonly RectTransform[,] decorObjs = new RectTransform[Story.Chapters.Length, Decor.Slots];
+        readonly int[,] decorShown = new int[Story.Chapters.Length, Decor.Slots];
         static readonly string[] sceneNames = { "Shop", "Cellar", "Garden", "Town", "Tower", "Realm" };
         RectTransform ghostLayer;
 
@@ -118,6 +121,7 @@ namespace KaraPati
                 scenes[i] = extra[i].root;
                 dims[i] = extra[i].dim;
             }
+            for (int i = 0; i < scenes.Length; i++) BuildDecorLayer(i);
             for (int i = 0; i < scenes.Length; i++) BuildClues(i);
 
             // investigation buttons on top of the scene
@@ -127,6 +131,15 @@ namespace KaraPati
             caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(caseBadgeText.rectTransform);
             RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
+            RoundButton(sceneArea, "Decor", ProcArt.Brush, new Vector2(1f, 1f), new Vector2(-66f, -320f), () => GM.OpenDecor(view));
+            // sound: tap cycles all on -> music off -> silent
+            Button soundBtn = null;
+            soundBtn = RoundButton(sceneArea, "Sound", ProcArt.Speaker(Sfx.Mode), new Vector2(1f, 1f), new Vector2(-66f, -190f), () =>
+            {
+                int m = Sfx.CycleMode();
+                soundBtn.transform.Find("Icon").GetComponent<Image>().sprite = ProcArt.Speaker(m);
+                GM.Toast(m == 0 ? "Ses ve müzik açık" : m == 1 ? "Müzik kapalı, efektler açık" : "Ses kapalı");
+            });
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
             dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
@@ -188,7 +201,7 @@ namespace KaraPati
             var ic = UIKit.Img("Icon", bg.transform, icon, Color.white);
             ic.rectTransform.sizeDelta = new Vector2(74f, 74f);
             var b = bg.gameObject.AddComponent<Button>();
-            b.onClick.AddListener(() => { Tween.Punch(bg.transform, 0.12f, 0.25f); onClick(); });
+            b.onClick.AddListener(() => { Tween.Punch(bg.transform, 0.12f, 0.25f); Sfx.Play("click"); onClick(); });
             return b;
         }
 
@@ -389,6 +402,37 @@ namespace KaraPati
             return scene;
         }
 
+        // ------------------------------------------------------------------ decoration
+        void BuildDecorLayer(int ch)
+        {
+            // sits under the scene's darkness overlay so ornaments share the mood of the room
+            decorLayers[ch] = UIKit.Rect("Decor", scenes[ch]).At(Vector2.zero, new Vector2(1020f, 940f));
+            if (dims[ch]) decorLayers[ch].SetSiblingIndex(dims[ch].transform.GetSiblingIndex());
+            for (int s = 0; s < Decor.Slots; s++) decorShown[ch, s] = -1;
+        }
+
+        public void RefreshDecor(int ch, int slot, bool animate)
+        {
+            if (ch < 0 || ch >= decorLayers.Length || !decorLayers[ch]) return;
+            int v = GM.DecorSelected(ch, slot);
+            if (decorShown[ch, slot] == v) return;
+            decorShown[ch, slot] = v;
+            if (decorObjs[ch, slot]) Destroy(decorObjs[ch, slot].gameObject);
+            var place = ch < Decor.Places.Length ? Decor.Places[ch][slot] : Vector3.zero;
+            decorObjs[ch, slot] = DecorArt.Build(decorLayers[ch], slot, v, place);
+            if (animate && decorObjs[ch, slot])
+            {
+                Tween.Pop(decorObjs[ch, slot], 0.4f);
+                FX.Burst(decorLayers[ch], new Vector2(place.x, place.y), UIKit.Orange, 12);
+            }
+        }
+
+        void RefreshAllDecor()
+        {
+            for (int c = 0; c < decorLayers.Length; c++)
+                for (int s = 0; s < Decor.Slots; s++) RefreshDecor(c, s, false);
+        }
+
         // ------------------------------------------------------------------ clues
         void BuildClues(int ch)
         {
@@ -575,6 +619,7 @@ namespace KaraPati
             nextBtn.gameObject.SetActive(hasNext);
             nextLock.gameObject.SetActive(hasNext && view + 1 > current);
             RefreshGifts();
+            RefreshAllDecor();
 
             bool justDid = animate && shownDone >= 0 && done > shownDone;
             ApplyShop(done);

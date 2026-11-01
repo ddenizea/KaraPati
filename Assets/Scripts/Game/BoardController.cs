@@ -423,8 +423,9 @@ namespace KaraPati
             string chain = gen.chain == Chains.Kazan
                 ? (Random.value < 0.5f ? Chains.Ot : Chains.Mantar)
                 : (Random.value < 0.5f ? Chains.Kristal : Chains.Ag);
-            int level = Random.value < 0.12f ? 2 : 1;
+            int level = Generators.Roll(GM.GeneratorLevel(gen.chain));
             if (v) Tween.Punch(v.rt, 0.15f, 0.25f);
+            Sfx.Play("spawn", level > 1 ? 1.25f : 1f);
             SpawnFrom(c, e, new ItemData(chain, level));
             GM.OnBoardChanged();
             GM.Tut?.Notify("spawn");
@@ -439,6 +440,7 @@ namespace KaraPati
 
             var nd = new ItemData(a.chain, a.level + 1);
             Set(to, nd, true);
+            Sfx.Play("pop", 0.85f + 0.1f * nd.level);   // higher merges sound brighter
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
             TrySpawnBubble(to, nd);
@@ -458,6 +460,7 @@ namespace KaraPati
             else if (Chains.IsPotion(d.chain)) price = PotionSellPrice(d.level);
             else return;
             GM.AddGold(price);
+            Sfx.Play("coin", 0.9f, 0.6f);
             GM.Toast(d.Name + " satıldı: +" + price + " altın");
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
@@ -500,6 +503,7 @@ namespace KaraPati
                     return;
                 }
                 pot.mix = Recipes.Key(a.chain, a.level);
+                Sfx.Play("spawn", 0.8f);
                 ConsumeInto(from, potCell);
                 var partners = Recipes.PartnersOf(a.chain, a.level, done);
                 var names = new List<string>();
@@ -524,6 +528,7 @@ namespace KaraPati
                 pot.brew = r.id;
                 pot.brewUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(r.seconds).Ticks;
                 pot.readyNotified = false;
+                Sfx.Play("brew");
                 ConsumeInto(from, potCell);
                 FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
                 GM.Toast(r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
@@ -554,6 +559,7 @@ namespace KaraPati
             pot.brewUntil = 0;
             pot.readyNotified = false;
             SpawnFrom(c, e, new ItemData(Chains.Iksir, r != null ? r.id : 1));
+            Sfx.Play("pop", 1.3f);
             FX.Burst(fxLayer, CellPos(e), ProcArt.PotionColor(r != null ? r.id : 1), 12);
             RefreshView(c);
             Select(e);
@@ -614,6 +620,7 @@ namespace KaraPati
                 bubbleUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(Bubbles.Seconds).Ticks
             };
             SpawnFromPos(CellPos(from), e, b);
+            Sfx.Play("bubble");
             FX.Burst(fxLayer, CellPos(e), new Color(0.75f, 0.9f, 1f), 8);
             GM.Toast("Bir hayalet baloncuk belirdi! İçindeki " + b.Name + " " + (int)Bubbles.Seconds + " sn boyunca senin olabilir.", new Color(0.7f, 0.9f, 1f), 4f);
         }
@@ -641,6 +648,7 @@ namespace KaraPati
             if (d == null || !d.bubble) return;
             if (!GM.TrySpendGold(Bubbles.Price(d.level))) return;
             d.bubble = false;
+            Sfx.Play("bubble", 1.3f);
             RefreshView(c);
             var v = ViewAt(c);
             if (v) Tween.Pop(v.rt, 0.35f);
@@ -664,6 +672,7 @@ namespace KaraPati
                 if (pd != null && pd.brew > 0 && !pd.readyNotified && pd.brewUntil <= now)
                 {
                     pd.readyNotified = true;
+                    Sfx.Play("ready");
                     RefreshView(c);
                     FX.Burst(fxLayer, CellPos(c), ProcArt.PotionColor(pd.brew), 10);
                     GM.Toast(Chains.Name(Chains.Iksir, pd.brew) + " hazır! Kazana dokun.", new Color(0.85f, 0.7f, 1f));
@@ -682,6 +691,7 @@ namespace KaraPati
             if (changed)
             {
                 GM.Toast("Pof! Baloncuk uçup gitti.");
+                Sfx.Play("bubble", 0.7f);
                 GM.OnBoardChanged();
             }
             else

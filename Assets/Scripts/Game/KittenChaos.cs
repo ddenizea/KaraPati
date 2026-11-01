@@ -156,6 +156,7 @@ namespace KaraPati
                 GM.KittenHintShown = true;
             }
             GM.Toast(msg, UIKit.Orange, 4.5f);
+            Sfx.Play("paw", 1.15f, 0.8f);
             GM.GiveSticker("c_yavru", false);
             GM.MarkDirty();
         }
@@ -209,6 +210,7 @@ namespace KaraPati
             B.MoveItem(c, n, 0.35f, true);
             if (sel) B.Select(n);
             GM.Toast("Hop! Yavru patisiyle itti: " + d.Name, UIKit.Orange);
+            Sfx.Play("paw", 1.3f, 0.6f);
             GM.OnBoardChanged();
         }
 
@@ -261,6 +263,7 @@ namespace KaraPati
             a.WalkTo(a.Pos + Random.insideUnitCircle.normalized * 170f);
             FX.Burst(B.FxLayer, a.Pos + new Vector2(0f, 30f), new Color(1f, 0.6f, 0.75f), 5);
             GM.Toast("Mırrr... Yavru uyandı ve gerindi.");
+            Sfx.Play("paw", 1.1f, 0.7f);
             GM.GiveSticker("c_uykucu", false);
             B.RefreshSelection();
             if (Selected == a) GM.ShowKittenInfo(a);
@@ -279,6 +282,7 @@ namespace KaraPati
             Select(a);
             if (a.state == KittenAgent.State.Napping) { Pet(a); return; }
             Tween.Punch(a.rt, 0.18f, 0.3f);
+            Sfx.Play("paw", a.level == 1 ? 1.2f : a.level == 2 ? 1f : 0.85f);
             switch (a.level)
             {
                 case 1:
@@ -332,6 +336,7 @@ namespace KaraPati
 
             Select(c);
             GM.Toast("Yavrular birleşti: Çırak Kedi! 2 saat yanında kalacak, yavrular onu görünce kaçışıyor.", UIKit.Orange, 5f);
+            Sfx.Play("levelup", 1.2f);
             GM.GiveSticker("c_cirak", false);
             GM.OnBoardChanged();
         }

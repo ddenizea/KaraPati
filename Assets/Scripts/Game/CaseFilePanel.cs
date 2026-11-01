@@ -52,6 +52,7 @@ namespace KaraPati
 
         public void Open()
         {
+            Sfx.Play("page");
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             tab = Story.CurrentChapter(GM.TasksDone);
