@@ -44,7 +44,7 @@ namespace KaraPati
         readonly List<Image> candleGlows = new List<Image>();
 
         RectTransform taskList;
-        Image albumBadge, caseBadge, dailyBadge, chaptersBadge;
+        Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -170,24 +170,38 @@ namespace KaraPati
             // bottom buttons
             var bottom = UIKit.Section(root, "Bottom", 1765f, 170f);
             var album = UIKit.Btn("Album", bottom, "", UIKit.Panel, () => GM.OpenAlbum());
-            ((RectTransform)album.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(320f, 150f));
+            ((RectTransform)album.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(270f, 150f));
             var aIcon = UIKit.Img("Icon", album.transform, ProcArt.AlbumIcon, Color.white);
             aIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(18f, 0f), new Vector2(100f, 100f));
             var aLabel = album.Label();
             aLabel.text = "Albüm";
-            aLabel.fontSize = 40;
+            aLabel.fontSize = 34;
             aLabel.rectTransform.offsetMin = new Vector2(110f, 4f);
             albumBadge = UIKit.Img("Badge", album.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
             albumBadge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-14f, -14f), new Vector2(46f, 46f));
             var bt = UIKit.Txt("!", albumBadge.transform, "!", 32, Color.white);
             UIKit.Stretch(bt.rectTransform);
 
-            var play = UIKit.Btn("Play", bottom, "Dükkânı Aç", UIKit.Green, () => GM.GoBoard(), 52);
-            ((RectTransform)play.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(660f, 150f));
+            // witch's tower: Kara Pati's home (red dot when the bowls run low)
+            var towerBtn = UIKit.Btn("Tower", bottom, "", new Color(0.42f, 0.28f, 0.6f), () => GM.GoTower());
+            ((RectTransform)towerBtn.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(315f, 0f), new Vector2(240f, 150f));
+            var tIcon = UIKit.Img("Icon", towerBtn.transform, ProcArt.TowerIcon, Color.white);
+            tIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 4f), new Vector2(100f, 100f));
+            var tLabel = towerBtn.Label();
+            tLabel.text = "Kule";
+            tLabel.fontSize = 34;
+            tLabel.rectTransform.offsetMin = new Vector2(100f, 4f);
+            towerBadge = UIKit.Img("Badge", towerBtn.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            towerBadge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-14f, -14f), new Vector2(46f, 46f));
+            var tbt = UIKit.Txt("!", towerBadge.transform, "!", 32, Color.white);
+            UIKit.Stretch(tbt.rectTransform);
+
+            var play = UIKit.Btn("Play", bottom, "Dükkânı Aç", UIKit.Green, () => GM.GoBoard(), 46);
+            ((RectTransform)play.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(460f, 150f));
             play.Label().fontStyle = FontStyle.Bold;
-            play.Label().rectTransform.offsetMin = new Vector2(120f, 4f);
+            play.Label().rectTransform.offsetMin = new Vector2(110f, 4f);
             var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Item(Chains.Kazan, 1), Color.white);
-            pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 4f), new Vector2(110f, 110f));
+            pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 4f), new Vector2(100f, 100f));
         }
 
         Button RoundButton(RectTransform parent, string name, Sprite icon, Vector2 anchor, Vector2 pos, System.Action onClick)
@@ -634,6 +648,7 @@ namespace KaraPati
             albumBadge.gameObject.SetActive(GM.AnyClaimableSet);
             dailyBadge.gameObject.SetActive(GM.DailyAvailable);
             chaptersBadge.gameObject.SetActive(GM.AnyGiftReady);
+            towerBadge.gameObject.SetActive(GM.CatNeedsCare);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);

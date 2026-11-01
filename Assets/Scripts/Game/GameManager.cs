@@ -70,6 +70,7 @@ namespace KaraPati
         public Tutorial Tut { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
+        public bool OnTower { get; private set; }
         public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
@@ -86,7 +87,10 @@ namespace KaraPati
         readonly Dictionary<string, int> decorSelected = new Dictionary<string, int>();
         DecorPanel decorPanel;
         CanvasScaler scaler;
-        CanvasGroup homeCg, boardCg;
+        CanvasGroup homeCg, boardCg, towerCg;
+        TowerScreen tower;
+        int towerFloors = 1;
+        long lastFed, lastWatered;
         Button homeBtn;
         RectTransform storageBtn, levelBadge;
         Text storageText, levelText;
@@ -272,6 +276,12 @@ namespace KaraPati
             Board.Build(boardArea);
             BuildInfoBar(UIKit.Section(boardRt, "InfoBar", 1916f, 134f));
 
+            // --- witch's tower
+            var towerRt = UIKit.Fill(Root, "TowerScreen");
+            towerCg = towerRt.gameObject.AddComponent<CanvasGroup>();
+            tower = towerRt.gameObject.AddComponent<TowerScreen>();
+            tower.Build(towerRt);
+
             // --- shared overlays
             BuildTopBar(UIKit.Section(Root, "TopBar", 12f, 115f));
 
@@ -333,6 +343,7 @@ namespace KaraPati
             // start on the shop screen
             OnBoard = false;
             boardCg.gameObject.SetActive(false);
+            towerCg.gameObject.SetActive(false);
         }
 
         Image Pill(Transform parent, string name, Vector2 anchor, Vector2 pivot, Vector2 pos, float width)
@@ -521,6 +532,74 @@ namespace KaraPati
             infoKitten = null;
             home.Refresh(false);
             Cross(boardCg, homeCg);
+            Save();
+        }
+
+        public void GoTower()
+        {
+            if (OnBoard || OnTower) return;
+            OnTower = true;
+            Sfx.Play("whoosh", 1.1f);
+            tower.Refresh();
+            Cross(homeCg, towerCg);
+            tower.ScrollToFloor(0, true);
+        }
+
+        public void LeaveTower()
+        {
+            if (!OnTower) return;
+            OnTower = false;
+            Sfx.Play("whoosh", 0.85f);
+            home.Refresh(false);
+            Cross(towerCg, homeCg);
+            Save();
+        }
+
+        // ------------------------------------------------------------------ tower & cat care
+        public int TowerFloorsOpen => towerFloors;
+        public float FoodLevel => Tower.Level(lastFed);
+        public float WaterLevel => Tower.Level(lastWatered);
+        public bool CatHappy => FoodLevel > Tower.HappyAbove && WaterLevel > Tower.HappyAbove;
+        public bool CatNeedsCare => !CatHappy;
+
+        public bool UnlockTowerFloor(int i)
+        {
+            if (i != towerFloors || i >= Tower.Floors) return false;
+            if (!TrySpendGold(Tower.FloorPrice[i])) return false;
+            towerFloors++;
+            Sfx.Play("levelup");
+            Toast((i + 1) + ". kat açıldı: " + Tower.FloorNames[i] + "! Burayı süsleyebilirsin.", UIKit.Orange, 4f);
+            Save();
+            return true;
+        }
+
+        public bool FillFood()
+        {
+            if (FoodLevel > 0.95f) { Toast("Mama kabı zaten dolu."); return false; }
+            bool wasHappy = CatHappy;
+            lastFed = DateTime.UtcNow.Ticks;
+            Sfx.Play("spawn", 0.9f);
+            Sfx.Play("paw", 1.15f, 0.8f);
+            AnnounceCare(wasHappy);
+            return true;
+        }
+
+        public bool FillWater()
+        {
+            if (WaterLevel > 0.95f) { Toast("Su kabı zaten dolu."); return false; }
+            bool wasHappy = CatHappy;
+            lastWatered = DateTime.UtcNow.Ticks;
+            Sfx.Play("bubble", 0.9f);
+            Sfx.Play("paw", 1.15f, 0.8f);
+            AnnounceCare(wasHappy);
+            return true;
+        }
+
+        void AnnounceCare(bool wasHappy)
+        {
+            if (!wasHappy && CatHappy) Toast("Kara Pati mutlu! Siparişlerden +%" + Mathf.RoundToInt(Tower.HappyBonus * 100f) + " altın kazanırsın.", UIKit.Orange, 4f);
+            else if (!CatHappy) Toast(FoodLevel <= Tower.HappyAbove ? "Şimdi biraz mama..." : "Şimdi biraz su...");
+            else Toast("Afiyet olsun Kara Pati!");
             Save();
         }
 
@@ -1405,6 +1484,8 @@ namespace KaraPati
             discovered.Clear();
             chapterGifts.Clear();
             kazanLevel = sandikLevel = 1;
+            towerFloors = 1;
+            lastFed = lastWatered = 0;
             decorOwned.Clear();
             decorSelected.Clear();
             tipIndex = 0;
@@ -1428,6 +1509,7 @@ namespace KaraPati
             RefreshHud();
             ShowInfo(null);
             if (OnBoard) GoHome();
+            if (OnTower) LeaveTower();
             home.ShowChapter(0);
             home.Refresh(false);
             Save();
@@ -1460,6 +1542,9 @@ namespace KaraPati
                 chapterGifts = new List<string>(chapterGifts),
                 kazanLevel = kazanLevel,
                 sandikLevel = sandikLevel,
+                towerFloors = towerFloors,
+                lastFed = lastFed,
+                lastWatered = lastWatered,
                 decorOwned = new List<string>(decorOwned),
                 decorSelected = DecorSelectedList(),
                 stickers = new List<string>(stickers),
@@ -1504,6 +1589,9 @@ namespace KaraPati
                 if (s.chapterGifts != null) foreach (var k in s.chapterGifts) chapterGifts.Add(k);
                 kazanLevel = Mathf.Clamp(s.kazanLevel, 1, Generators.MaxLevel);
                 sandikLevel = Mathf.Clamp(s.sandikLevel, 1, Generators.MaxLevel);
+                towerFloors = Mathf.Clamp(s.towerFloors, 1, Tower.Floors);
+                lastFed = s.lastFed;
+                lastWatered = s.lastWatered;
                 decorOwned.Clear();
                 if (s.decorOwned != null) foreach (var k in s.decorOwned) decorOwned.Add(k);
                 decorSelected.Clear();

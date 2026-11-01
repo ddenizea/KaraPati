@@ -247,5 +247,58 @@ namespace KaraPati
             p.Fill(q => S.Circle(q, new Vector2(0.45f, -0.55f), 0.13f), new Color(0.65f, 0.4f, 0.95f));
             p.Fill(q => S.Circle(q, new Vector2(0.7f, -0.25f), 0.09f), new Color(0.4f, 0.85f, 0.5f));
         });
+            // ---------- tower & cat care ----------
+        /// <summary>Empty pet bowl (white, tint it).</summary>
+        public static Sprite Bowl => Make("bowl", Size, p =>
+        {
+            p.FillOutlined(q => S.I(S.Ellipse(q, new Vector2(0f, 0.05f), new Vector2(0.85f, 0.55f)), q.y - 0.12f), Color.white, 0.06f);
+            p.FillOutlined(q => S.Ellipse(q, new Vector2(0f, 0.12f), new Vector2(0.85f, 0.2f)), new Color(0.85f, 0.85f, 0.85f), 0.05f);
+            p.Fill(q => S.Ellipse(q, new Vector2(0f, 0.12f), new Vector2(0.7f, 0.12f)), new Color(0.35f, 0.3f, 0.35f));
+            p.Fill(q => S.Ellipse(q, new Vector2(-0.35f, -0.2f), new Vector2(0.12f, 0.06f)), new Color(1f, 1f, 1f, 0.6f));
+        });
+
+        /// <summary>Heap of kibble that sits inside the bowl.</summary>
+        public static Sprite Kibble => Make("kibble", Size, p =>
+        {
+            var c1 = new Color(0.72f, 0.45f, 0.22f);
+            var c2 = new Color(0.85f, 0.58f, 0.3f);
+            var pts = new[] { new Vector2(-0.45f, -0.1f), new Vector2(-0.2f, 0.05f), new Vector2(0.05f, -0.05f), new Vector2(0.3f, 0.08f),
+                              new Vector2(0.5f, -0.12f), new Vector2(-0.3f, 0.25f), new Vector2(0f, 0.25f), new Vector2(0.25f, 0.3f), new Vector2(-0.05f, 0.45f) };
+            for (int i = 0; i < pts.Length; i++)
+            {
+                var c = pts[i];
+                p.FillOutlined(q => S.Circle(q, c, 0.17f), i % 2 == 0 ? c1 : c2, 0.04f);
+            }
+        });
+
+        /// <summary>Water surface for the water bowl.</summary>
+        public static Sprite Water => Make("water", Size, p =>
+        {
+            p.Fill(q => S.Ellipse(q, Vector2.zero, new Vector2(0.95f, 0.5f)), new Color(0.45f, 0.75f, 1f));
+            p.Fill(q => S.Ellipse(q, new Vector2(-0.3f, 0.1f), new Vector2(0.3f, 0.1f)), new Color(1f, 1f, 1f, 0.7f));
+            p.Fill(q => S.Ellipse(q, new Vector2(0.35f, -0.12f), new Vector2(0.15f, 0.06f)), new Color(1f, 1f, 1f, 0.5f));
+        });
+
+        /// <summary>Little heart for petting.</summary>
+        public static Sprite Heart => Make("heart", Size, p =>
+            p.FillOutlined(q =>
+            {
+                var a = S.Circle(q, new Vector2(-0.3f, 0.2f), 0.38f);
+                var b = S.Circle(q, new Vector2(0.3f, 0.2f), 0.38f);
+                var t = S.Poly(q, new[] { new Vector2(-0.66f, 0.05f), new Vector2(0.66f, 0.05f), new Vector2(0f, -0.75f) });
+                return S.U(S.U(a, b), t);
+            }, new Color(1f, 0.4f, 0.55f), 0.06f));
+
+        /// <summary>Tower icon for the home screen button.</summary>
+        public static Sprite TowerIcon => Make("tower_icon", Size, p =>
+        {
+            var stone = new Color(0.55f, 0.48f, 0.65f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.3f), new Vector2(0.38f, 0.55f), 0.06f), stone, 0.06f);
+            var roof = new[] { new Vector2(-0.55f, 0.22f), new Vector2(0.55f, 0.22f), new Vector2(0.05f, 0.95f) };
+            p.FillOutlined(q => S.Poly(q, roof), new Color(0.5f, 0.28f, 0.75f), 0.06f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.15f), new Vector2(0.12f, 0.16f), 0.1f), new Color(1f, 0.82f, 0.4f), 0.04f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.68f), new Vector2(0.14f, 0.17f), 0.12f), new Color(0.35f, 0.22f, 0.15f), 0.04f);
+            p.Fill(q => S.Poly(q - new Vector2(0.05f, 0.92f), S.Star(5, 0.1f, 0.045f)), new Color(1f, 0.88f, 0.4f));
+        });
     }
 }

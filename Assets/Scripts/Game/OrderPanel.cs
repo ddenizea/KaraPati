@@ -146,6 +146,9 @@ namespace KaraPati
                 if (Chains.IsPotion(q.chain)) { var rc = Recipes.Get(q.level); r += rc != null ? rc.Gold : 10; }
                 else r += Chains.Value(q.level);
             }
+            // a well-fed Kara Pati charms the customers
+            var gm = GameManager.I;
+            if (gm != null && gm.CatHappy) r = Mathf.RoundToInt(r * (1f + Tower.HappyBonus));
             if (o.reqs.Count > 1) r += 5;
             return r;
         }

@@ -216,7 +216,9 @@ namespace KaraPati
         public List<string> chapterGifts = new List<string>();
         public int kazanLevel, sandikLevel;   // generator upgrades (0 in old saves = level 1)
         public List<string> decorOwned = new List<string>();      // "chapter_slot_variant"
-        public List<string> decorSelected = new List<string>();   // "chapter_slot:variant"    // claimed progress-bar gifts, e.g. "2_1" 
+        public List<string> decorSelected = new List<string>();   // "chapter_slot:variant" 
+        public int towerFloors;                 // how many tower floors are open (0 in old saves = 1)
+        public long lastFed, lastWatered;       // UTC ticks when the bowls were last filled   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -547,6 +549,32 @@ namespace KaraPati
     }
 
     /// <summary>Player level curve and what each level gives.</summary>
+    /// <summary>The witch's tower: floors bought with gold, and Kara Pati's food and water bowls.</summary>
+    public static class Tower
+    {
+        public static readonly string[] FloorNames =
+            { "Kara Pati'nin Odası", "Mutfak", "Kütüphane", "Yatak Odası", "Teras", "Gözlem Odası" };
+        public static readonly int[] FloorPrice = { 0, 500, 1200, 2500, 4500, 8000 };
+        public static readonly Color[] Wall =
+        {
+            new Color(0.32f, 0.22f, 0.42f), new Color(0.2f, 0.3f, 0.33f), new Color(0.32f, 0.23f, 0.18f),
+            new Color(0.19f, 0.21f, 0.38f), new Color(0.12f, 0.15f, 0.32f), new Color(0.22f, 0.14f, 0.3f),
+        };
+        public static int Floors => FloorNames.Length;
+
+        public const float BowlHours = 8f;          // a full bowl lasts this long
+        public const float HappyBonus = 0.10f;      // extra order gold while Kara Pati is happy
+        public const float HappyAbove = 0.15f;      // both bowls must be above this
+
+        /// <summary>1 = just filled, 0 = empty (or never filled).</summary>
+        public static float Level(long filledTicks)
+        {
+            if (filledTicks <= 0) return 0f;
+            double hours = TimeSpan.FromTicks(Math.Max(0, DateTime.UtcNow.Ticks - filledTicks)).TotalHours;
+            return Mathf.Clamp01(1f - (float)(hours / BowlHours));
+        }
+    }
+
     /// <summary>
     /// Shop decoration: every chapter scene has 4 slots (garland, plant, cat corner, light);
     /// each slot has "none" (free) plus 3 ornaments bought with gold. Bought ornaments can be swapped for free.
