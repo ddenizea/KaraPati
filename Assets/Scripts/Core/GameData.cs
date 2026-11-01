@@ -34,6 +34,28 @@ namespace KaraPati
         /// <summary>Items that show no level badge (machines and potions).</summary>
         public static bool IsSpecial(string c) => IsGenerator(c) || IsPotion(c) || IsStation(c);
         public static int Value(int level) => 5 * (1 << (level - 1));
+
+        /// <summary>The board machine an item comes from (empty for machines themselves).</summary>
+        public static string SourceOf(string c)
+        {
+            if (c == Ot || c == Mantar) return Kazan;
+            if (c == Kristal || c == Ag) return Sandik;
+            if (c == Iksir) return Simya;
+            return "";
+        }
+
+        public static string ChainTitle(string c)
+        {
+            switch (c)
+            {
+                case Ot: return "Otlar";
+                case Mantar: return "Mantarlar";
+                case Kristal: return "Taşlar ve Kristaller";
+                case Ag: return "Ağlar ve Kumaşlar";
+                case Iksir: return "İksirler";
+                default: return "Dükkân Eşyası";
+            }
+        }
         public static string RandomIngredient() => Ingredients[UnityEngine.Random.Range(0, Ingredients.Length)];
     }
 
@@ -190,6 +212,7 @@ namespace KaraPati
         public int tasksDone;
         public bool introSeen;
         public int tutorialStep;
+        public List<string> discovered = new List<string>();
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -522,6 +545,9 @@ namespace KaraPati
     /// <summary>Player level curve and what each level gives.</summary>
     public static class Levels
     {
+        // XP only comes from the story (tasks, chapter ends, hidden clues); merging and orders give none
+        public const int TaskXp = 15, ChapterXp = 25, ClueXp = 5;
+
         public const int MaxStorage = 12;
         public static int XpToNext(int level) => 30 + (level - 1) * 20;
         public static int MaxEnergy(int level) => Mathf.Min(50, 30 + (level - 1) * 2);

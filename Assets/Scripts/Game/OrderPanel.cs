@@ -232,9 +232,6 @@ namespace KaraPati
             int reward = Reward(o);
             GM.AddGold(reward);
             GM.AddStamps(StampReward(o));
-            int xp = 2;
-            foreach (var q in o.reqs) xp += q.level * 2;
-            GM.AddXp(xp);
             GM.AddPumpkins(o.reqs.Count + (o.reqs.Count > 1 ? 1 : 0));
             GM.RegisterServed();
             GM.Toast(o.ghost + ": \"" + Ghosts.Lines[o.line % Ghosts.Lines.Length] + "\"", UIKit.Cream, 4f);

@@ -70,12 +70,15 @@ namespace KaraPati
         public Tutorial Tut { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
         CaseFilePanel caseFile;
         RecipePanel recipePanel;
+        ItemInfoPanel itemInfo;
+        Button infoBtn;
+        readonly HashSet<string> discovered = new HashSet<string>();
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
@@ -300,6 +303,10 @@ namespace KaraPati
             recipePanel = recipeRt.gameObject.AddComponent<RecipePanel>();
             recipePanel.Build();
 
+            var infoRt = UIKit.Rect("ItemInfo", canvasRt);
+            itemInfo = infoRt.gameObject.AddComponent<ItemInfoPanel>();
+            itemInfo.Build();
+
             BuildDialog(canvasRt);
 
             Cats = gameObject.AddComponent<KittenChaos>();
@@ -343,7 +350,7 @@ namespace KaraPati
             lvBtn.onClick.AddListener(() =>
             {
                 Tween.Punch(levelBadge, 0.15f, 0.25f);
-                Toast("Seviye " + Level + ": " + Xp + "/" + Levels.XpToNext(Level) + " XP. Sipariş, görev ve ipuçları XP verir.");
+                Toast("Seviye " + Level + ": " + Xp + "/" + Levels.XpToNext(Level) + " XP. XP hikâyeden gelir: görevler, bölüm sonları ve gizli ipuçları.");
             });
 
             var gold = Pill(bar, "Gold", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(140f, 0f), 230f);
@@ -421,6 +428,11 @@ namespace KaraPati
             infoDesc.rectTransform.offsetMax = new Vector2(-196f, -58f);
             actionBtn = UIKit.Btn("Action", panel.transform, "", UIKit.Orange, OnAction, 28);
             ((RectTransform)actionBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 0f), new Vector2(176f, 96f));
+            // "i" button: opens the merge chain / source info for the selected item
+            infoBtn = UIKit.Btn("Info", panel.transform, "i", new Color(0.35f, 0.55f, 0.85f), OpenSelectedInfo, 40);
+            ((RectTransform)infoBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -8f), new Vector2(62f, 62f));
+            infoBtn.Label().fontStyle = FontStyle.Bold;
+            infoBtn.gameObject.SetActive(false);
         }
 
         void BuildStickerPopup()
@@ -563,6 +575,27 @@ namespace KaraPati
         public void OpenCaseFile() => caseFile.Open();
         public void OpenRecipes() => recipePanel.Open();
 
+        // ------------------------------------------------------------------ item encyclopedia
+        public bool IsDiscovered(string chain, int level) => discovered.Contains(Recipes.Key(chain, level));
+
+        public void Discover(string chain, int level)
+        {
+            if (string.IsNullOrEmpty(chain)) return;
+            bool added = false;
+            // reaching a level means the lower ones of the same chain were seen on the way
+            int from = Chains.IsIngredient(chain) ? 1 : level;
+            for (int l = from; l <= level; l++) added |= discovered.Add(Recipes.Key(chain, l));
+            if (added) MarkDirty();
+        }
+
+        void OpenSelectedInfo()
+        {
+            var d = Board.Get(Board.Selected);
+            if (d == null) return;
+            if (Chains.IsStation(d.chain)) { OpenRecipes(); return; }
+            itemInfo.Open(d);
+        }
+
         // ------------------------------------------------------------------ clues
         public bool HasClue(string id) => clues.Contains(id);
 
@@ -571,11 +604,11 @@ namespace KaraPati
             if (clues.Contains(c.id)) return;
             clues.Add(c.id);
             AddStamps(1);
-            AddXp(5);
+            AddXp(Levels.ClueXp);
             Save();
             ShowDialog(c.title, c.text, () =>
             {
-                Toast("İpucu Cadı Dosyası'na eklendi: +1 Pati Mührü", UIKit.Orange);
+                Toast("İpucu Cadı Dosyası'na eklendi: +1 Pati Mührü, +" + Levels.ClueXp + " XP", UIKit.Orange);
                 home.Refresh(false);
             });
         }
@@ -629,7 +662,7 @@ namespace KaraPati
             int chapter = Story.CurrentChapter(idx);
             Stamps -= task.cost;
             TasksDone++;
-            AddXp(10);
+            AddXp(Levels.TaskXp);
             AddPumpkins(2);
             RefreshHud();
             home.Refresh(true);
@@ -646,6 +679,8 @@ namespace KaraPati
                     {
                         ShowDialog("Kara Pati", Story.Chapters[chapter].endLine, () =>
                         {
+                            AddXp(Levels.ChapterXp);
+                            Toast(Story.Chapters[chapter].name + " bitti: +" + Levels.ChapterXp + " XP!", UIKit.Orange, 3.5f);
                             if (chapter + 1 < Story.Chapters.Length)
                             {
                                 home.ShowChapter(chapter + 1);
@@ -809,6 +844,7 @@ namespace KaraPati
             infoKitten = null;
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
+            if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble);
             if (d == null)
             {
                 infoTitle.text = "İpucu";
@@ -884,9 +920,10 @@ namespace KaraPati
                 return;
             }
             int max = Chains.MaxLevel(d.chain);
-            infoDesc.text = d.level < max
-                ? "İki tanesini birleştir: " + Chains.Name(d.chain, d.level + 1)
-                : "En üst seviye! Hayaletler buna bayılır.";
+            string src = Chains.Name(Chains.SourceOf(d.chain), 1);
+            infoDesc.text = (d.level < max
+                ? "İki tanesini birleştir: " + (IsDiscovered(d.chain, d.level + 1) ? Chains.Name(d.chain, d.level + 1) : "???")
+                : "En üst seviye! Hayaletler buna bayılır.") + "\nKaynak: " + src + "  (i: seviye listesi)";
             actionBtn.gameObject.SetActive(true);
             actionBtn.Label().text = "Sat  +" + d.level;
         }
@@ -897,6 +934,7 @@ namespace KaraPati
             if (!a) { ShowInfo(null); return; }
             infoKitten = a;
             kittenInfoTimer = 1f;
+            if (infoBtn) infoBtn.gameObject.SetActive(false);
             var btnImg = actionBtn.GetComponent<Image>();
             btnImg.color = UIKit.Orange;
             actionBtn.gameObject.SetActive(false);
@@ -1225,6 +1263,7 @@ namespace KaraPati
             KittenHintShown = false;
             introSeen = false;
             Tut.Step = 0;
+            discovered.Clear();
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
@@ -1274,6 +1313,7 @@ namespace KaraPati
                 tasksDone = TasksDone,
                 introSeen = introSeen,
                 tutorialStep = Tut.Step,
+                discovered = new List<string>(discovered),
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
                 level = Level,
@@ -1310,6 +1350,8 @@ namespace KaraPati
                 if (s.clues != null) foreach (var id in s.clues) clues.Add(id);
                 introSeen = s.introSeen;
                 Tut.Step = s.tutorialStep;
+                discovered.Clear();
+                if (s.discovered != null) foreach (var k in s.discovered) discovered.Add(k);
                 // players from before the guide existed already know the basics
                 if (Tut.Step == 0 && (s.served > 0 || s.tasksDone > 0)) Tut.Step = Tutorial.Done;
                 stickers.Clear();

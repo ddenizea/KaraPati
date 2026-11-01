@@ -83,6 +83,16 @@ namespace KaraPati
         // ---------------------------------------------------------------- queries
         public RectTransform ViewRect(Vector2Int c) { var v = ViewAt(c); return v ? v.rt : null; }
 
+        /// <summary>Tapping an item makes the machine it comes from wiggle, so you know where to get more.</summary>
+        public void PulseSource(string chain, Vector2Int from)
+        {
+            string src = Chains.SourceOf(chain);
+            if (string.IsNullOrEmpty(src) || !FindFirst(d => d.chain == src, out var g) || g == from) return;
+            var gv = ViewAt(g);
+            if (gv) Tween.Punch(gv.rt, 0.18f, 0.35f);
+            FX.Burst(fxLayer, CellPos(g), new Color(1f, 0.85f, 0.4f), 5);
+        }
+
         public bool FindFirst(System.Func<ItemData, bool> pred, out Vector2Int cell)
         {
             foreach (var c in AllCells())
@@ -222,6 +232,7 @@ namespace KaraPati
             data[c.x, c.y] = d;
             if (d == null) return null;
 
+            GM.Discover(d.chain, d.level);
             var rt = UIKit.Rect("Item", itemsLayer);
             var v = rt.gameObject.AddComponent<ItemView>();
             v.Init(this, c, d);
@@ -395,6 +406,7 @@ namespace KaraPati
             if (Chains.IsGenerator(d.chain)) { UseGenerator(c); return; }
             if (Chains.IsStation(d.chain)) { TapPot(c); return; }
             Tween.Punch(v.rt, 0.1f, 0.2f);
+            PulseSource(d.chain, c);
         }
 
         void UseGenerator(Vector2Int c)
@@ -429,7 +441,6 @@ namespace KaraPati
             Set(to, nd, true);
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
-            if (nd.level >= 3) GM.AddXp(nd.level - 2);
             TrySpawnBubble(to, nd);
             if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
@@ -516,7 +527,6 @@ namespace KaraPati
                 ConsumeInto(from, potCell);
                 FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
                 GM.Toast(r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
-                GM.AddXp(1);
             }
             RefreshView(potCell);
             var pv = ViewAt(potCell);
@@ -546,7 +556,6 @@ namespace KaraPati
             SpawnFrom(c, e, new ItemData(Chains.Iksir, r != null ? r.id : 1));
             FX.Burst(fxLayer, CellPos(e), ProcArt.PotionColor(r != null ? r.id : 1), 12);
             RefreshView(c);
-            GM.AddXp(2);
             Select(e);
             GM.OnBoardChanged();
         }
