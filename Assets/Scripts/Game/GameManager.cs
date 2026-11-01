@@ -70,15 +70,17 @@ namespace KaraPati
         public Tutorial Tut { get; private set; }
         public KittenChaos Cats { get; private set; }
         public bool OnBoard { get; private set; }
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
         CaseFilePanel caseFile;
         RecipePanel recipePanel;
         ItemInfoPanel itemInfo;
+        ChapterPanel chapterPanel;
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
+        readonly HashSet<string> chapterGifts = new HashSet<string>();
         CanvasScaler scaler;
         CanvasGroup homeCg, boardCg;
         Button homeBtn;
@@ -306,6 +308,10 @@ namespace KaraPati
             var infoRt = UIKit.Rect("ItemInfo", canvasRt);
             itemInfo = infoRt.gameObject.AddComponent<ItemInfoPanel>();
             itemInfo.Build();
+
+            var chaptersRt = UIKit.Rect("ChapterPanel", canvasRt);
+            chapterPanel = chaptersRt.gameObject.AddComponent<ChapterPanel>();
+            chapterPanel.Build();
 
             BuildDialog(canvasRt);
 
@@ -574,6 +580,42 @@ namespace KaraPati
         }
         public void OpenCaseFile() => caseFile.Open();
         public void OpenRecipes() => recipePanel.Open();
+        public void OpenChapters() => chapterPanel.Open();
+        public void ShowHomeChapter(int ch) => home.ShowChapter(ch, true);
+        public void RefreshHome() => home.Refresh(false);
+
+        // ------------------------------------------------------------------ chapter gifts
+        public bool GiftClaimed(int chapter, int gift) => chapterGifts.Contains(ChapterGifts.Id(chapter, gift));
+
+        public bool GiftReady(int chapter, int gift)
+        {
+            if (GiftClaimed(chapter, gift)) return false;
+            int done = TasksDone - Story.ChapterStart(chapter);
+            return done >= ChapterGifts.TasksNeeded(chapter, gift);
+        }
+
+        public bool AnyGiftReady
+        {
+            get
+            {
+                for (int c = 0; c < Story.Chapters.Length; c++)
+                    for (int g = 0; g < ChapterGifts.At.Length; g++)
+                        if (GiftReady(c, g)) return true;
+                return false;
+            }
+        }
+
+        public void ClaimChapterGift(int chapter, int gift)
+        {
+            if (!GiftReady(chapter, gift)) return;
+            chapterGifts.Add(ChapterGifts.Id(chapter, gift));
+            AddGold(ChapterGifts.Gold(chapter, gift));
+            if (ChapterGifts.Energy(chapter, gift) > 0) { Energy += ChapterGifts.Energy(chapter, gift); RefreshHud(); }
+            if (ChapterGifts.Stamps(chapter, gift) > 0) AddStamps(ChapterGifts.Stamps(chapter, gift));
+            if (ChapterGifts.Sticker(chapter, gift) && !GiveRandomMissingAny()) AddGold(50);
+            Toast("Sandık açıldı: " + ChapterGifts.Text(chapter, gift), UIKit.Orange, 4f);
+            Save();
+        }
 
         // ------------------------------------------------------------------ item encyclopedia
         public bool IsDiscovered(string chain, int level) => discovered.Contains(Recipes.Key(chain, level));
@@ -1264,6 +1306,7 @@ namespace KaraPati
             introSeen = false;
             Tut.Step = 0;
             discovered.Clear();
+            chapterGifts.Clear();
             tipIndex = 0;
             stickers.Clear();
             claimedSets.Clear();
@@ -1314,6 +1357,7 @@ namespace KaraPati
                 introSeen = introSeen,
                 tutorialStep = Tut.Step,
                 discovered = new List<string>(discovered),
+                chapterGifts = new List<string>(chapterGifts),
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
                 level = Level,
@@ -1352,6 +1396,8 @@ namespace KaraPati
                 Tut.Step = s.tutorialStep;
                 discovered.Clear();
                 if (s.discovered != null) foreach (var k in s.discovered) discovered.Add(k);
+                chapterGifts.Clear();
+                if (s.chapterGifts != null) foreach (var k in s.chapterGifts) chapterGifts.Add(k);
                 // players from before the guide existed already know the basics
                 if (Tut.Step == 0 && (s.served > 0 || s.tasksDone > 0)) Tut.Step = Tutorial.Done;
                 stickers.Clear();

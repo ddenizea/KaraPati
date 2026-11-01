@@ -213,6 +213,7 @@ namespace KaraPati
         public bool introSeen;
         public int tutorialStep;
         public List<string> discovered = new List<string>();
+        public List<string> chapterGifts = new List<string>();   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -543,6 +544,33 @@ namespace KaraPati
     }
 
     /// <summary>Player level curve and what each level gives.</summary>
+    /// <summary>Gift chests on the chapter progress bar: one halfway, one at the end.</summary>
+    public static class ChapterGifts
+    {
+        public static readonly float[] At = { 0.5f, 1f };
+
+        public static string Id(int chapter, int gift) => chapter + "_" + gift;
+
+        /// <summary>How many tasks of the chapter must be done to open this gift.</summary>
+        public static int TasksNeeded(int chapter, int gift) =>
+            Mathf.CeilToInt(Story.Chapters[chapter].tasks.Length * At[gift]);
+
+        // later chapters pay more
+        public static int Gold(int chapter, int gift) => gift == 0 ? 30 + chapter * 20 : 60 + chapter * 30;
+        public static int Energy(int chapter, int gift) => gift == 0 ? 10 : 0;
+        public static int Stamps(int chapter, int gift) => gift == 0 ? 0 : 3;
+        public static bool Sticker(int chapter, int gift) => gift == 1;
+
+        public static string Text(int chapter, int gift)
+        {
+            var parts = new List<string> { "+" + Gold(chapter, gift) + " altın" };
+            if (Energy(chapter, gift) > 0) parts.Add("+" + Energy(chapter, gift) + " enerji");
+            if (Stamps(chapter, gift) > 0) parts.Add("+" + Stamps(chapter, gift) + " Pati Mührü");
+            if (Sticker(chapter, gift)) parts.Add("bir etiket");
+            return string.Join(", ", parts);
+        }
+    }
+
     public static class Levels
     {
         // XP only comes from the story (tasks, chapter ends, hidden clues); merging and orders give none

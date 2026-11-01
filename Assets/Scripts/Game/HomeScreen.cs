@@ -16,6 +16,9 @@ namespace KaraPati
         RectTransform progressFill;
         Button prevBtn, nextBtn;
         Image nextLock;
+        readonly Image[] gifts = new Image[2];
+        readonly Image[] giftChecks = new Image[2];
+        readonly Image[] giftGlows = new Image[2];
         const float ProgressW = 600f;
         int view = -1;
 
@@ -38,7 +41,7 @@ namespace KaraPati
         readonly List<Image> candleGlows = new List<Image>();
 
         RectTransform taskList;
-        Image albumBadge, caseBadge, dailyBadge;
+        Image albumBadge, caseBadge, dailyBadge, chaptersBadge;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -79,7 +82,24 @@ namespace KaraPati
             progressFill = fill.rectTransform;
             progressFill.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(6f, 0f), new Vector2(40f, 24f));
             progressText = UIKit.Txt("Count", header, "0/8", 32, UIKit.Cream);
-            progressText.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(325f, -74f), new Vector2(120f, 40f));
+            progressText.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(350f, -74f), new Vector2(120f, 40f));
+
+            // gift chests sitting on the progress bar (halfway and at the end)
+            for (int g = 0; g < gifts.Length; g++)
+            {
+                int gi = g;
+                float x = 6f + ProgressW * ChapterGifts.At[g];
+                giftGlows[g] = UIKit.Img("GiftGlow", barBg.transform, ProcArt.GlowSprite, new Color(1f, 0.85f, 0.4f, 0.7f));
+                giftGlows[g].rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(x, 4f), new Vector2(130f, 130f));
+                gifts[g] = UIKit.Img("Gift", barBg.transform, ProcArt.Item(Chains.Sandik, 1), Color.white);
+                gifts[g].rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(x, 4f), new Vector2(70f, 70f));
+                gifts[g].raycastTarget = true;
+                var gb = gifts[g].gameObject.AddComponent<Button>();
+                gb.transition = Selectable.Transition.None;
+                gb.onClick.AddListener(() => OnGiftTapped(gi));
+                giftChecks[g] = UIKit.Img("Check", gifts[g].transform, ProcArt.Check, Color.white);
+                giftChecks[g].rectTransform.At(new Vector2(20f, -18f), new Vector2(36f, 36f));
+            }
 
             prevBtn = UIKit.Btn("Prev", header, "<", UIKit.PanelDark, () => ShowChapter(view - 1, true), 54);
             ((RectTransform)prevBtn.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(96f, 100f));
@@ -112,6 +132,17 @@ namespace KaraPati
             dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var db = UIKit.Txt("!", dailyBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(db.rectTransform);
+            // chapter list (like a map of the story), red dot when a gift chest is waiting
+            var chapters = RoundButton(sceneArea, "Chapters", ProcArt.Item(Chains.Sandik, 1), new Vector2(0f, 1f), new Vector2(66f, -320f), () => GM.OpenChapters());
+            chaptersBadge = UIKit.Img("Badge", chapters.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            chaptersBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var cbt = UIKit.Txt("!", chaptersBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(cbt.rectTransform);
+            // the chapter title also opens the list
+            chapterTitle.raycastTarget = true;
+            var titleBtn = chapterTitle.gameObject.AddComponent<Button>();
+            titleBtn.transition = Selectable.Transition.None;
+            titleBtn.onClick.AddListener(() => GM.OpenChapters());
 
             // tasks
             var tasks = UIKit.Section(root, "Tasks", 1228f, 515f);
@@ -488,6 +519,35 @@ namespace KaraPati
             });
         }
 
+        // ------------------------------------------------------------------ chapter gifts
+        void RefreshGifts()
+        {
+            for (int g = 0; g < gifts.Length; g++)
+            {
+                bool claimed = GM.GiftClaimed(view, g);
+                bool ready = GM.GiftReady(view, g);
+                gifts[g].color = claimed ? new Color(1f, 1f, 1f, 0.55f) : ready ? Color.white : new Color(0.45f, 0.42f, 0.5f, 0.9f);
+                giftChecks[g].gameObject.SetActive(claimed);
+                giftGlows[g].gameObject.SetActive(ready);
+                if (!ready) gifts[g].rectTransform.localScale = Vector3.one;
+            }
+        }
+
+        void OnGiftTapped(int g)
+        {
+            if (GM.GiftClaimed(view, g)) { GM.Toast("Bu sandığı zaten açtın."); return; }
+            if (GM.GiftReady(view, g))
+            {
+                FX.Burst((RectTransform)gifts[g].transform.parent, gifts[g].rectTransform.anchoredPosition, UIKit.Orange, 14);
+                GM.ClaimChapterGift(view, g);
+                Refresh(false);
+                return;
+            }
+            int left = ChapterGifts.TasksNeeded(view, g) - Mathf.Clamp(GM.TasksDone - Story.ChapterStart(view), 0, 999);
+            Tween.Punch(gifts[g].transform, 0.12f, 0.25f);
+            GM.Toast("Bu sandık için " + left + " görev daha yap. İçinde: " + ChapterGifts.Text(view, g));
+        }
+
         public void Refresh(bool animate)
         {
             int done = GM.TasksDone;
@@ -514,6 +574,7 @@ namespace KaraPati
             bool hasNext = view < Story.Chapters.Length - 1;
             nextBtn.gameObject.SetActive(hasNext);
             nextLock.gameObject.SetActive(hasNext && view + 1 > current);
+            RefreshGifts();
 
             bool justDid = animate && shownDone >= 0 && done > shownDone;
             ApplyShop(done);
@@ -527,6 +588,7 @@ namespace KaraPati
             RefreshClues();
             albumBadge.gameObject.SetActive(GM.AnyClaimableSet);
             dailyBadge.gameObject.SetActive(GM.DailyAvailable);
+            chaptersBadge.gameObject.SetActive(GM.AnyGiftReady);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);
@@ -775,6 +837,14 @@ namespace KaraPati
                 karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
 
             if (view >= 0 && view < extra.Length && extra[view] != null) extra[view].tick?.Invoke(t);
+
+            // ready gifts hop up and down so they get noticed
+            for (int g = 0; g < gifts.Length; g++)
+                if (gifts[g] && giftGlows[g].gameObject.activeSelf)
+                {
+                    gifts[g].rectTransform.localScale = Vector3.one * (1f + Mathf.Abs(Mathf.Sin(t * 4f + g)) * 0.18f);
+                    giftGlows[g].rectTransform.localEulerAngles = new Vector3(0f, 0f, t * 40f);
+                }
 
             // clue twinkle; the eye makes waiting clues pulse brightly
             bool eye = t < eyeUntil;
