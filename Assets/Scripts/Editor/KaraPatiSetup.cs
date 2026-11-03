@@ -245,7 +245,8 @@ namespace KaraPati.EditorTools
         [MenuItem("KaraPati/Kayıtlı Oyunu Sil")]
         static void ClearSave()
         {
-            PlayerPrefs.DeleteKey("karapati_save_v1");
+            PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.DeleteKey(BackupKey);   // otherwise the game would load the automatic backup copy
             PlayerPrefs.Save();
             Debug.Log("KaraPati: kayıt silindi. Bir sonraki Play yeni oyunla başlar.");
         }

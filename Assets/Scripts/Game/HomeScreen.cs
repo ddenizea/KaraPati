@@ -574,7 +574,7 @@ namespace KaraPati
         {
             int done = GM.TasksDone;
             int current = Story.CurrentChapter(done);
-            if (view < 0) view = current;
+            if (view < 0 || view > current) view = current;   // e.g. after a reset the old chapter is locked again
 
             for (int i = 0; i < scenes.Length; i++) scenes[i].gameObject.SetActive(i == view);
 
@@ -767,7 +767,7 @@ namespace KaraPati
             int done = GM.TasksDone;
             var chapter = Story.Chapters[view];
             int start = Story.ChapterStart(view);
-            int inChapter = done - start;
+            int inChapter = Mathf.Max(0, done - start);
 
             if (inChapter >= chapter.tasks.Length)
             {

@@ -119,7 +119,6 @@ namespace KaraPati
         bool dirty;
         float saveTimer;
         Coroutine toastCo;
-        float resetArmedUntil;
         int tipIndex;
         KittenAgent infoKitten;
         float kittenInfoTimer;
@@ -188,11 +187,6 @@ namespace KaraPati
                 energyTimerText.text = "dolu";
             }
 
-            if (resetArmedUntil > 0f && Time.unscaledTime > resetArmedUntil)
-            {
-                resetArmedUntil = 0f;
-                if (infoKitten == null && Board.Get(Board.Selected) == null) ShowInfo(null);
-            }
 
             eventTick -= Time.unscaledDeltaTime;
             if (eventTick <= 0f)
@@ -1175,10 +1169,7 @@ namespace KaraPati
             {
                 infoTitle.text = "İpucu";
                 infoDesc.text = tips[tipIndex % tips.Length];
-                bool armed = resetArmedUntil > Time.unscaledTime;
-                actionBtn.gameObject.SetActive(true);
-                actionBtn.Label().text = armed ? "Emin misin?" : "Yeni Oyun";
-                btnImg.color = armed ? new Color(0.85f, 0.3f, 0.3f) : UIKit.Disabled;
+                actionBtn.gameObject.SetActive(false);   // nothing selected: just the tip, no button
                 return;
             }
 
@@ -1369,14 +1360,6 @@ namespace KaraPati
             if (d != null && Chains.IsHouse(d.chain)) { Cats.MakeApprenticeFromHouse(Board.Selected); ShowInfo(Board.Get(Board.Selected)); return; }
             if (d != null && Chains.IsGenerator(d.chain)) { UpgradeGenerator(d.chain); return; }
             if (d != null) { Board.SellSelected(); return; }
-            if (resetArmedUntil > Time.unscaledTime)
-            {
-                resetArmedUntil = 0f;
-                NewGame();
-                return;
-            }
-            resetArmedUntil = Time.unscaledTime + 3f;
-            ShowInfo(null);
         }
 
         // ------------------------------------------------------------------ level / xp
