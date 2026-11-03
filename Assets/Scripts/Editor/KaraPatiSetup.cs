@@ -140,6 +140,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Usta Rengini Seç (Play modunda)")]
+        static void UstaColor()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugUstaColor();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Müşteri Dostluğu +3 (Play modunda)")]
         static void FriendPlus()
         {

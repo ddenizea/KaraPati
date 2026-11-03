@@ -442,6 +442,28 @@ namespace KaraPati
             EnsureHouse();
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
+            GM.OpenUstaColor(m);   // the player picks the Master's colour
+        }
+
+        /// <summary>Test helper: open the colour picker for the Master (selected so the info bar shows its "Renk" button too).</summary>
+        public void DebugUstaColor()
+        {
+            var m = Master();
+            if (!m) { GM.Toast("Masada Usta Kedi yok."); return; }
+            Select(m);
+            GM.OpenUstaColor(m);
+        }
+
+        public void SetMasterColor(KittenAgent m, int col)
+        {
+            if (!m || m.level != 3) return;
+            m.SetColor(col);
+            Tween.Pop(m.rt, 0.35f);
+            FX.Burst(B.FxLayer, m.Pos, new Color(0.8f, 0.5f, 1f), 12);
+            Sfx.Play("pop");
+            GM.Toast("Usta artık " + UstaColorPanel.ColorName(col) + "!", UIKit.Orange);
+            if (GM.InfoKitten == m) GM.ShowKittenInfo(m);
+            GM.MarkDirty();
         }
 
         public void Adopt(KittenAgent a)

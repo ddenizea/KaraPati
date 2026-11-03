@@ -48,6 +48,14 @@ namespace KaraPati
         public bool Training => trainUntil > 0;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
+        /// <summary>New fur colour (the Master's colour can be picked by the player).</summary>
+        public void SetColor(int col)
+        {
+            color = col;
+            for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i, color);
+            if (body) body.sprite = frames[4];
+        }
+
         public void Init(KittenChaos s, int lvl, Vector2 pos, int col)
         {
             sys = s;

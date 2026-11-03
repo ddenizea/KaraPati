@@ -74,7 +74,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -84,6 +84,8 @@ namespace KaraPati
         ChapterPanel chapterPanel;
         ExpeditionPanel expeditionPanel;
         HousePanel housePanel;
+        UstaColorPanel ustaColorPanel;
+        Button colorBtn;
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
@@ -336,6 +338,10 @@ namespace KaraPati
             housePanel = houseRt.gameObject.AddComponent<HousePanel>();
             housePanel.Build();
 
+            var colorRt = UIKit.Rect("UstaColorPanel", canvasRt);
+            ustaColorPanel = colorRt.gameObject.AddComponent<UstaColorPanel>();
+            ustaColorPanel.Build();
+
             var tripRt = UIKit.Rect("ExpeditionPanel", canvasRt);
             expeditionPanel = tripRt.gameObject.AddComponent<ExpeditionPanel>();
             expeditionPanel.Build();
@@ -493,6 +499,11 @@ namespace KaraPati
             ((RectTransform)infoBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -8f), new Vector2(62f, 62f));
             infoBtn.Label().fontStyle = FontStyle.Bold;
             infoBtn.gameObject.SetActive(false);
+            // "Renk" button: shown for the Master Cat, opens the colour picker
+            colorBtn = UIKit.Btn("Color", panel.transform, "Renk", new Color(0.42f, 0.28f, 0.6f), () => { if (infoKitten) OpenUstaColor(infoKitten); }, 24);
+            ((RectTransform)colorBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -10f), new Vector2(92f, 48f));
+            colorBtn.Label().fontStyle = FontStyle.Bold;
+            colorBtn.gameObject.SetActive(false);
         }
 
         void BuildStickerPopup()
@@ -863,6 +874,8 @@ namespace KaraPati
         public void OpenItemInfo(ItemData d) { if (d != null) itemInfo.Open(d); }
 
         public void OpenHouse(Vector2Int hc) => housePanel.Open(hc);
+        public void OpenUstaColor(KittenAgent m) => ustaColorPanel.Open(m);
+        public KittenAgent InfoKitten => infoKitten;
 
         void OpenSelectedInfo()
         {
@@ -1165,6 +1178,8 @@ namespace KaraPati
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
+            if (colorBtn) colorBtn.gameObject.SetActive(false);
+            infoTitle.rectTransform.offsetMax = new Vector2(-196f, -14f);
             if (d == null)
             {
                 infoTitle.text = "İpucu";
@@ -1280,6 +1295,8 @@ namespace KaraPati
             infoKitten = a;
             kittenInfoTimer = 1f;
             if (infoBtn) infoBtn.gameObject.SetActive(false);
+            if (colorBtn) colorBtn.gameObject.SetActive(a.level == 3);
+            infoTitle.rectTransform.offsetMax = new Vector2(a.level == 3 ? -300f : -196f, -14f);   // room for the "Renk" button
             var btnImg = actionBtn.GetComponent<Image>();
             btnImg.color = UIKit.Orange;
             actionBtn.gameObject.SetActive(false);
@@ -1330,7 +1347,7 @@ namespace KaraPati
                     break;
                 }
                 default:
-                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : colName + " Usta";
+                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : UstaColorPanel.ColorName(a.color) + " Usta";
                     if (a.state == KittenAgent.State.Sitting)
                     {
                         infoDesc.text = "Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.";
