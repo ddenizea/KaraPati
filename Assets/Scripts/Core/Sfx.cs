@@ -5,11 +5,12 @@ namespace KaraPati
 {
     /// <summary>
     /// Plays sound effects and the looping music. Clips live in Assets/Resources/Audio (made by Tools/make_sounds.py).
-    /// Mode: 0 = everything on, 1 = music off, 2 = all sound off. Saved in PlayerPrefs.
+    /// Music and effects (merges, coins, clicks...) are switched on and off separately. Saved in PlayerPrefs.
     /// </summary>
     public class Sfx : MonoBehaviour
     {
-        const string PrefKey = "karapati_sound_mode";
+        const string PrefKey = "karapati_sound_mode";   // old single setting (0 all on, 1 music off, 2 silent)
+        const string MusicKey = "karapati_music_on", EffectsKey = "karapati_effects_on";
         const int Voices = 8;
 
         static Sfx inst;
@@ -19,9 +20,10 @@ namespace KaraPati
         AudioSource[] voices;
         int next;
 
-        public static int Mode { get; private set; }
-        public static bool EffectsOn => Mode < 2;
-        public static bool MusicOn => Mode == 0;
+        public static bool EffectsOn { get; private set; } = true;
+        public static bool MusicOn { get; private set; } = true;
+        /// <summary>For the speaker icon: 0 = all on, 1 = one of them off, 2 = all off.</summary>
+        public static int Mode => MusicOn && EffectsOn ? 0 : !MusicOn && !EffectsOn ? 2 : 1;
 
         // per-sound loudness so nothing sticks out
         static readonly Dictionary<string, float> volume = new Dictionary<string, float>
@@ -42,7 +44,10 @@ namespace KaraPati
 
         void Setup()
         {
-            Mode = Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, 0), 0, 2);
+            // first start after the update: carry over the old single setting
+            int old = Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, 0), 0, 2);
+            MusicOn = PlayerPrefs.GetInt(MusicKey, old == 0 ? 1 : 0) == 1;
+            EffectsOn = PlayerPrefs.GetInt(EffectsKey, old < 2 ? 1 : 0) == 1;
             foreach (var c in Resources.LoadAll<AudioClip>("Audio")) clips[c.name] = c;
             voices = new AudioSource[Voices];
             for (int i = 0; i < Voices; i++)
@@ -74,15 +79,21 @@ namespace KaraPati
             src.PlayOneShot(clip);
         }
 
-        /// <summary>Cycle on -> music off -> silent. Returns the new mode.</summary>
-        public static int CycleMode()
+        public static void SetMusic(bool on)
         {
-            Mode = (Mode + 1) % 3;
-            PlayerPrefs.SetInt(PrefKey, Mode);
+            MusicOn = on;
+            PlayerPrefs.SetInt(MusicKey, on ? 1 : 0);
             PlayerPrefs.Save();
             if (inst) inst.ApplyMusic();
             Play("click");
-            return Mode;
+        }
+
+        public static void SetEffects(bool on)
+        {
+            EffectsOn = on;
+            PlayerPrefs.SetInt(EffectsKey, on ? 1 : 0);
+            PlayerPrefs.Save();
+            Play("click");   // heard only when they were just switched on
         }
 
         void ApplyMusic()

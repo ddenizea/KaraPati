@@ -31,6 +31,7 @@ namespace KaraPati
         Image body, ring;
         Text label;
         readonly Sprite[] frames = new Sprite[6];
+        readonly Sprite[] backFrames = new Sprite[4];   // standing with its back to us, stirring the pot
         Vector2 target;
         float idleTimer, animT, speed, mischiefTimer;
         int facing = 1;
@@ -53,6 +54,7 @@ namespace KaraPati
         {
             color = col;
             for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i, color);
+            if (backFrames[0]) for (int i = 0; i < backFrames.Length; i++) backFrames[i] = ProcArt.BackStirCat(level, i, color);
             if (body) body.sprite = frames[4];
         }
 
@@ -80,7 +82,7 @@ namespace KaraPati
 
             label = UIKit.Txt("Label", rt, "", 22, UIKit.Cream);
             label.rectTransform.At(new Vector2(0f, -72f), new Vector2(170f, 30f));
-            label.gameObject.SetActive(level == 2 || level == 4);
+            label.gameObject.SetActive(false);
 
             speed = level == 1 ? 95f : level == 4 ? 105f : 75f;
             Pos = pos;
@@ -124,14 +126,15 @@ namespace KaraPati
             chasing = false;
             onArrive = null;
             stirCell = cell;
-            int side = Pos.x >= potPos.x ? 1 : -1;            // sit on whichever side it was dropped
-            Pos = sys.Clamp(potPos + new Vector2(side * 92f, -8f));
-            Face(-side);                                       // look at the pot
+            // stands in front of the pot on its hind paws, back to us, so the cells next to the pot stay free
+            Pos = sys.Clamp(potPos + new Vector2(0f, -40f));
+            Face(1);
             state = State.Stirring;
-            if (!spoon) BuildSpoon();
-            spoon.gameObject.SetActive(true);
-            spoon.anchoredPosition = new Vector2(-side * 30f, 34f);   // in the paw that faces the pot
-            spoon.localScale = new Vector3(-side, 1f, 1f);   // the spoon reaches towards the pot
+            if (spoon) spoon.gameObject.SetActive(false);    // the back-view drawing holds its own spoon
+            for (int i = 0; i < backFrames.Length; i++) backFrames[i] = ProcArt.BackStirCat(level, i, color);
+            rt.sizeDelta = new Vector2(96f, 80f);             // a small touch area: the top of the pot stays tappable
+            body.rectTransform.sizeDelta = new Vector2(112f, 112f);
+            sys.StirChanged(cell);
         }
 
         /// <summary>Sit still (a kitten in training, or the Master while it teaches).</summary>
@@ -187,8 +190,13 @@ namespace KaraPati
 
         public void StopStir()
         {
+            var was = stirCell;
             stirCell = new Vector2Int(-1, -1);
             if (spoon) spoon.gameObject.SetActive(false);
+            rt.sizeDelta = new Vector2(130f, 130f);
+            float size = level == 1 ? 128f : level == 4 ? 118f : 140f;
+            body.rectTransform.sizeDelta = new Vector2(size, size);
+            if (was.x >= 0) sys.StirChanged(was);
             if (state == State.Stirring) Idle(1f);
         }
 
@@ -278,12 +286,6 @@ namespace KaraPati
                     if (idleTimer <= 0f) WalkTo(sys.RandomPoint());
                     break;
                 case State.Stirring:
-                    if (spoon)
-                    {
-                        // a slow swirl; quicker while something is brewing
-                        float rate = sys.PotBrewing(stirCell) ? 7f : 2.5f;
-                        spoon.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(animT * rate) * 22f);
-                    }
                     break;
                 case State.Walking:
                 case State.Leaving:
@@ -326,22 +328,10 @@ namespace KaraPati
 
         void UpdateLabel()
         {
-            if (Training)
+            // timers are not shown on the board any more (too busy); tap a cat to see them in the info bar
+            if (Training || level == 2 || level == 4)
             {
-                // countdown over the kitten that is being trained
-                if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
-                var tl = TimeSpan.FromTicks(Math.Max(0L, trainUntil - DateTime.UtcNow.Ticks));
-                label.text = "Eğitim " + tl.Minutes + ":" + tl.Seconds.ToString("00");
-                label.rectTransform.anchoredPosition = new Vector2(0f, -72f);
-                label.color = new Color(1f, 0.85f, 0.4f);
-            }
-            else if (level == 2 || level == 4)
-            {
-                var left = TimeSpan.FromTicks(Math.Max(0L, expires - DateTime.UtcNow.Ticks));
-                label.text = left.TotalHours >= 1.0
-                    ? (int)left.TotalHours + "sa " + left.Minutes + "dk"
-                    : left.Minutes + "dk " + left.Seconds + "sn";
-                label.color = cd > 0f ? new Color(1f, 1f, 1f, 0.55f) : UIKit.Cream;
+                if (label.gameObject.activeSelf) label.gameObject.SetActive(false);
             }
             else if (level == 1)
             {
@@ -364,6 +354,16 @@ namespace KaraPati
             else if (jumping) frame = 1;
             else if (moving) frame = (int)(animT * (chasing || runBoost > 1f ? 13f : 8f)) % 4;
             else frame = 4;
+            if (state == State.Stirring && backFrames[0])
+            {
+                // one round of the spoon; quicker while something is brewing
+                float rate = sys.PotBrewing(stirCell) ? 7f : 3f;
+                body.sprite = backFrames[(int)(animT * rate) % 4];
+                body.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Abs(Mathf.Sin(animT * rate * 0.5f * Mathf.PI)) * 2f);
+                body.rectTransform.localScale = Vector3.one;
+                body.rectTransform.localEulerAngles = Vector3.zero;
+                return;
+            }
             body.sprite = frames[frame];
 
             float bob = moving ? Mathf.Abs(Mathf.Sin(animT * 16f)) * 5f

@@ -140,10 +140,17 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
-        [MenuItem("KaraPati/Test/Usta Rengini Seç (Play modunda)")]
+        [MenuItem("KaraPati/Test/Usta Kedim Penceresi (Play modunda)")]
         static void UstaColor()
         {
-            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugUstaColor();
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.OpenUstaPanel();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Müşteri İksir İstesin (Play modunda)")]
+        static void PotionOrder()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Orders.DebugPotionOrder();
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 

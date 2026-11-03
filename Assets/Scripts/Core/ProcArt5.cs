@@ -33,6 +33,81 @@ namespace KaraPati
             p.Glow(new Vector2(0.5f, 0.35f), 0.5f, c);
         });
 
+        /// <summary>Apprentice seen from behind, standing on its hind paws and stirring the pot with both front paws.
+        /// frame 0-3 is one round of the spoon.</summary>
+        public static Sprite BackStirCat(int level, int frame, int color)
+        {
+            if (color < 0 || color > KittenColors.Gece) color = KittenColors.Legacy(level);
+            int c = color;
+            int hat = level == 2 ? 1 : level == 3 ? 2 : level == 4 ? 3 : 0;
+            return Make("backstir_" + level + "_" + frame + "_" + c, Size, p => DrawBackStir(p, catFur[c], catPattern[c], hat, frame));
+        }
+
+        static void DrawBackStir(Painter p, Color fur, int pattern, int hat, int frame)
+        {
+            var furDark = new Color(fur.r * 0.72f, fur.g * 0.68f, fur.b * 0.7f);
+            var limb = pattern == 2 ? patchDark : pattern == 3 ? patchOrange : fur;
+            var wood = new Color(0.62f, 0.42f, 0.26f);
+            float a = frame * Mathf.PI * 0.5f;
+            float sway = Mathf.Sin(a) * 0.035f;                                     // the whole cat leans with the spoon
+            var hand = new Vector2(0.2f + Mathf.Cos(a) * 0.09f, 0.0f + Mathf.Sin(a) * 0.05f);
+            var bc = new Vector2(sway, -0.4f);
+            var br = new Vector2(0.31f, 0.38f);
+            var hc = new Vector2(sway * 1.4f, 0.13f);
+
+            // the spoon is held in front of the cat (away from us): only the handle shows above its shoulder
+            var top = new Vector2(hand.x + 0.14f, 0.86f);
+            p.FillOutlined(q => S.Seg(q, hand, top, 0.045f), wood, 0.035f);
+
+            // feet peeking out under the body
+            p.FillOutlined(q => S.U(S.Ellipse(q, new Vector2(-0.17f, -0.79f), new Vector2(0.13f, 0.07f)),
+                S.Ellipse(q, new Vector2(0.17f, -0.79f), new Vector2(0.13f, 0.07f))), furDark, 0.04f);
+            // both front paws reach up to the spoon
+            p.FillOutlined(q => S.U(S.Seg(q, new Vector2(bc.x - 0.24f, -0.14f), hand + new Vector2(-0.06f, 0f), 0.07f),
+                S.Seg(q, new Vector2(bc.x + 0.24f, -0.14f), hand + new Vector2(0.03f, -0.02f), 0.07f)), fur, 0.045f);
+            p.FillOutlined(q => S.U(S.Circle(q, hand + new Vector2(-0.06f, 0f), 0.075f), S.Circle(q, hand + new Vector2(0.04f, -0.02f), 0.075f)), fur, 0.04f);
+
+            // body
+            p.FillOutlined(q => S.Ellipse(q, bc, br), fur, 0.05f);
+            Patches(p, pattern, bc, br, bc + new Vector2(-0.14f, 0.12f), 0.19f, bc + new Vector2(0.12f, -0.18f), 0.15f);
+            if (pattern == 1)   // tabby stripes across the back
+                p.Fill(q => S.U(S.Seg(q, bc + new Vector2(-0.2f, 0.18f), bc + new Vector2(0.2f, 0.18f), 0.03f),
+                    S.U(S.Seg(q, bc + new Vector2(-0.25f, 0.02f), bc + new Vector2(0.25f, 0.02f), 0.03f),
+                        S.Seg(q, bc + new Vector2(-0.24f, -0.14f), bc + new Vector2(0.24f, -0.14f), 0.03f))), furDark);
+            // a little line down the spine
+            p.Fill(q => S.Seg(q, bc + new Vector2(0f, 0.26f), bc + new Vector2(0f, -0.2f), 0.012f), new Color(furDark.r, furDark.g, furDark.b, 0.6f));
+
+            // back of the head: round, two ears, no face
+            var earA = new[] { hc + new Vector2(-0.25f, 0.08f), hc + new Vector2(-0.2f, 0.4f), hc + new Vector2(-0.04f, 0.2f) };
+            var earB = new[] { hc + new Vector2(0.04f, 0.2f), hc + new Vector2(0.2f, 0.4f), hc + new Vector2(0.25f, 0.08f) };
+            p.FillOutlined(q => S.U(S.Circle(q, hc, 0.27f), S.U(S.Poly(q, earA), S.Poly(q, earB))), fur, 0.05f);
+            if (pattern >= 2)
+                p.Fill(q => S.I(S.Circle(q, hc, 0.25f), S.Circle(q, hc + new Vector2(0.12f, 0.12f), 0.15f)), pattern == 3 ? patchOrange : patchDark);
+            if (pattern == 1)
+                p.Fill(q => S.U(S.Seg(q, hc + new Vector2(-0.06f, 0.2f), hc + new Vector2(-0.06f, 0.06f), 0.025f),
+                    S.Seg(q, hc + new Vector2(0.06f, 0.2f), hc + new Vector2(0.06f, 0.06f), 0.025f)), furDark);
+
+            // hat seen from behind
+            if (hat == 1 || hat == 2)
+            {
+                var hatCol = hat == 1 ? new Color(0.3f, 0.5f, 0.9f) : new Color(0.5f, 0.28f, 0.75f);
+                var brim = hat == 1 ? new Color(0.25f, 0.4f, 0.8f) : new Color(0.42f, 0.22f, 0.65f);
+                var cone = new[] { hc + new Vector2(-0.17f, 0.2f), hc + new Vector2(0.17f, 0.2f), hc + new Vector2(0.05f - sway, 0.62f) };
+                p.FillOutlined(q => S.Poly(q, cone), hatCol, 0.035f);
+                p.FillOutlined(q => S.Ellipse(q, hc + new Vector2(0f, 0.2f), new Vector2(0.27f, 0.05f)), brim, 0.035f);
+            }
+            else if (hat == 3)
+            {
+                p.FillOutlined(q => S.Ellipse(q, hc + new Vector2(0f, 0.24f), new Vector2(0.17f, 0.11f)), new Color(0.88f, 0.3f, 0.32f), 0.035f);
+                p.Fill(q => S.Circle(q, hc + new Vector2(0f, 0.36f), 0.055f), new Color(1f, 0.95f, 0.9f));
+            }
+
+            // the tail curls out towards us and swishes while it stirs
+            float tw = Mathf.Sin(a + 1f) * 0.08f;
+            p.FillOutlined(q => S.U(S.Seg(q, bc + new Vector2(0.05f, -0.3f), new Vector2(0.42f, -0.62f), 0.065f),
+                S.Seg(q, new Vector2(0.42f, -0.62f), new Vector2(0.55f + tw, -0.28f), 0.06f)), limb, 0.045f);
+        }
+
         static void DrawCustomer(Painter p, string id, bool full)
         {
             switch (id)

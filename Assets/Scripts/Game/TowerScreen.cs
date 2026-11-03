@@ -236,6 +236,125 @@ namespace KaraPati
             moodFill.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(Vector2.zero, new Vector2(300f, 30f));
             moodText = UIKit.Txt("Text", panel.transform, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             moodText.rectTransform.At(new Vector2(0f, -32f), new Vector2(400f, 36f));
+            BuildUstaShelf(f);
+        }
+
+        // ------------------------------------------------------------------ the Master's shelf
+        // The Master Cat works in the shop during the day; at home it naps on a cushion on a wall shelf.
+        // Tap it and it plays with Kara Pati (once every two hours: the happiness bar fills a quarter).
+        RectTransform ustaShelf;
+        Image ustaImg, yarn;
+        Text ustaLabel;
+        Vector2 ustaHome = new Vector2(250f, 40f);
+        bool playing;
+        const float PlayHours = 2f;
+
+        void BuildUstaShelf(RectTransform f)
+        {
+            ustaShelf = UIKit.Rect("UstaShelf", f).At(Vector2.zero, new Vector2(FloorW, FloorH));
+            P("Bracket", ustaShelf, ProcArt.Rounded, new Color(0.3f, 0.19f, 0.13f), ustaHome + new Vector2(-90f, -40f), new Vector2(18f, 50f), true);
+            P("Bracket", ustaShelf, ProcArt.Rounded, new Color(0.3f, 0.19f, 0.13f), ustaHome + new Vector2(90f, -40f), new Vector2(18f, 50f), true);
+            P("Plank", ustaShelf, ProcArt.Rounded, new Color(0.45f, 0.3f, 0.2f), ustaHome + new Vector2(0f, -18f), new Vector2(290f, 26f), true);
+            P("Cushion", ustaShelf, ProcArt.Circle, new Color(0.55f, 0.35f, 0.78f), ustaHome + new Vector2(0f, 2f), new Vector2(230f, 52f));
+            ustaImg = P("Usta", ustaShelf, ProcArt.SideCat(3, 5), Color.white, ustaHome + new Vector2(0f, 62f), new Vector2(190f, 190f));
+            ustaImg.raycastTarget = true;
+            var b = ustaImg.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(TapUsta);
+            ustaLabel = UIKit.Txt("Name", ustaShelf, "", 26, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            ustaLabel.fontStyle = FontStyle.Bold;
+            ustaLabel.rectTransform.At(ustaHome + new Vector2(0f, -56f), new Vector2(300f, 34f));
+            ustaLabel.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.6f);
+            yarn = P("Yarn", f, ProcArt.Item(Chains.Ag, 2), Color.white, Vector2.zero, new Vector2(70f, 70f));
+            yarn.gameObject.SetActive(false);
+            RefreshUsta();
+        }
+
+        public void RefreshUsta()
+        {
+            if (!ustaShelf || !GM || GM.Cats == null) return;
+            bool has = GM.Cats.HasAnyMaster;
+            ustaShelf.gameObject.SetActive(has);   // the shelf goes up with the first Master
+            if (!has || playing) return;
+            int col = GM.Cats.MasterColor;
+            bool away = GM.Cats.UstaAway;
+            ustaImg.gameObject.SetActive(!away);
+            ustaImg.sprite = ProcArt.SideCat(3, 5, col);
+            ustaImg.rectTransform.anchoredPosition = ustaHome + new Vector2(0f, 62f);
+            ustaImg.rectTransform.localScale = Vector3.one;
+            ustaLabel.text = away ? GM.UstaDisplayName(col) + " keşifte" : GM.UstaDisplayName(col);
+        }
+
+        void TapUsta()
+        {
+            if (playing || GM.Cats.UstaAway) return;
+            long now = System.DateTime.UtcNow.Ticks;
+            string who = GM.UstaDisplayName(GM.Cats.MasterColor);
+            if (now < GM.UstaPlayAt)
+            {
+                var left = System.TimeSpan.FromTicks(GM.UstaPlayAt - now);
+                Tween.Punch(ustaImg.transform, 0.08f, 0.3f);
+                Sfx.Play("paw", 0.8f);
+                GM.Toast(who + " esniyor: \"Biraz sonra oynarız...\" (" + (left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk") + ")");
+                return;
+            }
+            StartCoroutine(PlayYarn(who));
+        }
+
+        System.Collections.IEnumerator PlayYarn(string who)
+        {
+            playing = true;
+            int col = GM.Cats.MasterColor;
+            float floorY = -FloorH / 2f + 150f;
+            var u = ustaImg.rectTransform;
+            var k = cat.rectTransform;
+            Vector2 uSpot = new Vector2(120f, floorY + 70f), kSpot = new Vector2(-170f, floorY + 70f);
+            // the Master wakes up and hops down; Kara Pati comes over
+            ustaImg.sprite = ProcArt.SideCat(3, 4, col);
+            Sfx.Play("paw", 1.2f);
+            Tween.Move(u, uSpot, 0.5f);
+            Tween.Move(k, kSpot, 0.5f);
+            u.localScale = new Vector3(-1f, 1f, 1f);   // face Kara Pati
+            k.localScale = Vector3.one;
+            yield return new WaitForSeconds(0.55f);
+            // the yarn rolls back and forth between them
+            yarn.gameObject.SetActive(true);
+            yarn.transform.SetAsLastSibling();
+            Vector2 a = kSpot + new Vector2(80f, -50f), b = uSpot + new Vector2(-80f, -50f);
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 from = i % 2 == 0 ? a : b, to = i % 2 == 0 ? b : a;
+                Sfx.Play("pop", 1.1f + i * 0.05f, 0.6f);
+                Tween.Punch(i % 2 == 0 ? k : u, 0.12f, 0.25f);
+                float t = 0f;
+                while (t < 0.8f)
+                {
+                    t += Time.deltaTime;
+                    float e = Mathf.Clamp01(t / 0.8f);
+                    yarn.rectTransform.anchoredPosition = Vector2.Lerp(from, to, e) + new Vector2(0f, Mathf.Sin(e * Mathf.PI) * 60f);
+                    yarn.rectTransform.localEulerAngles = new Vector3(0f, 0f, (i % 2 == 0 ? -1f : 1f) * e * 360f);
+                    yield return null;
+                }
+            }
+            yarn.gameObject.SetActive(false);
+            for (int i = 0; i < 4; i++)
+            {
+                var h = P("Heart", floors[0], ProcArt.Heart, Color.white, Vector2.Lerp(kSpot, uSpot, i / 3f) + new Vector2(0f, 90f), new Vector2(46f, 46f));
+                var hr = h.rectTransform;
+                Vector2 hf = hr.anchoredPosition;
+                Tween.Run(1.1f, e => { if (!hr) return; hr.anchoredPosition = hf + new Vector2(0f, e * 120f); h.color = new Color(1f, 1f, 1f, 1f - e); }, () => { if (hr) Destroy(hr.gameObject); });
+            }
+            GM.UstaPlayed(PlayHours);
+            GM.Toast(who + " ve Kara Pati yumakla oynadı! Mutluluk arttı.", UIKit.Orange, 4f);
+            Sfx.Play("gift", 1.1f);
+            RefreshCare();
+            yield return new WaitForSeconds(0.6f);
+            Tween.Move(u, ustaHome + new Vector2(0f, 62f), 0.5f);
+            Tween.Move(k, catHome, 0.5f);
+            yield return new WaitForSeconds(0.55f);
+            u.localScale = Vector3.one;
+            playing = false;
+            RefreshUsta();
         }
 
         RectTransform MakeBowl(RectTransform f, string name, Vector2 pos, Color tint, Sprite content, out Image fill, out Text label, System.Action onTap)
@@ -326,6 +445,7 @@ namespace KaraPati
                 }
             }
             RefreshCare();
+            RefreshUsta();
         }
 
         void OnUnlock(int i)

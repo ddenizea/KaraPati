@@ -25,6 +25,9 @@ namespace KaraPati
             public Text stampText;
             public Image giveImg;
             public Text giveText;
+            public Button make;          // "Yaptır": a Mini Apprentice fetches the potion's ingredients
+            public Image makeImg;
+            public Text makeText;
         }
 
         readonly Card[] cards = new Card[SlotCount];
@@ -92,6 +95,12 @@ namespace KaraPati
                 card.stampText = UIKit.Txt("N", stamp.transform, "1", 26, UIKit.Cream);
                 card.stampText.rectTransform.At(new Vector2(18f, -18f), new Vector2(40f, 34f));
 
+                card.make = UIKit.Btn("Make", card.root, "Yaptır", UIKit.Green, () => MakePotion(slot), 26);
+                ((RectTransform)card.make.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -250f), new Vector2(150f, 54f));
+                card.makeImg = card.make.GetComponent<Image>();
+                card.makeText = card.make.Label();
+                card.make.gameObject.SetActive(false);
+
                 card.give = UIKit.Btn("Give", card.root, "Ver", UIKit.Disabled, () => Deliver(slot), 34);
                 card.giveImg = card.give.GetComponent<Image>();
                 card.giveText = card.give.Label();
@@ -102,9 +111,14 @@ namespace KaraPati
             }
         }
 
+        float makeTick;
+
         void Update()
         {
             float t = Time.time;
+            // the Mini Apprentice comes, goes and gets busy without the board changing: check now and then
+            makeTick -= Time.unscaledDeltaTime;
+            if (makeTick <= 0f) { makeTick = 0.5f; for (int i = 0; i < SlotCount; i++) RefreshMake(i); }
             for (int i = 0; i < SlotCount; i++)
             {
                 var g = cards[i]?.ghost;
@@ -116,6 +130,39 @@ namespace KaraPati
                 if (ready[i] && cards[i].give)
                     cards[i].give.transform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
             }
+        }
+
+        /// <summary>The potion this order wants (recipe), or null for an ingredient order.</summary>
+        Recipe WantedPotion(int slot)
+        {
+            var o = orders[slot];
+            if (o == null) return null;
+            foreach (var q in o.reqs) if (Chains.IsPotion(q.chain)) return Recipes.Get(q.level);
+            return null;
+        }
+
+        void RefreshMake(int i)
+        {
+            var card = cards[i];
+            if (card == null || card.make == null || GM == null || GM.Cats == null) return;
+            var r = WantedPotion(i);
+            // only for a potion that is not on the table yet, and only while a Mini Apprentice is around
+            bool show = r != null && !ready[i] && GM.Cats.HasMini && card.checks[0] && !card.checks[0].gameObject.activeSelf;
+            if (card.make.gameObject.activeSelf != show) card.make.gameObject.SetActive(show);
+            if (!show) return;
+            bool busy = GM.Cats.MiniBusy;
+            card.makeImg.color = busy ? UIKit.Disabled : UIKit.Green;
+            card.makeText.text = busy ? "Meşgul" : "Yaptır";
+        }
+
+        void MakePotion(int slot)
+        {
+            var r = WantedPotion(slot);
+            if (r == null) return;
+            if (GM.Cats.MiniBusy) { GM.Toast("Minik Çırak şu an başka bir iksir için malzeme taşıyor."); Sfx.Play("error"); return; }
+            Tween.Punch(cards[slot].make.transform, 0.1f, 0.2f);
+            GM.Cats.MiniBrew(r);
+            RefreshMake(slot);
         }
 
         void ShowFriendInfo(int slot)
@@ -362,6 +409,17 @@ namespace KaraPati
             Tween.Pop(card.root, 0.35f);
             Refresh();
             GM.MarkDirty();
+        }
+
+        /// <summary>Test helper: the first customer asks for a potion (the first recipe) instead.</summary>
+        public void DebugPotionOrder()
+        {
+            if (orders[0] == null) return;
+            orders[0].reqs.Clear();
+            orders[0].reqs.Add(new ReqSave { chain = Chains.Iksir, level = 1 });
+            ShowCard(0);
+            Refresh();
+            RefreshMake(0);
         }
 
         /// <summary>Test helper: friendship points for the first customer waiting, then redraw the cards.</summary>

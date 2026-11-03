@@ -237,6 +237,9 @@ namespace KaraPati
         public int ustaTrip;                    // Master cat's expedition: 0 = at home, otherwise trip index + 1
         public long ustaTripUntil;              // UTC ticks when the Master comes back
         public int ustaTripColor;               // colour + 1 of the Master who is away
+        public string ustaName;                 // name the player gave the Master Cat ("" = none)
+        public bool ustaNew;                    // a new Master is waiting to be named ("!" on the Usta Kedim button)
+        public long ustaPlayAt;                 // UTC ticks when the Master and Kara Pati can play with the yarn again
         public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order) // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;

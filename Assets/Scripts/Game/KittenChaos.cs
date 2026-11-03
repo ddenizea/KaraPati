@@ -438,31 +438,41 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
             Select(m);
-            GM.Toast("Usta Kedi! Artık hep burada: malzeme getirir, yavrulara tıslar, keşfe de çıkabilir.", UIKit.Orange, 5f);
+            GM.Toast("Usta Kedi! Malzeme getirir, yavrulara tıslar, keşfe çıkar. Ana ekrandaki Usta Kedim'den adını ve rengini seçebilirsin.", UIKit.Orange, 6f);
             EnsureHouse();
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
-            GM.OpenUstaColor(m);   // the player picks the Master's colour
+            GM.UstaPromoted();   // "!" on the Usta Kedim button: name it and pick a colour there
         }
 
-        /// <summary>Test helper: open the colour picker for the Master (selected so the info bar shows its "Renk" button too).</summary>
-        public void DebugUstaColor()
+        /// <summary>There is a Master Cat: in the shop or away on a trip.</summary>
+        public bool HasAnyMaster => HasMaster || UstaAway;
+
+        /// <summary>The Master's colour, also while it is away.</summary>
+        public int MasterColor
+        {
+            get
+            {
+                var m = Master();
+                return m ? m.color : UstaAway ? TripColor : KittenColors.Gece;
+            }
+        }
+
+        public void SetMasterColor(int col)
         {
             var m = Master();
-            if (!m) { GM.Toast("Masada Usta Kedi yok."); return; }
-            Select(m);
-            GM.OpenUstaColor(m);
-        }
-
-        public void SetMasterColor(KittenAgent m, int col)
-        {
-            if (!m || m.level != 3) return;
-            m.SetColor(col);
-            Tween.Pop(m.rt, 0.35f);
-            FX.Burst(B.FxLayer, m.Pos, new Color(0.8f, 0.5f, 1f), 12);
+            if (m)
+            {
+                m.SetColor(col);
+                Tween.Pop(m.rt, 0.35f);
+                if (Selected == m) GM.ShowKittenInfo(m);
+            }
+            else if (UstaAway) TripColor = col;
+            else return;
             Sfx.Play("pop");
-            GM.Toast("Usta artık " + UstaColorPanel.ColorName(col) + "!", UIKit.Orange);
-            if (GM.InfoKitten == m) GM.ShowKittenInfo(m);
+            GM.Toast(GM.UstaDisplayName(col) + " yeni rengini çok sevdi!", UIKit.Orange);
+            GM.SeenUsta();
+            GM.RefreshUstaViews();
             GM.MarkDirty();
         }
 
@@ -1098,6 +1108,15 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        /// <summary>A cat started or stopped stirring at this pot: redraw it (the timer moves up so the cat doesn't cover it).</summary>
+        public void StirChanged(Vector2Int cell) { if (B != null) B.RefreshView(cell); }
+
+        public KittenAgent StirrerAt(Vector2Int cell)
+        {
+            foreach (var a in agents) if (a && a.Stirring && a.stirCell == cell && !a.IsGone) return a;
+            return null;
+        }
+
         void StirTick(KittenAgent a, float dt)
         {
             var d = B.Get(a.stirCell);
@@ -1130,9 +1149,10 @@ namespace KaraPati
             Say(m, "Görüşürüz!", UIKit.Cream);
             m.Leave();
             Sfx.Play("whoosh");
-            GM.Toast("Usta Kedi " + Expeditions.Names[k] + " için yola çıktı. " + Expeditions.Duration(k) + " sonra dönecek.", UIKit.Orange, 4.5f);
+            GM.Toast(GM.UstaDisplayName(m.color) + " " + Expeditions.Names[k] + " için yola çıktı. " + Expeditions.Duration(k) + " sonra dönecek.", UIKit.Orange, 4.5f);
             GM.RefreshTripButton();
             GM.ShowInfo(null);
+            GM.RefreshUstaViews();
             GM.MarkDirty();
         }
 
@@ -1142,7 +1162,8 @@ namespace KaraPati
             if (Trip < 0 || now < TripUntil || readyAnnounced) return;
             readyAnnounced = true;
             if (FindHouse(out var hc)) B.RefreshView(hc);
-            GM.Toast("Usta Kedi döndü! Kedi Evi'nde sandığıyla bekliyor. Eve dokun!", UIKit.Orange, 5f);
+            GM.Toast(GM.UstaDisplayName(TripColor) + " döndü! Kedi Evi'nde sandığıyla bekliyor. Eve dokun!", UIKit.Orange, 5f);
+            GM.RefreshUstaViews();
             Sfx.Play("ready");
         }
 
@@ -1232,7 +1253,7 @@ namespace KaraPati
                 ? " Masa doluydu: " + (stored > 0 ? stored + " tanesi depoya" : "") + (stored > 0 && sold > 0 ? ", " : "") + (sold > 0 ? sold + " tanesi altına" : "") + " gitti."
                 : "";
             Sfx.Play("gift");
-            GM.ShowDialog("Usta Kedi", Expeditions.Names[k] + " bitti, miyav! Getirdiklerim: " + string.Join(", ", found) + "." + where);
+            GM.ShowDialog(GM.UstaDisplayName(m.color), Expeditions.Names[k] + " bitti, miyav! Getirdiklerim: " + string.Join(", ", found) + "." + where);
             GM.RefreshHud();
             if (Selected == null) GM.ShowInfo(null);
             GM.OnBoardChanged();

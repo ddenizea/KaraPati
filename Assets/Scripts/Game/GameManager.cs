@@ -85,7 +85,9 @@ namespace KaraPati
         ExpeditionPanel expeditionPanel;
         HousePanel housePanel;
         UstaColorPanel ustaColorPanel;
-        Button colorBtn;
+        public string UstaName { get; private set; } = "";
+        public bool UstaNew { get; private set; }
+        public long UstaPlayAt { get; set; }
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
@@ -499,11 +501,6 @@ namespace KaraPati
             ((RectTransform)infoBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -8f), new Vector2(62f, 62f));
             infoBtn.Label().fontStyle = FontStyle.Bold;
             infoBtn.gameObject.SetActive(false);
-            // "Renk" button: shown for the Master Cat, opens the colour picker
-            colorBtn = UIKit.Btn("Color", panel.transform, "Renk", new Color(0.42f, 0.28f, 0.6f), () => { if (infoKitten) OpenUstaColor(infoKitten); }, 24);
-            ((RectTransform)colorBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -10f), new Vector2(92f, 48f));
-            colorBtn.Label().fontStyle = FontStyle.Bold;
-            colorBtn.gameObject.SetActive(false);
         }
 
         void BuildStickerPopup()
@@ -874,7 +871,56 @@ namespace KaraPati
         public void OpenItemInfo(ItemData d) { if (d != null) itemInfo.Open(d); }
 
         public void OpenHouse(Vector2Int hc) => housePanel.Open(hc);
-        public void OpenUstaColor(KittenAgent m) => ustaColorPanel.Open(m);
+        public void OpenUstaPanel() => ustaColorPanel.Open();
+
+        /// <summary>The Master's name: the one the player gave, or "Usta Kedi" / "Gri Usta".</summary>
+        public string UstaDisplayName(int col) =>
+            !string.IsNullOrEmpty(UstaName) ? UstaName : col == KittenColors.Gece ? "Usta Kedi" : UstaColorPanel.ColorName(col) + " Usta";
+
+        public void SetUstaName(string n)
+        {
+            n = (n ?? "").Trim();
+            if (n.Length > UstaColorPanel.NameLimit) n = n.Substring(0, UstaColorPanel.NameLimit);
+            if (n == UstaName) return;
+            UstaName = n;
+            if (n.Length > 0) Toast("Usta Kedi'nin yeni adı: " + n + "!", UIKit.Orange);
+            SeenUsta();
+            if (infoKitten && infoKitten.level == 3) ShowKittenInfo(infoKitten);
+            RefreshUstaViews();
+            MarkDirty();
+        }
+
+        /// <summary>The Master and Kara Pati played: the happiness bar fills a quarter (both bowls a bit fuller).</summary>
+        public void UstaPlayed(float cooldownHours)
+        {
+            UstaPlayAt = DateTime.UtcNow.Ticks + TimeSpan.FromHours(cooldownHours).Ticks;
+            long boost = TimeSpan.FromHours(Tower.BowlHours * 0.25f).Ticks, now = DateTime.UtcNow.Ticks;
+            if (lastFed > 0) lastFed = Math.Min(now, lastFed + boost);
+            if (lastWatered > 0) lastWatered = Math.Min(now, lastWatered + boost);
+            MarkDirty();
+        }
+
+        public void UstaPromoted()
+        {
+            UstaNew = true;
+            RefreshUstaViews();
+            MarkDirty();
+        }
+
+        public void SeenUsta()
+        {
+            if (!UstaNew) return;
+            UstaNew = false;
+            RefreshUstaViews();
+            MarkDirty();
+        }
+
+        /// <summary>Redraw everything that shows the Master: home button, tower cushion.</summary>
+        public void RefreshUstaViews()
+        {
+            if (home) home.RefreshUstaButton();
+            if (tower) tower.RefreshUsta();
+        }
         public KittenAgent InfoKitten => infoKitten;
 
         void OpenSelectedInfo()
@@ -935,6 +981,7 @@ namespace KaraPati
             if (speaker == "Cadı Hanım") return ProcArt.Witch;
             if (speaker == "Gölge") return ProcArt.SideCat(0, 4);
             if (speaker == "Usta Kedi") return ProcArt.SideCat(3, 4);
+            if (I != null && I.Cats != null && I.Cats.HasAnyMaster && speaker == I.UstaDisplayName(I.Cats.MasterColor)) return ProcArt.SideCat(3, 4, I.Cats.MasterColor);
             var cust = Customers.ByName(speaker);
             if (cust != null) return ProcArt.Customer(cust.id, I != null && I.FriendStage(cust) >= cust.FullLookStage);
             int gi = Array.IndexOf(Ghosts.Names, speaker);
@@ -1178,8 +1225,7 @@ namespace KaraPati
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
-            if (colorBtn) colorBtn.gameObject.SetActive(false);
-            infoTitle.rectTransform.offsetMax = new Vector2(-196f, -14f);
+
             if (d == null)
             {
                 infoTitle.text = "İpucu";
@@ -1236,6 +1282,9 @@ namespace KaraPati
                     infoDesc.text = "İki malzemeyi kazana sürükle, iksir kaynasın. " + Recipes.UnlockedCount(TasksDone) + "/" + Recipes.All.Length + " tarif açık.";
                     actionBtn.Label().text = "Tarifler";
                 }
+                var stirrer = Cats.StirrerAt(Board.Selected);
+                if (stirrer)
+                    infoDesc.text += "\n" + KittenColors.Name(stirrer.color) + " Çırak karıştırıyor: " + (stirrer.color == KittenColors.Gri ? "2,5" : "2") + " kat hızlı.";
                 return;
             }
             if (Chains.IsHouse(d.chain))
@@ -1295,8 +1344,7 @@ namespace KaraPati
             infoKitten = a;
             kittenInfoTimer = 1f;
             if (infoBtn) infoBtn.gameObject.SetActive(false);
-            if (colorBtn) colorBtn.gameObject.SetActive(a.level == 3);
-            infoTitle.rectTransform.offsetMax = new Vector2(a.level == 3 ? -300f : -196f, -14f);   // room for the "Renk" button
+
             var btnImg = actionBtn.GetComponent<Image>();
             btnImg.color = UIKit.Orange;
             actionBtn.gameObject.SetActive(false);
@@ -1340,14 +1388,14 @@ namespace KaraPati
                     infoTitle.text = colName + " Minik Çırak";
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     infoDesc.text = (Cats.MiniBusy ? "Malzemeleri kazana taşıyor..." : "Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın.")
-                        + "\nKalan: " + left.Minutes + " dk " + left.Seconds + " sn";
+                        + "\nKalan: " + (left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn");
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Tarifler";
                     btnImg.color = UIKit.Green;
                     break;
                 }
                 default:
-                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : UstaColorPanel.ColorName(a.color) + " Usta";
+                    infoTitle.text = UstaDisplayName(a.color);
                     if (a.state == KittenAgent.State.Sitting)
                     {
                         infoDesc.text = "Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.";
@@ -1699,6 +1747,9 @@ namespace KaraPati
             claimedSets.Clear();
             clues.Clear();
             friends.Clear();
+            UstaName = "";
+            UstaNew = false;
+            UstaPlayAt = 0;
 
             Cats.ClearAll();
             Board.ClearAll();
@@ -1777,6 +1828,9 @@ namespace KaraPati
             s.ustaTrip = Cats.Trip + 1;
             s.ustaTripUntil = Cats.TripUntil;
             s.ustaTripColor = Cats.TripColor + 1;
+            s.ustaName = UstaName;
+            s.ustaNew = UstaNew;
+            s.ustaPlayAt = UstaPlayAt;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
         }
@@ -1874,6 +1928,9 @@ namespace KaraPati
                 Board.EnsurePot();
                 Cats.ReadSave(s.kittens);
                 Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil, s.ustaTripColor > 0 ? s.ustaTripColor - 1 : KittenColors.Gece);
+                UstaName = s.ustaName ?? "";
+                UstaNew = s.ustaNew;
+                UstaPlayAt = s.ustaPlayAt;
                 Orders.ReadSave(s.orders);
                 RefreshHud();
                 ShowInfo(null);

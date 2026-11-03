@@ -41,7 +41,7 @@ namespace KaraPati
         readonly List<Image> candleGlows = new List<Image>();
 
         RectTransform taskList;
-        Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge;
+        Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge, ustaBadge, ustaIcon;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -127,14 +127,10 @@ namespace KaraPati
             caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(caseBadgeText.rectTransform);
             RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
-            // sound: tap cycles all on -> music off -> silent
-            Button soundBtn = null;
-            soundBtn = RoundButton(sceneArea, "Sound", ProcArt.Speaker(Sfx.Mode), new Vector2(1f, 1f), new Vector2(-66f, -190f), () =>
-            {
-                int m = Sfx.CycleMode();
-                soundBtn.transform.Find("Icon").GetComponent<Image>().sprite = ProcArt.Speaker(m);
-                GM.Toast(m == 0 ? "Ses ve müzik açık" : m == 1 ? "Müzik kapalı, efektler açık" : "Ses kapalı");
-            });
+            // sound: a small menu with music and effects as two separate switches
+            var soundBtn = RoundButton(sceneArea, "Sound", ProcArt.Speaker(Sfx.Mode), new Vector2(1f, 1f), new Vector2(-66f, -190f), ToggleSoundMenu);
+            soundIcon = soundBtn.transform.Find("Icon").GetComponent<Image>();
+            BuildSoundMenu();
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
             dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
@@ -146,6 +142,14 @@ namespace KaraPati
             chaptersBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var cbt = UIKit.Txt("!", chaptersBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(cbt.rectTransform);
+            // "Usta Kedim": name and colour of the Master Cat
+            var usta = RoundButton(sceneArea, "UstaKedim", ProcArt.SideCat(3, 4), new Vector2(0f, 1f), new Vector2(66f, -450f), () => GM.OpenUstaPanel());
+            ustaIcon = usta.transform.Find("Icon").GetComponent<Image>();
+            ustaIcon.rectTransform.sizeDelta = new Vector2(92f, 92f);
+            ustaBadge = UIKit.Img("Badge", usta.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            ustaBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var ubt = UIKit.Txt("!", ustaBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(ubt.rectTransform);
             // the chapter title also opens the list
             chapterTitle.raycastTarget = true;
             var titleBtn = chapterTitle.gameObject.AddComponent<Button>();
@@ -466,6 +470,52 @@ namespace KaraPati
             caseBadgeText.text = found2.ToString();
         }
 
+        public void RefreshUstaButton()
+        {
+            if (!ustaIcon || GM == null || GM.Cats == null) return;
+            bool has = GM.Cats.HasAnyMaster;
+            ustaIcon.sprite = ProcArt.SideCat(3, 4, has ? GM.Cats.MasterColor : KittenColors.Gece);
+            ustaIcon.color = has ? Color.white : new Color(1f, 1f, 1f, 0.35f);   // no Master yet: a faded hint
+            ustaBadge.gameObject.SetActive(has && GM.UstaNew);
+        }
+
+        // ------------------------------------------------------------------ sound menu
+        Image soundIcon;
+        RectTransform soundMenu;
+        Button musicBtn, fxBtn;
+
+        void BuildSoundMenu()
+        {
+            var bg = UIKit.Img("SoundMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.95f), true);
+            bg.raycastTarget = true;
+            soundMenu = bg.rectTransform;
+            soundMenu.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(340f, 210f));
+            var title = UIKit.Txt("Title", soundMenu, "Ses", 30, UIKit.Orange, TextAnchor.MiddleCenter, false);
+            title.fontStyle = FontStyle.Bold;
+            title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(300f, 40f));
+            musicBtn = UIKit.Btn("Music", soundMenu, "", UIKit.Green, () => { Sfx.SetMusic(!Sfx.MusicOn); RefreshSoundMenu(); }, 28);
+            ((RectTransform)musicBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -54f), new Vector2(300f, 66f));
+            fxBtn = UIKit.Btn("Effects", soundMenu, "", UIKit.Green, () => { Sfx.SetEffects(!Sfx.EffectsOn); RefreshSoundMenu(); }, 28);
+            ((RectTransform)fxBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -130f), new Vector2(300f, 66f));
+            soundMenu.gameObject.SetActive(false);
+        }
+
+        void ToggleSoundMenu()
+        {
+            bool open = !soundMenu.gameObject.activeSelf;
+            soundMenu.gameObject.SetActive(open);
+            if (open) { soundMenu.SetAsLastSibling(); RefreshSoundMenu(); Tween.Pop(soundMenu, 0.2f); }
+        }
+
+        void RefreshSoundMenu()
+        {
+            musicBtn.Label().text = "Müzik: " + (Sfx.MusicOn ? "Açık" : "Kapalı");
+            musicBtn.GetComponent<Image>().color = Sfx.MusicOn ? UIKit.Green : UIKit.Disabled;
+            fxBtn.Label().text = "Efektler: " + (Sfx.EffectsOn ? "Açık" : "Kapalı");
+            fxBtn.GetComponent<Image>().color = Sfx.EffectsOn ? UIKit.Green : UIKit.Disabled;
+            if (soundIcon) soundIcon.sprite = ProcArt.Speaker(Sfx.Mode);
+        }
+
         void UseEye()
         {
             int waiting = 0;
@@ -592,6 +642,7 @@ namespace KaraPati
             }
             else progressFill.sizeDelta = new Vector2(fw, 24f);
 
+            RefreshUstaButton();
             prevBtn.gameObject.SetActive(view > 0);
             bool hasNext = view < Story.Chapters.Length - 1;
             nextBtn.gameObject.SetActive(hasNext);

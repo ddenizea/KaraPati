@@ -144,6 +144,9 @@ namespace KaraPati
             bool showExtra = pot && (data.brew > 0 || !string.IsNullOrEmpty(data.mix));
             potExtra.gameObject.SetActive(showExtra);
             potTimer.gameObject.SetActive(pot && data.brew > 0);
+            // an apprentice standing in front of the pot covers the bottom: show the timer over the pot instead
+            bool stirred = pot && GameManager.I != null && GameManager.I.Cats != null && GameManager.I.Cats.StirrerAt(cell) != null;
+            potTimer.rectTransform.anchoredPosition = new Vector2(0f, stirred ? 12f : -52f);
             if (!showExtra) return;
             if (data.brew > 0)
             {
