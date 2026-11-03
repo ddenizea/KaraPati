@@ -21,7 +21,8 @@ namespace KaraPati
         public Vector2Int stirCell = new Vector2Int(-1, -1);   // pot this apprentice is stirring
         public bool homed;                                      // Master Cat: it has its cushion on the counter and works from there
         /// <summary>Where an apprentice stands to stir: on the counter, just right of the pot.</summary>
-        public static readonly Vector2 StirOffset = new Vector2(96f, -6f);
+        public static readonly Vector2 StirOffset = new Vector2(92f, -8f);
+        public bool parked;                                     // Mini Apprentice: sits at its toy ball on the counter
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
         public float age;             // seconds on the table (new kittens get a grace period)
@@ -34,7 +35,6 @@ namespace KaraPati
         Image body, ring;
         Text label;
         readonly Sprite[] frames = new Sprite[6];
-        readonly Sprite[] backFrames = new Sprite[4];   // standing with its back to us, stirring the pot
         Vector2 target;
         float idleTimer, animT, speed, mischiefTimer;
         int facing = 1;
@@ -58,7 +58,6 @@ namespace KaraPati
         {
             color = col;
             for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i, color);
-            if (backFrames[0]) for (int i = 0; i < backFrames.Length; i++) backFrames[i] = ProcArt.BackStirCat(level, i, color);
             if (body) body.sprite = frames[4];
         }
 
@@ -130,14 +129,14 @@ namespace KaraPati
             chasing = false;
             onArrive = null;
             stirCell = cell;
-            // stands next to the pot on the counter, on its hind paws with its back to us
+            // sits on the counter right of the pot, side on, stirring with a big wooden spoon
             Pos = sys.Clamp(potPos + StirOffset);
-            Face(1);
+            Face(-1);                                          // look at the pot
             state = State.Stirring;
-            if (spoon) spoon.gameObject.SetActive(false);    // the back-view drawing holds its own spoon
-            for (int i = 0; i < backFrames.Length; i++) backFrames[i] = ProcArt.BackStirCat(level, i, color);
-            rt.sizeDelta = new Vector2(96f, 80f);             // a small touch area: the top of the pot stays tappable
-            body.rectTransform.sizeDelta = new Vector2(112f, 112f);
+            if (!spoon) BuildSpoon();
+            spoon.gameObject.SetActive(true);
+            spoon.anchoredPosition = new Vector2(-30f, 34f);   // in the paw that faces the pot
+            spoon.localScale = new Vector3(-1f, 1f, 1f);      // the spoon reaches towards the pot
             sys.StirChanged(cell);
         }
 
@@ -197,9 +196,6 @@ namespace KaraPati
             var was = stirCell;
             stirCell = new Vector2Int(-1, -1);
             if (spoon) spoon.gameObject.SetActive(false);
-            rt.sizeDelta = new Vector2(130f, 130f);
-            float size = level == 1 ? 128f : level == 4 ? 118f : 140f;
-            body.rectTransform.sizeDelta = new Vector2(size, size);
             if (was.x >= 0) sys.StirChanged(was);
             if (state == State.Stirring) Idle(1f);
         }
@@ -295,10 +291,22 @@ namespace KaraPati
                             if (!AtHome) WalkTo(sys.CushionPos);
                             else { Face(-1); idleTimer = 2f; }
                         }
+                        else if (parked)
+                        {
+                            // the Mini Apprentice stays with its toy ball
+                            if ((Pos - sys.ToySeat).sqrMagnitude > 30f * 30f) WalkTo(sys.ToySeat);
+                            else { Face(-1); idleTimer = 2f; }
+                        }
                         else WalkTo(sys.RandomPoint());
                     }
                     break;
                 case State.Stirring:
+                    if (spoon)
+                    {
+                        // a slow swirl; quicker while something is brewing
+                        float rate = sys.PotBrewing(stirCell) ? 7f : 2.5f;
+                        spoon.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(animT * rate) * 22f);
+                    }
                     break;
                 case State.Walking:
                 case State.Leaving:
@@ -367,16 +375,6 @@ namespace KaraPati
             else if (jumping) frame = 1;
             else if (moving) frame = (int)(animT * (chasing || runBoost > 1f ? 13f : 8f)) % 4;
             else frame = 4;
-            if (state == State.Stirring && backFrames[0])
-            {
-                // one round of the spoon; quicker while something is brewing
-                float rate = sys.PotBrewing(stirCell) ? 7f : 3f;
-                body.sprite = backFrames[(int)(animT * rate) % 4];
-                body.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Abs(Mathf.Sin(animT * rate * 0.5f * Mathf.PI)) * 2f);
-                body.rectTransform.localScale = new Vector3(-1f, 1f, 1f);   // mirrored: the spoon reaches left into the pot
-                body.rectTransform.localEulerAngles = Vector3.zero;
-                return;
-            }
             body.sprite = frames[frame];
 
             float bob = moving ? Mathf.Abs(Mathf.Sin(animT * 16f)) * 5f

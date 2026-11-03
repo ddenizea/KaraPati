@@ -73,6 +73,28 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        // ---------------------------------------------------------------- one-off cat hints
+        // "Drag the new Master to its cushion", "drag the Mini Apprentice to its toy": a paw slides from the cat to its place.
+        KittenAgent hintCat;
+        RectTransform hintTarget;
+        string hintMsg;
+        System.Func<bool> hintDone;
+
+        public void CatHint(KittenAgent cat, RectTransform target, string msg, System.Func<bool> done)
+        {
+            hintCat = cat; hintTarget = target; hintMsg = msg; hintDone = done;
+            t = 0f;
+        }
+
+        bool HintActive
+        {
+            get
+            {
+                if (!hintCat || !hintTarget || hintCat.IsGone || (hintDone != null && hintDone())) { hintCat = null; return false; }
+                return true;
+            }
+        }
+
         public void Notify(string e)
         {
             if (!Active) return;
@@ -91,6 +113,7 @@ namespace KaraPati
 
         void Skip()
         {
+            if (HintActive) { hintCat = null; return; }   // closes only the cat hint
             Step = Done;
             GM.MarkDirty();
             GM.Toast("Rehber kapandı. İpuçları alttaki panelde.");
@@ -99,7 +122,8 @@ namespace KaraPati
         void LateUpdate()
         {
             if (!layer) return;
-            bool show = Active && GM != null && GM.OnBoard && !GM.ModalOpen && GM.Board != null && GM.Board.Ready;
+            bool hint = HintActive;
+            bool show = (Active || hint) && GM != null && GM.OnBoard && !GM.ModalOpen && GM.Board != null && GM.Board.Ready;
             if (layer.gameObject.activeSelf != show)
             {
                 layer.gameObject.SetActive(show);
@@ -111,7 +135,8 @@ namespace KaraPati
             RectTransform target = null, dragFrom = null;
             string msg = "";
             var B = GM.Board;
-            switch (Step)
+            if (hint) { dragFrom = hintCat.rt; target = hintTarget; msg = hintMsg; }
+            else switch (Step)
             {
                 case 1:
                     if (B.FindFirst(d => d.chain == Chains.Kazan, out var k)) target = B.ViewRect(k);
@@ -137,7 +162,7 @@ namespace KaraPati
                                    : "Bu mor Simya Kazanı. Seçip 'Tarifler'e bak: iki malzeme = bir iksir!";
                     break;
             }
-            stepText.text = "Rehber " + Step + "/" + LastStep;
+            stepText.text = hint ? "İpucu" : "Rehber " + Step + "/" + LastStep;
             text.text = msg;
 
             if (!target) { paw.gameObject.SetActive(false); ring.gameObject.SetActive(false); PlaceBubble(new Vector2(0f, -200f)); return; }

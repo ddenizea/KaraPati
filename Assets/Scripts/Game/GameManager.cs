@@ -86,6 +86,15 @@ namespace KaraPati
         HousePanel housePanel;
         UstaColorPanel ustaColorPanel;
         public string UstaName { get; private set; } = "";
+        readonly HashSet<string> hintsSeen = new HashSet<string>();
+
+        /// <summary>True only the first time it is asked for this id (one-off guide hints).</summary>
+        public bool FirstTime(string id)
+        {
+            if (!hintsSeen.Add(id)) return false;
+            MarkDirty();
+            return true;
+        }
         public bool UstaNew { get; private set; }
         public long UstaPlayAt { get; set; }
         Button infoBtn;
@@ -1756,6 +1765,7 @@ namespace KaraPati
             clues.Clear();
             friends.Clear();
             UstaName = "";
+            hintsSeen.Clear();
             UstaNew = false;
             UstaPlayAt = 0;
 
@@ -1837,6 +1847,7 @@ namespace KaraPati
             s.ustaTripUntil = Cats.TripUntil;
             s.ustaTripColor = Cats.TripColor + 1;
             s.ustaName = UstaName;
+            s.hints = new List<string>(hintsSeen);
             s.ustaNew = UstaNew;
             s.ustaPlayAt = UstaPlayAt;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
@@ -1938,6 +1949,8 @@ namespace KaraPati
                 Cats.ReadSave(s.kittens);
                 Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil, s.ustaTripColor > 0 ? s.ustaTripColor - 1 : KittenColors.Gece);
                 UstaName = s.ustaName ?? "";
+                hintsSeen.Clear();
+                if (s.hints != null) foreach (var h in s.hints) hintsSeen.Add(h);
                 UstaNew = s.ustaNew;
                 UstaPlayAt = s.ustaPlayAt;
                 Orders.ReadSave(s.orders);

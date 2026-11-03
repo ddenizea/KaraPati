@@ -108,6 +108,14 @@ namespace KaraPati
                 S.Seg(q, new Vector2(0.42f, -0.62f), new Vector2(0.55f + tw, -0.28f), 0.06f)), limb, 0.045f);
         }
 
+        /// <summary>A little red ball with a white stripe: the Mini Apprentice's toy.</summary>
+        public static Sprite ToyBall => Make("ui_toyball", 96, p =>
+        {
+            p.FillOutlined(q => S.Circle(q, Vector2.zero, 0.8f), new Color(0.9f, 0.3f, 0.32f), 0.09f);
+            p.Fill(q => S.I(S.Circle(q, Vector2.zero, 0.72f), S.Ring(S.Circle(q, new Vector2(-0.9f, 0.2f), 1.1f), 0.1f)), new Color(1f, 0.95f, 0.88f));
+            p.Fill(q => S.Ellipse(q, new Vector2(-0.3f, 0.35f), new Vector2(0.18f, 0.12f)), new Color(1f, 1f, 1f, 0.7f));
+        });
+
         /// <summary>The Mini Apprentice's little red cap with a white pompom (graduation).</summary>
         public static Sprite RedCap => Make("ui_redcap", 96, p =>
         {

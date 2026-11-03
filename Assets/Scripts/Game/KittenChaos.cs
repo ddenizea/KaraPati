@@ -151,6 +151,7 @@ namespace KaraPati
             HissTick(dt);
             MiniTick();
             TrainYarnTick(dt);
+            ToyTick(dt);
             TripTick(now);
             houseCheck -= dt;
             if (houseCheck <= 0f) { houseCheck = 3f; EnsureHouse(); }
@@ -351,6 +352,7 @@ namespace KaraPati
         public void OnDropped(KittenAgent a)
         {
             if (a.level == 3) { DropMaster(a); return; }
+            if (a.level == 4) { DropMini(a); return; }
             if (a.level == 2) { TryStir(a); return; }
             if (!a.IsWild || a.Training) return;
             if (TryStartTraining(a)) return;
@@ -366,6 +368,18 @@ namespace KaraPati
             if (!other) return;
             if (HasApprentice) { GM.Toast("Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!"); return; }
             MergeKittens(a, other);
+        }
+
+        void DropMini(KittenAgent m)
+        {
+            if ((m.Pos - ToySeat).sqrMagnitude > 110f * 110f) { m.parked = false; return; }   // put down elsewhere: it roams again
+            if (m.parked) { ParkMini(m); return; }
+            ParkMini(m);
+            Tween.Pop(m.rt, 0.3f);
+            Sfx.Play("pop", 1.3f);
+            Say(m, "Topum!", UIKit.Orange);
+            GM.Toast("Minik Çırak topuyla oynuyor, masada gezmez. 'Yaptır' dersen yine koşar.", UIKit.Orange, 4.5f);
+            GM.MarkDirty();
         }
 
         void DropMaster(KittenAgent m)
@@ -433,6 +447,37 @@ namespace KaraPati
             return true;
         }
 
+        /// <summary>Where the Mini Apprentice sits to play with its ball (just right of it).</summary>
+        public Vector2 ToySeat => BoardController.ToyPos + new Vector2(52f, 26f);
+
+        void ParkMini(KittenAgent m)
+        {
+            m.parked = true;
+            m.Pos = ToySeat;
+            m.Face(-1);
+            m.Idle(2f);
+        }
+
+        float toyT;
+
+        /// <summary>A parked Mini Apprentice bats its ball between its paws.</summary>
+        void ToyTick(float dt)
+        {
+            var ball = B.ToyBall;
+            if (!ball) return;
+            var mini = Mini();
+            bool playing = mini && mini.parked && mini.state == KittenAgent.State.Idle && (mini.Pos - ToySeat).sqrMagnitude < 30f * 30f;
+            var brt = ball.rectTransform;
+            if (!playing) { brt.anchoredPosition = BoardController.ToyPos; brt.localEulerAngles = Vector3.zero; return; }
+            toyT += dt;
+            // a little hop and roll, then a tap from the paw
+            float cyc = Mathf.Repeat(toyT, 1.6f);
+            float hop = cyc < 0.6f ? Mathf.Sin(cyc / 0.6f * Mathf.PI) * 26f : 0f;
+            brt.anchoredPosition = BoardController.ToyPos + new Vector2(Mathf.Sin(toyT * 2.2f) * 10f, hop);
+            brt.localEulerAngles = new Vector3(0f, 0f, -toyT * 160f);
+            if (cyc < dt) Tween.Punch(mini.rt, 0.08f, 0.2f);
+        }
+
         /// <summary>Where the Master sits: its cushion on the right end of the counter.</summary>
         public Vector2 CushionPos => BoardController.CellPos(BoardController.CushionCell) + new Vector2(0f, 4f);
 
@@ -485,6 +530,8 @@ namespace KaraPati
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
             GM.UstaPromoted();   // "!" on the Usta Kedim button: name it and pick a colour there
+            if (GM.FirstTime("usta_cushion"))
+                GM.Tut?.CatHint(m, B.CushionRect, "Usta'yı tezgahtaki mor yastığına sürükle: oradan malzeme getirir, yavruları kovar.", () => m && m.homed);
         }
 
         /// <summary>There is a Master Cat: in the shop or away on a trip.</summary>
@@ -545,7 +592,7 @@ namespace KaraPati
                     expires = a.expires, cd = a.cd, colorPlus = a.color + 1,
                     trainUntil = a.trainUntil, carryChain = a.carryChain, carryLevel = a.carryLevel,
                     stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y,
-                    homeState = a.level == 3 ? (a.homed ? 2 : 1) : 0
+                    homeState = a.level == 3 ? (a.homed ? 2 : 1) : a.level == 4 && a.parked ? 2 : 0
                 });
             }
         }
@@ -563,6 +610,7 @@ namespace KaraPati
                     a.cd = s.cd;
                     // the Master sits on its cushion (saves from before the cushion: it moves there by itself)
                     if (s.level == 3 && s.homeState != 1) SeatMaster(a);
+                    if (s.level == 4 && s.homeState == 2) ParkMini(a);
                     if (!string.IsNullOrEmpty(s.carryChain))
                     {
                         // it was carrying an ingredient when the game closed: put it back on the table
@@ -834,6 +882,8 @@ namespace KaraPati
             Tween.Pop(mini.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
             Say(mini, "Artık Minik Çıraksın!", UIKit.Orange);
+            if (GM.FirstTime("mini_toy"))
+                GM.Tut?.CatHint(mini, B.ToyBall.rectTransform, "Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle.", () => mini && mini.parked);
             if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
             Sfx.Play("levelup", 1.3f);
             GM.Toast(KittenColors.Name(col) + " Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", UIKit.Orange, 6f);
@@ -989,6 +1039,7 @@ namespace KaraPati
                 return;
             }
             miniJob = job;
+            mini.parked = false;   // up from the toy and off to work (it roams afterwards)
             // lock exactly the items it found, in the same order as the needs
             var lockUsed = new HashSet<Vector2Int>();
             foreach (var q in job.needs)
@@ -1147,6 +1198,14 @@ namespace KaraPati
                 chaseCd -= dt;
                 if (chaseCd > 0f) return;
                 if (!ap.CanAct && !ap.Stirring) return;
+                // with the Master on its cushion, it does the shooing: the apprentice keeps stirring
+                var guard = Master();
+                if (guard && guard.homed)
+                {
+                    chaseCd = 1f;
+                    if (!ap.Stirring && ap.state == KittenAgent.State.Idle) GoBackToPot(ap);
+                    return;
+                }
                 chaseTarget = NearestWild(ap.Pos, 99999f);
                 if (chaseTarget == null)
                 {

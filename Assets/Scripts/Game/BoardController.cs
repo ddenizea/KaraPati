@@ -16,6 +16,10 @@ namespace KaraPati
         // Items are only placed on the rows below it (a 7x8 table).
         public static readonly Vector2Int PotCell = new Vector2Int(0, 0), HouseCell = new Vector2Int(3, 0), CushionCell = new Vector2Int(6, 0);
         public static bool IsCounter(Vector2Int c) => c.y == 0;
+        /// <summary>The Mini Apprentice's toy ball sits on the counter between the house and the cushion.</summary>
+        public static Vector2 ToyPos => CellPos(4, 0) + new Vector2(-6f, -30f);
+        public RectTransform CushionRect { get; private set; }
+        public Image ToyBall { get; private set; }
         public static bool Playable(Vector2Int c) => InBounds(c) && c.y > 0;
 
         readonly ItemData[,] data = new ItemData[Cols, Rows];
@@ -89,6 +93,12 @@ namespace KaraPati
             cush.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -34f), new Vector2(128f, 52f));
             var cushTop = UIKit.Img("CushionTop", grid, ProcArt.Circle, new Color(0.68f, 0.48f, 0.9f));
             cushTop.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -28f), new Vector2(98f, 32f));
+            CushionRect = cush.rectTransform;
+            // the Mini Apprentice's toy: a little red ball on a small rug
+            var rug = UIKit.Img("Rug", grid, ProcArt.Circle, new Color(0.85f, 0.55f, 0.3f, 0.7f));
+            rug.rectTransform.At(ToyPos + new Vector2(20f, -14f), new Vector2(150f, 34f));
+            ToyBall = UIKit.Img("ToyBall", grid, ProcArt.ToyBall, Color.white);
+            ToyBall.rectTransform.At(ToyPos, new Vector2(46f, 46f));
         }
 
         // ---------------------------------------------------------------- geometry
@@ -685,7 +695,7 @@ namespace KaraPati
         {
             foreach (var d in AllCells()) if (data[d.x, d.y] != null && Chains.IsStation(data[d.x, d.y].chain)) return;
             if (data[PotCell.x, PotCell.y] != null) Evict(PotCell);
-            Set(PotCell, new ItemData(Chains.Simya, 1), true);
+            if (data[PotCell.x, PotCell.y] == null) Set(PotCell, new ItemData(Chains.Simya, 1), true);
         }
 
         /// <summary>
@@ -709,6 +719,7 @@ namespace KaraPati
         void MoveToCounter(Vector2Int from, Vector2Int to)
         {
             if (data[to.x, to.y] != null) Evict(to);
+            if (data[to.x, to.y] != null) return;   // could not make room (should not happen)
             MoveItem(from, to, 0.01f);
         }
 
