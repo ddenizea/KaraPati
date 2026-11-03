@@ -15,11 +15,12 @@ namespace KaraPati
     public class KittenChaos : MonoBehaviour
     {
         public const float ApprenticeCooldown = 12f;
-        public const float MasterInterval = 20f;
+        public const float MasterInterval = 45f;
         public const double ApprenticeHours = 2.0;
         public const int PromoteCost = 150;
         const int MaxWild = 3;
-        const float SpawnMin = 25f, SpawnMax = 40f;   // seconds between kittens jumping onto the table
+        const float SpawnMin = 75f, SpawnMax = 105f;  // seconds between kittens jumping onto the table
+        const float DoubleJump = 0.08f;               // sometimes two come at once
         public const int HouseSlots = 2;              // kittens that fit in the cat house
         public const double MiniHours = 1.0;          // a Mini Apprentice helps for one hour
         public const float TrainMinutes = 3f;         // the Master trains a kitten for 3 minutes
@@ -27,7 +28,7 @@ namespace KaraPati
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
         RectTransform layer;
-        float spawnTimer = 10f;
+        float spawnTimer = 30f;
 
         // chasing (apprentice) and hissing (master)
         KittenAgent chaseTarget;
@@ -142,8 +143,8 @@ namespace KaraPati
                 if (a.cd > 0f) a.cd = Mathf.Max(0f, a.cd - dt);
                 if (a.level == 2 && now >= a.expires) { Farewell(a); continue; }
                 if (a.level == 2 && a.Stirring) StirTick(a, dt);
-                if (a.level == 3 && a.cd <= 0f && a.CanAct)
-                    a.cd = ProduceNear(a, 2) ? MasterInterval : 3f;
+                if (a.level == 3 && a.cd <= 0f && a.CanAct && a.homed && a.AtHome)
+                    a.cd = ProduceForMaster(a) ? MasterInterval : 3f;
             }
 
             ChaseTick(dt);
@@ -161,7 +162,8 @@ namespace KaraPati
                 if (spawnTimer <= 0f)
                 {
                     SpawnWild();
-                    spawnTimer = Random.Range(SpawnMin, SpawnMax) * (HasMaster ? 1.6f : 1f);
+                    if (Random.value < DoubleJump && WildCount < MaxWild) SpawnWild();   // a pair!
+                    spawnTimer = Random.Range(SpawnMin, SpawnMax);
                 }
             }
         }
@@ -231,7 +233,7 @@ namespace KaraPati
             foreach (var d in new[] { Vector2Int.left, Vector2Int.right, Vector2Int.up, Vector2Int.down })
             {
                 var n = c + d;
-                if (BoardController.InBounds(n) && B.Get(n) == null) opts.Add(d);
+                if (BoardController.Playable(n) && B.Get(n) == null) opts.Add(d);
             }
             dir = opts.Count > 0 ? opts[Random.Range(0, opts.Count)] : Vector2Int.zero;
             return opts.Count > 0;
@@ -242,7 +244,7 @@ namespace KaraPati
             if (!a || B.AnyHeld) return;
             var d = B.Get(c);
             var n = c + dir;
-            if (d == null || d.Locked || !Chains.IsIngredient(d.chain) || !BoardController.InBounds(n) || B.Get(n) != null) return;
+            if (d == null || d.Locked || !Chains.IsIngredient(d.chain) || !BoardController.Playable(n) || B.Get(n) != null) return;
             a.Face(dir.x != 0 ? dir.x : (BoardController.CellPos(c).x >= a.Pos.x ? 1 : -1));
             Tween.Punch(a.rt, 0.15f, 0.25f);
             bool sel = B.Selected == c;
@@ -340,13 +342,15 @@ namespace KaraPati
                     else GM.Toast("Masa dolu! Çırak malzemeyi koyacak yer bulamadı.");
                     break;
                 default:
-                    GM.Toast("Usta Kedi kendi işini bilir: her " + (int)MasterInterval + " saniyede bir malzeme getirir.");
+                    GM.Toast(a.homed ? "Usta Kedi yastığından her " + (int)MasterInterval + " saniyede bir malzeme getirir."
+                                     : "Usta'yı tezgahın sağındaki mor yastığa sürükle, oradan çalışsın.");
                     break;
             }
         }
 
         public void OnDropped(KittenAgent a)
         {
+            if (a.level == 3) { DropMaster(a); return; }
             if (a.level == 2) { TryStir(a); return; }
             if (!a.IsWild || a.Training) return;
             if (TryStartTraining(a)) return;
@@ -362,6 +366,20 @@ namespace KaraPati
             if (!other) return;
             if (HasApprentice) { GM.Toast("Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!"); return; }
             MergeKittens(a, other);
+        }
+
+        void DropMaster(KittenAgent m)
+        {
+            if (m.homed) return;   // it walks back to its cushion by itself
+            if ((m.Pos - CushionPos).sqrMagnitude > 120f * 120f) return;
+            SeatMaster(m);
+            Tween.Pop(m.rt, 0.35f);
+            FX.Burst(B.FxLayer, m.Pos, new Color(0.8f, 0.5f, 1f), 12);
+            Sfx.Play("gift", 1.2f);
+            Say(m, "Burası benim!", UIKit.Orange);
+            GM.Toast(GM.UstaDisplayName(m.color) + " yastığına kuruldu! Buradan malzeme getirir, yavrulara tıslar, yavru eğitir.", UIKit.Orange, 5f);
+            GM.ShowKittenInfo(m);
+            GM.MarkDirty();
         }
 
         void MergeKittens(KittenAgent a, KittenAgent b)
@@ -403,6 +421,29 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        /// <summary>The Master on its cushion sends an ingredient flying to a random free cell of the table.</summary>
+        bool ProduceForMaster(KittenAgent a)
+        {
+            var empty = B.EmptyCells();
+            if (empty.Count == 0) return false;
+            var e = empty[Random.Range(0, empty.Count)];
+            B.SpawnFromPos(a.Pos, e, new ItemData(Chains.RandomIngredient(), 2));
+            Tween.Punch(a.rt, 0.15f, 0.25f);
+            GM.OnBoardChanged();
+            return true;
+        }
+
+        /// <summary>Where the Master sits: its cushion on the right end of the counter.</summary>
+        public Vector2 CushionPos => BoardController.CellPos(BoardController.CushionCell) + new Vector2(0f, 4f);
+
+        void SeatMaster(KittenAgent m)
+        {
+            m.homed = true;
+            m.Pos = CushionPos;
+            m.Face(-1);
+            m.Idle(2f);
+        }
+
         bool ProduceNear(KittenAgent a, int lvl)
         {
             var cell = BoardController.LocalToCellClamped(a.Pos);
@@ -421,7 +462,7 @@ namespace KaraPati
                 : "Çırak kedi vedalaştı. Yavrular yeniden gelebilir!", UIKit.Orange, 5f);
             if (Selected == a) { Selected = null; GM.ShowInfo(null); }
             a.Leave();
-            spawnTimer = 15f;
+            spawnTimer = 30f;
             GM.MarkDirty();
         }
 
@@ -439,7 +480,7 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
             Select(m);
-            GM.Toast("Usta Kedi! Malzeme getirir, yavrulara tıslar, keşfe çıkar. Ana ekrandaki Usta Kedim'den adını ve rengini seçebilirsin.", UIKit.Orange, 6f);
+            GM.Toast("Usta Kedi! Onu tezgahın sağındaki mor yastığa sürükle, oradan çalışsın. Adını ve rengini ana ekrandaki Usta Kedim'den seçebilirsin.", UIKit.Orange, 7f);
             EnsureHouse();
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
@@ -503,7 +544,8 @@ namespace KaraPati
                     napX = a.napCell.x, napY = a.napCell.y,
                     expires = a.expires, cd = a.cd, colorPlus = a.color + 1,
                     trainUntil = a.trainUntil, carryChain = a.carryChain, carryLevel = a.carryLevel,
-                    stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y
+                    stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y,
+                    homeState = a.level == 3 ? (a.homed ? 2 : 1) : 0
                 });
             }
         }
@@ -519,6 +561,8 @@ namespace KaraPati
                     var a = Create(s.level, Clamp(new Vector2(s.x, s.y)), s.colorPlus > 0 ? s.colorPlus - 1 : KittenColors.Legacy(s.level));
                     a.expires = s.expires;
                     a.cd = s.cd;
+                    // the Master sits on its cushion (saves from before the cushion: it moves there by itself)
+                    if (s.level == 3 && s.homeState != 1) SeatMaster(a);
                     if (!string.IsNullOrEmpty(s.carryChain))
                     {
                         // it was carrying an ingredient when the game closed: put it back on the table
@@ -631,17 +675,13 @@ namespace KaraPati
         void EnsureHouse()
         {
             if (!(HasMaster || UstaAway) || FindHouse(out _)) return;
-            var centre = new Vector2Int(BoardController.Cols / 2, BoardController.Rows - 2);
-            if (!B.NearestEmpty(centre, out var e))
-            {
-                if (!houseHintShown) { houseHintShown = true; GM.Toast("Kedi Evi geldi ama masada yer yok. Bir kare boşalt!"); }
-                return;
-            }
+            var e = BoardController.HouseCell;   // its place in the middle of the counter
+            B.Evict(e);
             B.Set(e, new ItemData(Chains.KediEvi, 1), true);
             var v = B.ViewAt(e);
             if (v) Tween.Pop(v.rt, 0.4f);
             FX.Burst(B.FxLayer, BoardController.CellPos(e), new Color(1f, 0.8f, 0.55f), 10);
-            GM.Toast("Kedi Evi masaya geldi! Yavruları içine sürükle: Usta onlara tıslamaz. İki yavru olunca dokun, Çırak çıksın.", UIKit.Orange, 6f);
+            GM.Toast("Kedi Evi tezgaha geldi! Yavruları içine sürükle: Usta onlara tıslamaz. İki yavru olunca dokun, Çırak çıksın.", UIKit.Orange, 6f);
             GM.OnBoardChanged();
         }
 
@@ -1100,14 +1140,22 @@ namespace KaraPati
         void ChaseTick(float dt)
         {
             var ap = Apprentice();
-            if (!ap || ap.Stirring || ap.IsHeld) { chaseTarget = null; return; }
+            if (!ap || ap.IsHeld) { chaseTarget = null; return; }
 
             if (chaseTarget == null)
             {
                 chaseCd -= dt;
-                if (chaseCd > 0f || !ap.CanAct) return;
+                if (chaseCd > 0f) return;
+                if (!ap.CanAct && !ap.Stirring) return;
                 chaseTarget = NearestWild(ap.Pos, 99999f);
-                if (chaseTarget == null) { chaseCd = 1f; return; }
+                if (chaseTarget == null)
+                {
+                    chaseCd = 1f;
+                    // nothing to chase: back to its cauldron on the counter
+                    if (!ap.Stirring && ap.state == KittenAgent.State.Idle) GoBackToPot(ap);
+                    return;
+                }
+                if (ap.Stirring) ap.StopStir();   // jumps off the counter to chase
                 // the kitten notices and scampers away (unless it's asleep)
                 if (chaseTarget.CanAct)
                     chaseTarget.WalkTo(chaseTarget.Pos + (chaseTarget.Pos - ap.Pos).normalized * 260f);
@@ -1115,22 +1163,32 @@ namespace KaraPati
                 Sfx.Play("paw", 0.9f, 0.6f);
             }
 
-            if (!Shooable(chaseTarget)) { chaseTarget = null; ap.Idle(1f); return; }
-            if (ap.state == KittenAgent.State.Idle && !ap.chasing && ap.IsHeld) return;
+            if (!Shooable(chaseTarget)) { chaseTarget = null; GoBackToPot(ap); return; }
             ap.ChaseTo(chaseTarget.Pos);
             if ((chaseTarget.Pos - ap.Pos).sqrMagnitude < 75f * 75f)
             {
                 Scare(chaseTarget);
                 chaseTarget = null;
                 chaseCd = ap.color == KittenColors.SiyahBeyaz ? Random.Range(2f, 3f) : Random.Range(4f, 7f);
-                ap.Idle(Random.Range(1.5f, 2.5f));
                 Tween.Punch(ap.rt, 0.15f, 0.25f);
+                GoBackToPot(ap);
                 if (!chaseHintShown)
                 {
                     chaseHintShown = true;
-                    GM.Toast("Çırak Kedi yavruyu kovaladı! Kazanın yanına sürüklersen iksir karıştırır.", UIKit.Orange, 5f);
+                    GM.Toast("Çırak Kedi yavruyu kovaladı! Sonra kazanının başına döner, iksiri hızlı karıştırır.", UIKit.Orange, 5f);
                 }
             }
+        }
+
+        /// <summary>The apprentice walks back to the pot and starts stirring again.</summary>
+        void GoBackToPot(KittenAgent ap)
+        {
+            if (!ap || ap.IsHeld || ap.Stirring || !B.FindFirst(d => d.chain == Chains.Simya, out var pc)) return;
+            var pot = BoardController.CellPos(pc);
+            ap.WalkTo(pot + KittenAgent.StirOffset, () =>
+            {
+                if (ap && !ap.IsGone && ap.level == 2 && !ap.IsHeld && chaseTarget == null) ap.StartStir(pc, pot);
+            });
         }
 
         /// <summary>A kitten gets a fright and runs off the table.</summary>
@@ -1150,10 +1208,10 @@ namespace KaraPati
         void HissTick(float dt)
         {
             var m = Master();
-            if (!m || !m.CanAct) return;
+            if (!m || !m.CanAct || !m.homed || !m.AtHome) return;
             hissCd -= dt;
             if (hissCd > 0f) return;
-            var k = NearestWild(m.Pos, 560f);
+            var k = NearestWild(m.Pos, 99999f);
             if (k == null || k == chaseTarget) { hissCd = 1.5f; return; }
             hissCd = Random.Range(7f, 11f);
             m.Idle(2.5f);
@@ -1326,6 +1384,7 @@ namespace KaraPati
             var land = Clamp(origin + new Vector2(origin.x > 0f ? -150f : 150f, 30f));
             var m = Create(3, origin, TripColor);
             m.JumpIn(origin, land);
+            m.homed = true;   // then it walks back to its cushion
             m.cd = MasterInterval;
             // ...and its chest pops open on top of the house
             var chest = UIKit.Img("TripChest", layer, ProcArt.Item(Chains.Sandik, 1), Color.white);

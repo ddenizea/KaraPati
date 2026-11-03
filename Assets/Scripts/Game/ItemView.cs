@@ -158,9 +158,7 @@ namespace KaraPati
             bool showExtra = pot && (data.brew > 0 || !string.IsNullOrEmpty(data.mix));
             potExtra.gameObject.SetActive(showExtra);
             potTimer.gameObject.SetActive(pot && data.brew > 0);
-            // an apprentice standing in front of the pot covers the bottom: show the timer over the pot instead
-            bool stirred = pot && GameManager.I != null && GameManager.I.Cats != null && GameManager.I.Cats.StirrerAt(cell) != null;
-            potTimer.rectTransform.anchoredPosition = new Vector2(0f, stirred ? 12f : -52f);
+            potTimer.rectTransform.anchoredPosition = new Vector2(0f, -52f);
             if (!showExtra) return;
             if (data.brew > 0)
             {
@@ -258,7 +256,7 @@ namespace KaraPati
 
         public void OnBeginDrag(PointerEventData e)
         {
-            if (data == null || data.Locked) return;
+            if (data == null || data.Locked || Chains.IsStation(data.chain) || Chains.IsHouse(data.chain)) return;   // the counter pieces stay put
             IsDragging = true;
             cg.blocksRaycasts = false;
             // lift the item above every UI layer while it is being dragged

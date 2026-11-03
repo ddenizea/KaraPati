@@ -210,6 +210,7 @@ namespace KaraPati
         public long trainUntil;    // kitten being trained by the Master: becomes a Mini Apprentice at this UTC tick
         public string carryChain;  // Mini Apprentice: ingredient it was carrying to the pot
         public int carryLevel;
+        public int homeState;      // Master: 0 = save from before the cushion, 1 = not on its cushion yet, 2 = on its cushion
     }
 
     [Serializable]

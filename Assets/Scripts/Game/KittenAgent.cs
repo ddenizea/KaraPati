@@ -19,6 +19,9 @@ namespace KaraPati
         public float cd;       // helper cooldown
         public RectTransform rt;
         public Vector2Int stirCell = new Vector2Int(-1, -1);   // pot this apprentice is stirring
+        public bool homed;                                      // Master Cat: it has its cushion on the counter and works from there
+        /// <summary>Where an apprentice stands to stir: on the counter, just right of the pot.</summary>
+        public static readonly Vector2 StirOffset = new Vector2(96f, -6f);
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
         public float age;             // seconds on the table (new kittens get a grace period)
@@ -47,6 +50,7 @@ namespace KaraPati
         public bool Stirring => state == State.Stirring;
         public bool IsMini => level == 4;
         public bool Training => trainUntil > 0;
+        public bool AtHome => (Pos - sys.CushionPos).sqrMagnitude < 30f * 30f;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
         /// <summary>New fur colour (the Master's colour can be picked by the player).</summary>
@@ -126,8 +130,8 @@ namespace KaraPati
             chasing = false;
             onArrive = null;
             stirCell = cell;
-            // stands in front of the pot on its hind paws, back to us, so the cells next to the pot stay free
-            Pos = sys.Clamp(potPos + new Vector2(0f, -40f));
+            // stands next to the pot on the counter, on its hind paws with its back to us
+            Pos = sys.Clamp(potPos + StirOffset);
             Face(1);
             state = State.Stirring;
             if (spoon) spoon.gameObject.SetActive(false);    // the back-view drawing holds its own spoon
@@ -283,7 +287,16 @@ namespace KaraPati
                 case State.Idle:
                     if (sys.Selected == this) break; // the cat you picked waits for you
                     idleTimer -= dt;
-                    if (idleTimer <= 0f) WalkTo(sys.RandomPoint());
+                    if (idleTimer <= 0f)
+                    {
+                        if (homed)
+                        {
+                            // the Master stays on its cushion; if it was carried off, it walks back
+                            if (!AtHome) WalkTo(sys.CushionPos);
+                            else { Face(-1); idleTimer = 2f; }
+                        }
+                        else WalkTo(sys.RandomPoint());
+                    }
                     break;
                 case State.Stirring:
                     break;
@@ -360,7 +373,7 @@ namespace KaraPati
                 float rate = sys.PotBrewing(stirCell) ? 7f : 3f;
                 body.sprite = backFrames[(int)(animT * rate) % 4];
                 body.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Abs(Mathf.Sin(animT * rate * 0.5f * Mathf.PI)) * 2f);
-                body.rectTransform.localScale = Vector3.one;
+                body.rectTransform.localScale = new Vector3(-1f, 1f, 1f);   // mirrored: the spoon reaches left into the pot
                 body.rectTransform.localEulerAngles = Vector3.zero;
                 return;
             }

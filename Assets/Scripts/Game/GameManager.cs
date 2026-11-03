@@ -1408,7 +1408,8 @@ namespace KaraPati
                         infoDesc.text = "Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.";
                         break;
                     }
-                    infoDesc.text = "Malzeme getirir, yavrulara tıslar. Yavru bırakırsan eğitir, keşfe de çıkar.";
+                    infoDesc.text = a.homed ? "Yastığından malzeme getirir, yavrulara tıslar. Yavru bırakırsan eğitir, keşfe de çıkar."
+                                            : "Onu tezgahın sağındaki mor yastığa sürükle: oradan malzeme getirir, yavrulara tıslar.";
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Keşfe\nGönder";
                     btnImg.color = UIKit.Green;
@@ -1762,7 +1763,7 @@ namespace KaraPati
             Board.ClearAll();
             Board.Set(new Vector2Int(1, 4), new ItemData(Chains.Kazan, 1), true);
             Board.Set(new Vector2Int(5, 4), new ItemData(Chains.Sandik, 1), true);
-            Board.Set(new Vector2Int(3, 4), new ItemData(Chains.Simya, 1), true);
+            Board.Set(BoardController.PotCell, new ItemData(Chains.Simya, 1), true);   // on the counter
             Board.Set(new Vector2Int(2, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(3, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(4, 6), new ItemData(Chains.Mantar, 1), true);
@@ -1933,6 +1934,7 @@ namespace KaraPati
                 }
                 Board.ReadSave(s.cells);
                 Board.EnsurePot();
+                Board.ArrangeCounter();   // older saves: pot and house move onto the counter
                 Cats.ReadSave(s.kittens);
                 Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil, s.ustaTripColor > 0 ? s.ustaTripColor - 1 : KittenColors.Gece);
                 UstaName = s.ustaName ?? "";

@@ -12,6 +12,12 @@ namespace KaraPati
         public const int Cols = 7, Rows = 9;
         public const float CS = 140f;
 
+        // The top row is the wooden counter: the alchemy pot, the cat house and the Master's cushion live there.
+        // Items are only placed on the rows below it (a 7x8 table).
+        public static readonly Vector2Int PotCell = new Vector2Int(0, 0), HouseCell = new Vector2Int(3, 0), CushionCell = new Vector2Int(6, 0);
+        public static bool IsCounter(Vector2Int c) => c.y == 0;
+        public static bool Playable(Vector2Int c) => InBounds(c) && c.y > 0;
+
         readonly ItemData[,] data = new ItemData[Cols, Rows];
         readonly ItemView[,] views = new ItemView[Cols, Rows];
 
@@ -42,12 +48,13 @@ namespace KaraPati
 
             var cA = new Color(0.29f, 0.21f, 0.4f);
             var cB = new Color(0.25f, 0.18f, 0.35f);
-            for (int r = 0; r < Rows; r++)
+            for (int r = 1; r < Rows; r++)
             for (int c = 0; c < Cols; c++)
             {
                 var cell = UIKit.Img("Cell", grid, ProcArt.Rounded, ((c + r) % 2 == 0) ? cA : cB, true);
                 cell.rectTransform.At(CellPos(c, r), new Vector2(CS - 8f, CS - 8f));
             }
+            BuildCounter();
 
             selector = UIKit.Img("Selector", grid, ProcArt.Frame, UIKit.Orange, true);
             selector.rectTransform.sizeDelta = new Vector2(CS + 2f, CS + 2f);
@@ -57,6 +64,31 @@ namespace KaraPati
             catsLayer = UIKit.Rect("Cats", grid).At(Vector2.zero, grid.sizeDelta);
             fxLayer = UIKit.Rect("FX", grid).At(Vector2.zero, grid.sizeDelta);
             Ready = true;
+        }
+
+        void BuildCounter()
+        {
+            // a wooden shelf across the top row, with a darker front edge
+            var mid = CellPos(Cols / 2, 0);
+            var plank = UIKit.Img("Counter", grid, ProcArt.Rounded, new Color(0.5f, 0.33f, 0.22f), true);
+            plank.rectTransform.At(mid + new Vector2(0f, -6f), new Vector2(Cols * CS - 6f, CS - 14f));
+            var edge = UIKit.Img("CounterEdge", grid, ProcArt.Rounded, new Color(0.36f, 0.22f, 0.15f), true);
+            edge.rectTransform.At(mid + new Vector2(0f, -CS / 2f + 10f), new Vector2(Cols * CS - 6f, 22f));
+            for (int i = 0; i < 6; i++)   // a few wood grain lines
+            {
+                var g = UIKit.Img("Grain", grid, ProcArt.Rounded, new Color(0.44f, 0.29f, 0.19f), true);
+                g.rectTransform.At(mid + new Vector2(-420f + i * 170f, 18f - (i % 2) * 34f), new Vector2(120f, 6f));
+            }
+            // round mats under the pot and the house, and the Master's cushion
+            foreach (var c in new[] { PotCell, HouseCell })
+            {
+                var mat = UIKit.Img("Mat", grid, ProcArt.Circle, new Color(0.3f, 0.19f, 0.13f, 0.6f));
+                mat.rectTransform.At(CellPos(c) + new Vector2(0f, -44f), new Vector2(124f, 34f));
+            }
+            var cush = UIKit.Img("Cushion", grid, ProcArt.Circle, new Color(0.55f, 0.35f, 0.78f));
+            cush.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -34f), new Vector2(128f, 52f));
+            var cushTop = UIKit.Img("CushionTop", grid, ProcArt.Circle, new Color(0.68f, 0.48f, 0.9f));
+            cushTop.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -28f), new Vector2(98f, 32f));
         }
 
         // ---------------------------------------------------------------- geometry
@@ -174,7 +206,7 @@ namespace KaraPati
         public List<Vector2Int> EmptyCells()
         {
             var list = new List<Vector2Int>();
-            foreach (var c in AllCells()) if (data[c.x, c.y] == null) list.Add(c);
+            foreach (var c in AllCells()) if (data[c.x, c.y] == null && Playable(c)) list.Add(c);
             return list;
         }
 
@@ -184,7 +216,7 @@ namespace KaraPati
             float bestD = float.MaxValue;
             foreach (var c in AllCells())
             {
-                if (data[c.x, c.y] != null) continue;
+                if (data[c.x, c.y] != null || !Playable(c)) continue;   // never onto the counter
                 float d = (c - from).sqrMagnitude + Random.value * 0.1f;
                 if (d < bestD) { bestD = d; best = c; }
             }
@@ -366,6 +398,15 @@ namespace KaraPati
                 Tween.Move(v.rt, CellPos(from), 0.15f);
                 return;
             }
+            // the counter: only the pot takes things (ingredients), nothing is put down there
+            if (!Playable(to))
+            {
+                var tb = data[to.x, to.y];
+                if (tb != null && Chains.IsStation(tb.chain) && Chains.IsIngredient(a.chain) && !tb.nap) { DropIntoPot(from, to); return; }
+                Tween.Move(v.rt, CellPos(from), 0.15f);
+                if (tb == null) GM.Toast("Tezgaha eşya konmaz. Kazana malzeme atabilirsin.");
+                return;
+            }
 
             var b = data[to.x, to.y];
             if (b == null)
@@ -378,6 +419,11 @@ namespace KaraPati
             if (Chains.IsStation(b.chain) && Chains.IsIngredient(a.chain) && !b.nap)
             {
                 DropIntoPot(from, to);
+                return;
+            }
+            if (Chains.IsStation(b.chain) || Chains.IsHouse(b.chain) || Chains.IsStation(a.chain) || Chains.IsHouse(a.chain))
+            {
+                Tween.Move(v.rt, CellPos(from), 0.15f);   // the pot and the house stay where they are
                 return;
             }
             if (b.Locked)
@@ -634,13 +680,67 @@ namespace KaraPati
             GM.Tut?.Notify("recipes");
         }
 
-        /// <summary>Older saves have no cauldron yet: put one on the table.</summary>
+        /// <summary>Older saves have no cauldron yet: put one on the counter.</summary>
         public void EnsurePot()
         {
             foreach (var d in AllCells()) if (data[d.x, d.y] != null && Chains.IsStation(data[d.x, d.y].chain)) return;
-            var pref = new Vector2Int(3, 4);
-            if (data[pref.x, pref.y] == null || NearestEmpty(pref, out pref))
-                Set(pref, new ItemData(Chains.Simya, 1), true);
+            if (data[PotCell.x, PotCell.y] != null) Evict(PotCell);
+            Set(PotCell, new ItemData(Chains.Simya, 1), true);
+        }
+
+        /// <summary>
+        /// Saves from before the counter: move the pot and the house to their places on the counter and
+        /// bring anything else that sat in the top row down onto the table (or the storage, or sell it).
+        /// </summary>
+        public void ArrangeCounter()
+        {
+            if (FindFirst(d => Chains.IsStation(d.chain), out var pc) && pc != PotCell) MoveToCounter(pc, PotCell);
+            if (FindFirst(d => Chains.IsHouse(d.chain), out var hc) && hc != HouseCell) MoveToCounter(hc, HouseCell);
+            for (int x = 0; x < Cols; x++)
+            {
+                var c = new Vector2Int(x, 0);
+                var d = data[c.x, c.y];
+                if (d == null) continue;
+                if ((c == PotCell && Chains.IsStation(d.chain)) || (c == HouseCell && Chains.IsHouse(d.chain))) continue;
+                Evict(c);
+            }
+        }
+
+        void MoveToCounter(Vector2Int from, Vector2Int to)
+        {
+            if (data[to.x, to.y] != null) Evict(to);
+            MoveItem(from, to, 0.01f);
+        }
+
+        /// <summary>Clear a counter cell: its item goes to the nearest free table cell, else storage, else it is sold.</summary>
+        public void Evict(Vector2Int c)
+        {
+            var d = data[c.x, c.y];
+            if (d == null) return;
+            d.nap = false;
+            if (NearestEmpty(c, out var e)) { MoveItem(c, e, 0.01f); return; }
+            if (Chains.IsSpecial(d.chain))
+            {
+                // a machine is never lost: an ingredient makes room for it (that one goes to storage or is sold)
+                foreach (var t in AllCells())
+                {
+                    var td = data[t.x, t.y];
+                    if (!Playable(t) || td == null || td.Locked || !Chains.IsIngredient(td.chain)) continue;
+                    Set(t, null);
+                    Stash(td);
+                    MoveItem(c, t, 0.01f);
+                    return;
+                }
+                return;   // nothing to swap with: leave it where it is
+            }
+            Set(c, null);
+            if (!d.bubble) Stash(d);
+        }
+
+        void Stash(ItemData d)
+        {
+            if (GM.Storage.Count < GM.StorageSlots) GM.Storage.Add(new ItemData(d.chain, d.level));
+            else GM.AddGold(Chains.Value(d.level));
         }
 
         // ---------------------------------------------------------------- ghost bubbles
