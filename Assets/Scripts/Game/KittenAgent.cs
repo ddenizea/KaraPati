@@ -20,6 +20,7 @@ namespace KaraPati
         public Vector2Int stirCell = new Vector2Int(-1, -1);   // pot this apprentice is stirring
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
+        public float age;             // seconds on the table (new kittens get a grace period)
 
         KittenChaos sys;
         Image body, ring;
@@ -199,6 +200,7 @@ namespace KaraPati
             float dt = Time.deltaTime;
             animT += dt;
             if (sys == null || !sys.Active) { Animate(false); return; }
+            age += dt;
 
             bool moving = false;
             switch (state)

@@ -15,7 +15,7 @@ namespace KaraPati
         public bool IsPressed { get; private set; }
         public bool IsHeld => IsDragging || IsPressed;
 
-        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra;
+        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra, doorCat;
         Text badgeText, zzz, potTimer;
         CanvasGroup cg;
         Vector2 dragOffset;
@@ -61,6 +61,11 @@ namespace KaraPati
             potExtra = UIKit.Img("PotExtra", rt, null, Color.white);
             potExtra.rectTransform.At(new Vector2(40f, 40f), new Vector2(60f, 60f));
             potExtra.raycastTarget = false;
+            // cat house: the second kitten sits in the doorway
+            doorCat = UIKit.Img("DoorCat", rt, ProcArt.SideCat(1, 4), Color.white);
+            doorCat.rectTransform.At(new Vector2(0f, -24f), new Vector2(60f, 60f));
+            doorCat.raycastTarget = false;
+            doorCat.gameObject.SetActive(false);
             potTimer = UIKit.Txt("PotTimer", rt, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             potTimer.rectTransform.At(new Vector2(0f, -52f), new Vector2(130f, 30f));
             potTimer.raycastTarget = false;
@@ -109,6 +114,21 @@ namespace KaraPati
         void RefreshPot()
         {
             bool pot = Chains.IsStation(data.chain);
+            if (Chains.IsHouse(data.chain))
+            {
+                // cat house: "1/2" under it; first kitten looks out of the attic window, the second sits in the door
+                potTimer.gameObject.SetActive(true);
+                potTimer.text = data.cats + "/" + KittenChaos.HouseSlots;
+                potExtra.gameObject.SetActive(data.cats >= 1);
+                potExtra.sprite = ProcArt.SideCat(1, 4);
+                potExtra.rectTransform.At(new Vector2(0f, 26f), new Vector2(44f, 44f));
+                potExtra.color = Color.white;
+                doorCat.gameObject.SetActive(data.cats >= 2);
+                return;
+            }
+            doorCat.gameObject.SetActive(false);
+            potExtra.rectTransform.localEulerAngles = Vector3.zero;   // undo the house kitten's look-around
+            potExtra.rectTransform.localScale = Vector3.one;
             bool showExtra = pot && (data.brew > 0 || !string.IsNullOrEmpty(data.mix));
             potExtra.gameObject.SetActive(showExtra);
             potTimer.gameObject.SetActive(pot && data.brew > 0);
@@ -165,6 +185,13 @@ namespace KaraPati
                 icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
             else if (data.chain == Chains.Kazan)
                 icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
+            else if (Chains.IsHouse(data.chain) && data.cats > 0)
+            {
+                // the kittens inside look around a little
+                potExtra.rectTransform.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(t * 1.7f) * 8f);
+                potExtra.rectTransform.localScale = new Vector3(Mathf.Sin(t * 0.4f) > 0f ? 1f : -1f, 1f, 1f);
+                doorCat.rectTransform.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(t * 2.3f + 1f) * 6f);
+            }
             else if (Chains.IsStation(data.chain) && data.brew > 0)
             {
                 if (data.Brewing)

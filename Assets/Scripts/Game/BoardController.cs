@@ -405,6 +405,7 @@ namespace KaraPati
             if (d.bubble) { Tween.Punch(v.rt, 0.12f, 0.25f); return; }
             if (Chains.IsGenerator(d.chain)) { UseGenerator(c); return; }
             if (Chains.IsStation(d.chain)) { TapPot(c); return; }
+            if (Chains.IsHouse(d.chain)) { Tween.Punch(v.rt, 0.1f, 0.2f); GM.Cats.TapHouse(c); return; }
             Tween.Punch(v.rt, 0.1f, 0.2f);
             PulseSource(d.chain, c);
         }
@@ -709,7 +710,7 @@ namespace KaraPati
             {
                 var d = data[c.x, c.y];
                 if (d == null) continue;
-                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil, mix = d.mix, brew = d.brew, brewUntil = d.brewUntil });
+                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil, mix = d.mix, brew = d.brew, brewUntil = d.brewUntil, cats = d.cats });
             }
         }
 
@@ -722,7 +723,7 @@ namespace KaraPati
                 // cats used to live on the grid in the first prototype; they walk freely now
                 if (!InBounds(c) || string.IsNullOrEmpty(s.chain) || s.chain == Chains.Kedi) continue;
                 if (s.bubble && s.bubbleUntil <= System.DateTime.UtcNow.Ticks) continue; // popped while away
-                var item = new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil, mix = s.mix ?? "", brew = s.brew, brewUntil = s.brewUntil };
+                var item = new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil, mix = s.mix ?? "", brew = s.brew, brewUntil = s.brewUntil, cats = s.cats };
                 item.readyNotified = item.BrewReady; // finished while away: no extra toast on load
                 Set(c, item);
             }

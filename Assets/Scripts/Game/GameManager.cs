@@ -1098,7 +1098,7 @@ namespace KaraPati
             infoKitten = null;
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
-            if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble);
+            if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
             infoIdle = d == null;
             if (d == null)
             {
@@ -1162,6 +1162,20 @@ namespace KaraPati
                 }
                 return;
             }
+            if (Chains.IsHouse(d.chain))
+            {
+                bool full = d.cats >= KittenChaos.HouseSlots;
+                infoDesc.text = full
+                    ? (Cats.HasApprentice ? "İki yavru içeride. Masadaki Çırak gidince yenisini çıkarabilirsin." : "İki yavru içeride! Dokun: Çırak Kedi çıksın.")
+                    : "İçeride " + d.cats + "/" + KittenChaos.HouseSlots + " yavru. Yavruyu üstüne sürükle: Usta ve Çırak onu kovalamaz.";
+                if (full && !Cats.HasApprentice)
+                {
+                    actionBtn.gameObject.SetActive(true);
+                    actionBtn.Label().text = "Çırak Yap";
+                    btnImg.color = UIKit.Green;
+                }
+                return;
+            }
             if (Chains.IsPotion(d.chain))
             {
                 var r = Recipes.Get(d.level);
@@ -1215,7 +1229,9 @@ namespace KaraPati
                     infoTitle.text = "Yaramaz Yavru";
                     infoDesc.text = a.state == KittenAgent.State.Napping
                         ? "Mışıl mışıl uyuyor... Dokunup okşa, kalksın."
-                        : "Eşyaları iter, üstlerine yatar! Başka bir yavrunun üstüne sürükle: Çırak Kedi.";
+                        : Cats.FindHouse(out _)
+                            ? "Eşyaları iter, üstlerine yatar! Kedi Evi'ne sürükle: orada güvende, iki yavru Çırak olur."
+                            : "Eşyaları iter, üstlerine yatar! Başka bir yavrunun üstüne sürükle: Çırak Kedi.";
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Sahiplendir +3";
                     break;
@@ -1258,6 +1274,7 @@ namespace KaraPati
             var d = Board.Get(Board.Selected);
             if (d != null && d.bubble) { Board.OpenBubble(Board.Selected); return; }
             if (d != null && Chains.IsStation(d.chain)) { Board.PotAction(); return; }
+            if (d != null && Chains.IsHouse(d.chain)) { Cats.TapHouse(Board.Selected); ShowInfo(Board.Get(Board.Selected)); return; }
             if (d != null && Chains.IsGenerator(d.chain)) { UpgradeGenerator(d.chain); return; }
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)

@@ -20,6 +20,8 @@ namespace KaraPati
         public const int PromoteCost = 150;
         const int MaxWild = 3;
         const float SpawnMin = 25f, SpawnMax = 40f;   // seconds between kittens jumping onto the table
+        public const int HouseSlots = 2;              // kittens that fit in the cat house
+        const float GraceSeconds = 10f;               // a kitten that just arrived is left alone for a bit
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
         RectTransform layer;
@@ -28,7 +30,8 @@ namespace KaraPati
         // chasing (apprentice) and hissing (master)
         KittenAgent chaseTarget;
         float chaseCd = 2f, hissCd = 4f;
-        bool chaseHintShown, hissHintShown;
+        bool chaseHintShown, hissHintShown, houseHintShown;
+        float houseCheck;
 
         // the master's expedition
         public int Trip { get; private set; } = -1;     // -1 = at home
@@ -138,6 +141,8 @@ namespace KaraPati
             ChaseTick(dt);
             HissTick(dt);
             TripTick(now);
+            houseCheck -= dt;
+            if (houseCheck <= 0f) { houseCheck = 3f; EnsureHouse(); }
 
             // kittens keep coming even with an apprentice around - it's the one who shoos them
             if (WildCount < MaxWild && !B.AnyHeld)
@@ -174,6 +179,11 @@ namespace KaraPati
                 msg += " İki yavruyu üst üste sürükle: Çırak Kedi olurlar!";
                 GM.KittenHintShown = true;
             }
+            if (!houseHintShown && (HasMaster || HasApprentice) && FindHouse(out _))
+            {
+                houseHintShown = true;
+                msg += " Kovalanmasın diye onu Kedi Evi'ne sürükle!";
+            }
             GM.Toast(msg, UIKit.Orange, 4.5f);
             Sfx.Play("paw", 1.15f, 0.8f);
             GM.GiveSticker("c_yavru", false);
@@ -184,7 +194,7 @@ namespace KaraPati
         public void PlanMischief(KittenAgent a)
         {
             if (B.AnyHeld) return;
-            var cands = B.Cells(d => !d.Locked && !Chains.IsStation(d.chain)); // never nap on the alchemy cauldron
+            var cands = B.Cells(d => !d.Locked && !Chains.IsStation(d.chain) && !Chains.IsHouse(d.chain)); // never nap on the cauldron or the cat house
             cands.RemoveAll(c => IsTargeted(c));
             if (cands.Count == 0) return;
             cands.Sort((x, y) => (BoardController.CellPos(x) - a.Pos).sqrMagnitude
@@ -237,7 +247,7 @@ namespace KaraPati
         {
             if (!a || B.AnyHeld) return;
             var d = B.Get(c);
-            if (d == null || d.Locked || Chains.IsStation(d.chain) || NapperAt(c) != null) return;
+            if (d == null || d.Locked || Chains.IsStation(d.chain) || Chains.IsHouse(d.chain) || NapperAt(c) != null) return;
             d.nap = true;
             B.RefreshView(c);
             a.Nap(c, BoardController.CellPos(c) + new Vector2(0f, 12f));
@@ -326,6 +336,7 @@ namespace KaraPati
         {
             if (a.level == 2) { TryStir(a); return; }
             if (!a.IsWild) return;
+            if (TryEnterHouse(a)) return;
             KittenAgent other = null;
             float best = 100f * 100f;
             foreach (var o in agents)
@@ -415,6 +426,7 @@ namespace KaraPati
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
             Select(m);
             GM.Toast("Usta Kedi! Artık hep burada: malzeme getirir, yavrulara tıslar, keşfe de çıkabilir.", UIKit.Orange, 5f);
+            EnsureHouse();
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
         }
@@ -507,6 +519,14 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        public void DebugHouseKitten()
+        {
+            EnsureHouse();
+            if (!FindHouse(out var hc)) return;
+            var h = B.Get(hc);
+            if (h.cats < HouseSlots) { h.cats++; B.RefreshView(hc); GM.MarkDirty(); }
+        }
+
         public void DebugFinishTrip() { if (Trip >= 0) TripUntil = DateTime.UtcNow.Ticks; }
 
         /// <summary>Test: put the apprentice at the pot; a finished potion gets 60 s back on its timer so the speed-up shows.</summary>
@@ -518,6 +538,68 @@ namespace KaraPati
             if (pd.brew > 0 && pd.BrewReady) { pd.brewUntil = DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(60).Ticks; pd.readyNotified = false; B.RefreshView(pot); }
             ap.Pos = BoardController.CellPos(pot) + new Vector2(-100f, -20f);
             TryStir(ap);
+        }
+
+        // ------------------------------------------------------------ cat house
+        // Kittens dropped on the house wait inside, safe from the Apprentice and the Master.
+        // Two of them inside -> tap the house to make a new Apprentice.
+        public bool FindHouse(out Vector2Int cell) => B.FindFirst(d => Chains.IsHouse(d.chain), out cell);
+
+        /// <summary>Once there is a Master (home or away) the table gets a cat house, if there is room.</summary>
+        void EnsureHouse()
+        {
+            if (!(HasMaster || UstaAway) || FindHouse(out _)) return;
+            var centre = new Vector2Int(BoardController.Cols / 2, BoardController.Rows - 2);
+            if (!B.NearestEmpty(centre, out var e))
+            {
+                if (!houseHintShown) { houseHintShown = true; GM.Toast("Kedi Evi geldi ama masada yer yok. Bir kare boşalt!"); }
+                return;
+            }
+            B.Set(e, new ItemData(Chains.KediEvi, 1), true);
+            var v = B.ViewAt(e);
+            if (v) Tween.Pop(v.rt, 0.4f);
+            FX.Burst(B.FxLayer, BoardController.CellPos(e), new Color(1f, 0.8f, 0.55f), 10);
+            GM.Toast("Kedi Evi masaya geldi! Yavruları içine sürükle: Usta onlara tıslamaz. İki yavru olunca dokun, Çırak çıksın.", UIKit.Orange, 6f);
+            GM.OnBoardChanged();
+        }
+
+        bool TryEnterHouse(KittenAgent a)
+        {
+            if (!FindHouse(out var hc)) return false;
+            if ((BoardController.CellPos(hc) - a.Pos).sqrMagnitude > 80f * 80f) return false;   // not dropped on the house
+            var h = B.Get(hc);
+            if (h.cats >= HouseSlots) { GM.Toast("Kedi Evi dolu! Dokun, içindekiler Çırak olsun."); return true; }
+            h.cats++;
+            Release(a);
+            B.RefreshView(hc);
+            var v = B.ViewAt(hc);
+            if (v) Tween.Punch(v.rt, 0.15f, 0.3f);
+            Sfx.Play("paw", 1.25f, 0.7f);
+            GM.Toast(h.cats >= HouseSlots
+                ? "İki yavru da evde! Kedi Evi'ne dokun: Çırak Kedi çıksın."
+                : "Yavru Kedi Evi'ne girdi. Bir yavru daha getir!", UIKit.Orange, 4f);
+            GM.OnBoardChanged();
+            return true;
+        }
+
+        public void TapHouse(Vector2Int hc)
+        {
+            var h = B.Get(hc);
+            if (h == null || !Chains.IsHouse(h.chain)) return;
+            if (h.cats < HouseSlots) { GM.Toast("Evde " + h.cats + "/" + HouseSlots + " yavru var. İki yavru olunca dokun, Çırak çıksın."); return; }
+            if (HasApprentice) { GM.Toast("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın."); return; }
+            h.cats = 0;
+            B.RefreshView(hc);
+            var pos = Clamp(BoardController.CellPos(hc) + new Vector2(0f, 20f));
+            var c = Create(2, pos);
+            c.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHours).Ticks;
+            c.JumpIn(pos, Clamp(pos + new Vector2(Random.value < 0.5f ? -120f : 120f, -40f)));
+            FX.Burst(B.FxLayer, pos, UIKit.Orange, 10);
+            Select(c);
+            GM.Toast("Evdeki yavrular birleşti: Çırak Kedi! 2 saat kalacak.", UIKit.Orange, 5f);
+            Sfx.Play("levelup", 1.2f);
+            GM.GiveSticker("c_cirak", false);
+            GM.OnBoardChanged();
         }
 
         // ------------------------------------------------------------ apprentice: chase kittens
@@ -534,7 +616,7 @@ namespace KaraPati
         }
 
         static bool Shooable(KittenAgent k) =>
-            k && k.IsWild && !k.IsGone && !k.IsHeld && k.state != KittenAgent.State.Entering;
+            k && k.IsWild && !k.IsGone && !k.IsHeld && k.state != KittenAgent.State.Entering && k.age >= GraceSeconds;
 
         KittenAgent NearestWild(Vector2 from, float maxDist)
         {
@@ -608,17 +690,23 @@ namespace KaraPati
             var k = NearestWild(m.Pos, 560f);
             if (k == null || k == chaseTarget) { hissCd = 1.5f; return; }
             hissCd = Random.Range(7f, 11f);
-            m.Idle(2f);
+            m.Idle(2.5f);
             m.Face(k.Pos.x >= m.Pos.x ? 1 : -1);
-            Tween.Punch(m.rt, 0.2f, 0.3f);
-            Say(m, "Tısss!", new Color(0.85f, 0.7f, 1f));
-            Sfx.Play("hiss");
-            Scare(k);
-            if (!hissHintShown)
+            // first a warning: the Master turns, a "!" pops over the kitten - then the hiss
+            Say(k, "!", new Color(1f, 0.85f, 0.4f));
+            Tween.Run(0.9f, t => { }, () =>
             {
-                hissHintShown = true;
-                GM.Toast("Usta Kedi tısladı, yavru masadan atladı!", UIKit.Orange);
-            }
+                if (!m || !Shooable(k)) return;   // the player rescued it in time
+                Tween.Punch(m.rt, 0.2f, 0.3f);
+                Say(m, "Tısss!", new Color(0.85f, 0.7f, 1f));
+                Sfx.Play("hiss");
+                Scare(k);
+                if (!hissHintShown)
+                {
+                    hissHintShown = true;
+                    GM.Toast("Usta Kedi tısladı, yavru masadan atladı! Yavruları Kedi Evi'ne sürüklersen kovalanmazlar.", UIKit.Orange, 5f);
+                }
+            });
         }
 
         /// <summary>A little word that floats up from a cat and fades.</summary>

@@ -9,6 +9,7 @@ namespace KaraPati
         public const string Ot = "ot", Mantar = "mantar", Kristal = "kristal", Ag = "ag";
         public const string Kedi = "kedi", Kazan = "kazan", Sandik = "sandik";
         public const string Iksir = "iksir", Simya = "simya";
+        public const string KediEvi = "kedievi";   // the kittens' little house on the table
 
         public static readonly string[] Ingredients = { Ot, Mantar, Kristal, Ag };
 
@@ -23,6 +24,7 @@ namespace KaraPati
             { Sandik, new[] { "Eski Sandık" } },
             { Iksir, new[] { "Uyku İksiri", "Işıltı İksiri", "Gölge İksiri", "Ay İksiri", "Hayalet İksiri", "Yıldız İksiri" } },
             { Simya, new[] { "Simya Kazanı" } },
+            { KediEvi, new[] { "Kedi Evi" } },
         };
 
         public static int MaxLevel(string chain) => names[chain].Length;
@@ -31,8 +33,9 @@ namespace KaraPati
         public static bool IsGenerator(string c) => c == Kazan || c == Sandik;
         public static bool IsPotion(string c) => c == Iksir;
         public static bool IsStation(string c) => c == Simya;
-        /// <summary>Items that show no level badge (machines and potions).</summary>
-        public static bool IsSpecial(string c) => IsGenerator(c) || IsPotion(c) || IsStation(c);
+        public static bool IsHouse(string c) => c == KediEvi;
+        /// <summary>Items that show no level badge (machines, potions, the cat house).</summary>
+        public static bool IsSpecial(string c) => IsGenerator(c) || IsPotion(c) || IsStation(c) || IsHouse(c);
         public static int Value(int level) => 5 * (1 << (level - 1));
 
         /// <summary>The board machine an item comes from (empty for machines themselves).</summary>
@@ -72,6 +75,7 @@ namespace KaraPati
         public string mix = "";    // first ingredient waiting in the pot ("chain:level")
         public int brew;           // recipe id being brewed / ready (0 = none)
         public long brewUntil;     // UTC ticks when the potion is ready
+        public int cats;           // cat house: kittens waiting inside (0-2)
         [NonSerialized] public bool readyNotified;
 
         public bool Brewing => brew > 0 && DateTime.UtcNow.Ticks < brewUntil;
@@ -175,7 +179,7 @@ namespace KaraPati
         public static int Price(int level) => 6 * level + 4 * (level - 1) * (level - 1);
     }
 
-    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; }
+    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; public int cats; }
     [Serializable] public class ReqSave { public string chain; public int level; }
     [Serializable] public class PlacedSave { public string id; public int floor; public float x, y; public bool flip; }
 

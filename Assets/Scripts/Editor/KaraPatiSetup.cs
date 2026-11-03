@@ -105,6 +105,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Kedi Evine Yavru Koy (Play modunda)")]
+        static void HouseKitten()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugHouseKitten();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Usta Kedi Ekle (Play modunda)")]
         static void AddMaster()
         {

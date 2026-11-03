@@ -275,6 +275,7 @@ namespace KaraPati
                 case Chains.Kazan: Cauldron(p); break;
                 case Chains.Sandik: Chest(p); break;
                 case Chains.Simya: SimyaPot(p); break;
+                case Chains.KediEvi: CatHouse(p); break;
                 case Chains.Iksir: PotionFlask(p, level); break;
             }
         }
@@ -613,6 +614,24 @@ namespace KaraPati
             p.FillOutlined(q => S.Circle(q, new Vector2(-0.25f, 0.6f), 0.13f), bub, 0.035f);
             p.FillOutlined(q => S.Circle(q, new Vector2(0.15f, 0.74f), 0.1f), bub, 0.035f);
             p.FillOutlined(q => S.Circle(q, new Vector2(0.38f, 0.55f), 0.07f), bub, 0.035f);
+        }
+
+        /// <summary>A little wooden cat house: pointed roof with a round attic window, and a round door.</summary>
+        static void CatHouse(Painter p)
+        {
+            var wall = new Color(0.86f, 0.62f, 0.4f);
+            var roof = new Color(0.62f, 0.3f, 0.36f);
+            var dark = new Color(0.16f, 0.1f, 0.18f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.3f), new Vector2(0.62f, 0.5f), 0.08f), wall, 0.05f);
+            // planks
+            p.Fill(q => S.U(S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.56f, 0.012f), 0f), S.Box(q, new Vector2(0f, -0.52f), new Vector2(0.56f, 0.012f), 0f)), new Color(0.72f, 0.5f, 0.32f));
+            p.FillOutlined(q => S.Poly(q, new[] { new Vector2(-0.82f, 0.12f), new Vector2(0f, 0.86f), new Vector2(0.82f, 0.12f) }), roof, 0.05f);
+            // round door
+            p.FillOutlined(q => S.U(S.Circle(q, new Vector2(0f, -0.38f), 0.28f), S.Box(q, new Vector2(0f, -0.62f), new Vector2(0.28f, 0.24f), 0f)), dark, 0.04f);
+            // round attic window in the gable (the first kitten looks out of it)
+            var cream = new Color(1f, 0.92f, 0.82f);
+            p.Fill(q => S.Circle(q, new Vector2(0f, 0.38f), 0.2f), cream);
+            p.Fill(q => S.Circle(q, new Vector2(0f, 0.38f), 0.15f), dark);
         }
 
         static void Chest(Painter p)
