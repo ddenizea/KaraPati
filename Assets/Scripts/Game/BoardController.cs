@@ -393,6 +393,9 @@ namespace KaraPati
             if (!e.dragging) Select(new Vector2Int(-1, -1));
         }
 
+        /// <summary>Ghost bubbles may be dragged around the table (not a sleeping-kitten item or one the Mini Apprentice reserved).</summary>
+        public static bool CanMoveBubble(ItemData d) => d != null && d.bubble && !d.nap && !d.reserved;
+
         // ---------------------------------------------------------------- input
         public void OnItemDropped(ItemView v, Vector2 screen)
         {
@@ -403,9 +406,23 @@ namespace KaraPati
                 if (!GM.TryStore(from)) Tween.Move(v.rt, CellPos(from), 0.15f);
                 return;
             }
-            if (a == null || a.Locked || !ScreenToCell(screen, out var to) || to == from)
+            bool movable = a != null && (!a.Locked || CanMoveBubble(a));
+            if (!movable || !ScreenToCell(screen, out var to) || to == from)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
+                return;
+            }
+            if (a.bubble)
+            {
+                // a ghost bubble can be moved around (to a free cell, or swapping places), but not merged or used yet
+                var bt = data[to.x, to.y];
+                if (Playable(to) && (bt == null || (!bt.Locked && !Chains.IsStation(bt.chain) && !Chains.IsHouse(bt.chain))))
+                {
+                    if (bt == null) MoveItem(from, to, 0.08f); else Swap(from, to);
+                    Select(to);
+                    GM.OnBoardChanged();
+                }
+                else Tween.Move(v.rt, CellPos(from), 0.15f);
                 return;
             }
             // the counter: only the pot takes things (ingredients), nothing is put down there
@@ -802,6 +819,19 @@ namespace KaraPati
             FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 12);
             GM.Toast(d.Name + " baloncuktan çıktı!");
             Select(c);
+            GM.OnBoardChanged();
+        }
+
+        /// <summary>"Patlat": pop a ghost bubble right away to free its cell.</summary>
+        public void PopBubble(Vector2Int c)
+        {
+            var d = Get(c);
+            if (d == null || !d.bubble) return;
+            FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 10);
+            Sfx.Play("bubble", 0.7f);
+            RemoveWithShrink(c);
+            Select(new Vector2Int(-1, -1));
+            GM.Toast("Pof! Baloncuğu patlattın, yer açıldı.");
             GM.OnBoardChanged();
         }
 

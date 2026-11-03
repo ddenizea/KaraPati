@@ -256,7 +256,7 @@ namespace KaraPati
 
         public void OnBeginDrag(PointerEventData e)
         {
-            if (data == null || data.Locked || Chains.IsStation(data.chain) || Chains.IsHouse(data.chain)) return;   // the counter pieces stay put
+            if (data == null || (data.Locked && !BoardController.CanMoveBubble(data)) || Chains.IsStation(data.chain) || Chains.IsHouse(data.chain)) return;   // the counter pieces stay put
             IsDragging = true;
             cg.blocksRaycasts = false;
             // lift the item above every UI layer while it is being dragged

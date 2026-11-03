@@ -97,7 +97,7 @@ namespace KaraPati
         }
         public bool UstaNew { get; private set; }
         public long UstaPlayAt { get; set; }
-        Button infoBtn;
+        Button infoBtn, popBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
         int kazanLevel = 1, sandikLevel = 1;
@@ -511,6 +511,11 @@ namespace KaraPati
             ((RectTransform)infoBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -8f), new Vector2(62f, 62f));
             infoBtn.Label().fontStyle = FontStyle.Bold;
             infoBtn.gameObject.SetActive(false);
+            // "Patlat": a ghost bubble can be popped right away to free its cell
+            popBtn = UIKit.Btn("Pop", panel.transform, "Patlat", new Color(0.85f, 0.3f, 0.35f), () => Board.PopBubble(Board.Selected), 24);
+            ((RectTransform)popBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -10f), new Vector2(110f, 48f));
+            popBtn.Label().fontStyle = FontStyle.Bold;
+            popBtn.gameObject.SetActive(false);
         }
 
         void BuildStickerPopup()
@@ -1243,6 +1248,8 @@ namespace KaraPati
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
+            if (popBtn) popBtn.gameObject.SetActive(d != null && d.bubble);
+            infoTitle.rectTransform.offsetMax = new Vector2(d != null && d.bubble ? -320f : -196f, -14f);   // room for "Patlat"
 
             if (d == null)
             {
@@ -1368,6 +1375,8 @@ namespace KaraPati
             infoKitten = a;
             kittenInfoTimer = 1f;
             if (infoBtn) infoBtn.gameObject.SetActive(false);
+            if (popBtn) popBtn.gameObject.SetActive(false);
+            infoTitle.rectTransform.offsetMax = new Vector2(-196f, -14f);
 
             var btnImg = actionBtn.GetComponent<Image>();
             btnImg.color = UIKit.Orange;
