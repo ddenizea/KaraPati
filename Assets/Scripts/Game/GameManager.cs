@@ -288,7 +288,7 @@ namespace KaraPati
             var ordersArea = UIKit.Section(boardRt, "Orders", 138f, 400f);
             Orders = ordersArea.gameObject.AddComponent<OrderPanel>();
             Orders.Build(ordersArea);
-            var boardArea = UIKit.Section(boardRt, "Board", 618f, 1290f);
+            var boardArea = UIKit.Section(boardRt, "Board", 556f, 1290f);   // right under the order cards; messages show at the bottom
             Board = boardArea.gameObject.AddComponent<BoardController>();
             Board.Build(boardArea);
             BuildInfoBar(UIKit.Section(boardRt, "InfoBar", 1916f, 134f));
@@ -1737,7 +1737,7 @@ namespace KaraPati
             if (!toastText) return;
             // on the table the messages show at the bottom, just above the info bar, so they don't cover
             // the counter where the cats say their words; elsewhere they stay under the top bar
-            if (toastRt) toastRt.anchoredPosition = new Vector2(0f, OnBoard ? -1840f : -545f);
+            if (toastRt) toastRt.anchoredPosition = new Vector2(0f, OnBoard ? -1848f : -545f);
             toastText.text = msg;
             toastText.color = color ?? UIKit.Cream;
             if (toastCo != null) StopCoroutine(toastCo);
