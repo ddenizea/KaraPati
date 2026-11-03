@@ -1226,7 +1226,7 @@ namespace KaraPati
             switch (a.level)
             {
                 case 1:
-                    infoTitle.text = "Yaramaz Yavru";
+                    infoTitle.text = "Yaramaz Yavru  <size=26>(" + KittenColors.Names[a.color] + ")</size>";
                     infoDesc.text = a.state == KittenAgent.State.Napping
                         ? "Mışıl mışıl uyuyor... Dokunup okşa, kalksın."
                         : Cats.FindHouse(out _)
@@ -1237,12 +1237,12 @@ namespace KaraPati
                     break;
                 case 2:
                 {
-                    infoTitle.text = "Çırak Kedi";
+                    infoTitle.text = KittenColors.Names[a.color] + " Çırak";
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
                     infoDesc.text = a.Stirring
                         ? (Cats.PotBrewing(a.stirCell) ? "Kazanı karıştırıyor: iksir 2 kat hızlı pişiyor! " : "Kazanın başında iksir bekliyor. ") + "Kalan: " + time
-                        : "Dokun: malzeme. Yavruları kovalar. Kazanın yanına sürükle: iksir 2x hızlı. Kalan: " + time;
+                        : KittenColors.Talents[Mathf.Clamp(a.color, 0, KittenColors.Count - 1)] + " Kalan: " + time;
                     if (Cats.HasMaster || Cats.UstaAway) infoDesc.text += Cats.UstaAway ? " (Usta keşifte.)" : " (Dükkânda zaten Usta var.)";
                     else
                     {
@@ -1253,7 +1253,7 @@ namespace KaraPati
                     break;
                 }
                 default:
-                    infoTitle.text = "Usta Kedi";
+                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : KittenColors.Names[a.color] + " Usta";
                     infoDesc.text = "Her " + (int)KittenChaos.MasterInterval + " sn'de malzeme getirir, yavrulara tıslar. Keşfe gönderirsen sandıkla döner.";
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Keşfe\nGönder";
@@ -1649,6 +1649,7 @@ namespace KaraPati
             Cats.WriteSave(s.kittens);
             s.ustaTrip = Cats.Trip + 1;
             s.ustaTripUntil = Cats.TripUntil;
+            s.ustaTripColor = Cats.TripColor + 1;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
         }
@@ -1743,7 +1744,7 @@ namespace KaraPati
                 Board.ReadSave(s.cells);
                 Board.EnsurePot();
                 Cats.ReadSave(s.kittens);
-                Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil);
+                Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil, s.ustaTripColor > 0 ? s.ustaTripColor - 1 : KittenColors.Gece);
                 Orders.ReadSave(s.orders);
                 RefreshHud();
                 ShowInfo(null);

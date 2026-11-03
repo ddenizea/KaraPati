@@ -37,6 +37,7 @@ namespace KaraPati
         public int Trip { get; private set; } = -1;     // -1 = at home
         public long TripUntil { get; private set; }
         public bool UstaAway => Trip >= 0;
+        public int TripColor { get; private set; } = KittenColors.Gece;
 
         public KittenAgent Selected { get; private set; }
 
@@ -156,11 +157,11 @@ namespace KaraPati
             }
         }
 
-        KittenAgent Create(int level, Vector2 pos)
+        KittenAgent Create(int level, Vector2 pos, int color)
         {
             var rt = UIKit.Rect("Kitten", layer);
             var a = rt.gameObject.AddComponent<KittenAgent>();
-            a.Init(this, level, pos);
+            a.Init(this, level, pos, color);
             agents.Add(a);
             return a;
         }
@@ -170,7 +171,7 @@ namespace KaraPati
             var h = Half;
             float side = Random.value < 0.5f ? -1f : 1f;
             float y = Random.Range(-h.y * 0.8f, h.y * 0.8f);
-            var a = Create(1, new Vector2(side * (h.x + 200f), y - 80f));
+            var a = Create(1, new Vector2(side * (h.x + 200f), y - 80f), KittenColors.Pick());
             a.JumpIn(a.Pos, new Vector2(side * (h.x - 30f), y));
 
             string msg = arriveLines[Random.Range(0, arriveLines.Length)];
@@ -319,9 +320,9 @@ namespace KaraPati
                     break;
                 case 2:
                     if (a.cd > 0f) GM.Toast("Çırak dinleniyor... " + Mathf.CeilToInt(a.cd) + " sn");
-                    else if (ProduceNear(a, 1))
+                    else if (ProduceNear(a, a.color == KittenColors.Turuncu && Random.value < 0.3f ? 2 : 1))
                     {
-                        a.cd = ApprenticeCooldown;
+                        a.cd = a.color == KittenColors.Beyaz ? 8f : ApprenticeCooldown;
                         GM.Toast("Çırak kedi bir malzeme getirdi!");
                     }
                     else GM.Toast("Masa dolu! Çırak malzemeyi koyacak yer bulamadı.");
@@ -353,10 +354,11 @@ namespace KaraPati
         void MergeKittens(KittenAgent a, KittenAgent b)
         {
             var pos = Clamp(b.Pos);
+            int col = Random.value < 0.5f ? a.color : b.color;   // takes after one of the two
             Release(a);
             Release(b);
-            var c = Create(2, pos);
-            c.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHours).Ticks;
+            var c = Create(2, pos, col);
+            c.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHoursFor(col)).Ticks;
             Tween.Pop(c.rt, 0.35f);
             FX.Burst(B.FxLayer, pos, UIKit.Orange, 10);
 
@@ -368,9 +370,7 @@ namespace KaraPati
             }
 
             Select(c);
-            GM.Toast("Yavrular birleşti: Çırak Kedi! 2 saat kalacak ve yavruları kovalayacak. Kazanın yanına sürüklersen iksir karıştırır.", UIKit.Orange, 6f);
-            Sfx.Play("levelup", 1.2f);
-            GM.GiveSticker("c_cirak", false);
+            ApprenticeBorn(c);
             GM.OnBoardChanged();
         }
 
@@ -419,8 +419,9 @@ namespace KaraPati
             if (UstaAway) { GM.Toast("Usta Kedi keşifte. Dönünce yine burada olacak."); return; }
             if (!GM.TrySpendGold(PromoteCost)) return;
             var pos = a.Pos;
+            int col = a.color;
             Release(a);
-            var m = Create(3, pos);
+            var m = Create(3, pos, col);
             m.cd = MasterInterval;
             Tween.Pop(m.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
@@ -455,7 +456,7 @@ namespace KaraPati
                     level = a.level, x = a.Pos.x, y = a.Pos.y,
                     napping = a.state == KittenAgent.State.Napping,
                     napX = a.napCell.x, napY = a.napCell.y,
-                    expires = a.expires, cd = a.cd,
+                    expires = a.expires, cd = a.cd, colorPlus = a.color + 1,
                     stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y
                 });
             }
@@ -469,7 +470,7 @@ namespace KaraPati
                 foreach (var s in list)
                 {
                     if (s.level < 1 || s.level > 3) continue;
-                    var a = Create(s.level, Clamp(new Vector2(s.x, s.y)));
+                    var a = Create(s.level, Clamp(new Vector2(s.x, s.y)), s.colorPlus > 0 ? s.colorPlus - 1 : KittenColors.Legacy(s.level));
                     a.expires = s.expires;
                     a.cd = s.cd;
                     if (s.stir && s.level == 2)
@@ -512,7 +513,7 @@ namespace KaraPati
             if (level == 1) { SpawnWild(); return; }
             if (level == 2 && HasApprentice) return;
             if (level == 3 && (HasMaster || UstaAway)) return;
-            var a = Create(level, RandomPoint());
+            var a = Create(level, RandomPoint(), KittenColors.Pick());
             if (level == 2) a.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHours).Ticks;
             else a.cd = MasterInterval;
             Tween.Pop(a.rt, 0.35f);
@@ -524,7 +525,7 @@ namespace KaraPati
             EnsureHouse();
             if (!FindHouse(out var hc)) return;
             var h = B.Get(hc);
-            if (h.cats < HouseSlots) { h.cats++; B.RefreshView(hc); GM.MarkDirty(); }
+            if (h.cats < HouseSlots) { h.catCols = (h.catCols ?? "") + KittenColors.Pick(); h.cats = h.catCols.Length; B.RefreshView(hc); GM.MarkDirty(); }
         }
 
         public void DebugFinishTrip() { if (Trip >= 0) TripUntil = DateTime.UtcNow.Ticks; }
@@ -569,7 +570,9 @@ namespace KaraPati
             if ((BoardController.CellPos(hc) - a.Pos).sqrMagnitude > 80f * 80f) return false;   // not dropped on the house
             var h = B.Get(hc);
             if (h.cats >= HouseSlots) { GM.Toast("Kedi Evi dolu! Dokun, içindekiler Çırak olsun."); return true; }
-            h.cats++;
+            if ((h.catCols ?? "").Length < h.cats) h.catCols = (h.catCols ?? "").PadRight(h.cats, '0');
+            h.catCols = (h.catCols ?? "") + a.color;
+            h.cats = h.catCols.Length;
             Release(a);
             B.RefreshView(hc);
             var v = B.ViewAt(hc);
@@ -588,17 +591,31 @@ namespace KaraPati
             if (h == null || !Chains.IsHouse(h.chain)) return;
             if (h.cats < HouseSlots) { GM.Toast("Evde " + h.cats + "/" + HouseSlots + " yavru var. İki yavru olunca dokun, Çırak çıksın."); return; }
             if (HasApprentice) { GM.Toast("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın."); return; }
+            string cols = h.catCols ?? "";
+            int col = cols.Length > 0 ? cols[Random.Range(0, cols.Length)] - '0' : KittenColors.Pick();
             h.cats = 0;
+            h.catCols = "";
             B.RefreshView(hc);
             var pos = Clamp(BoardController.CellPos(hc) + new Vector2(0f, 20f));
-            var c = Create(2, pos);
-            c.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHours).Ticks;
+            var c = Create(2, pos, Mathf.Clamp(col, 0, KittenColors.Count - 1));
+            c.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHoursFor(c.color)).Ticks;
             c.JumpIn(pos, Clamp(pos + new Vector2(Random.value < 0.5f ? -120f : 120f, -40f)));
             FX.Burst(B.FxLayer, pos, UIKit.Orange, 10);
             Select(c);
-            GM.Toast("Evdeki yavrular birleşti: Çırak Kedi! 2 saat kalacak.", UIKit.Orange, 5f);
+            ApprenticeBorn(c);
+        }
+
+        // ------------------------------------------------------------ colours
+        static double ApprenticeHoursFor(int color) => color == KittenColors.UcRenkli ? 3.0 : ApprenticeHours;
+
+        /// <summary>A new apprentice: say which colour it is and what it is good at, add its album sticker.</summary>
+        void ApprenticeBorn(KittenAgent c)
+        {
+            int col = Mathf.Clamp(c.color, 0, KittenColors.Count - 1);
+            GM.Toast(KittenColors.Names[col] + " Çırak doğdu! " + KittenColors.Talents[col], UIKit.Orange, 6f);
             Sfx.Play("levelup", 1.2f);
             GM.GiveSticker("c_cirak", false);
+            GM.GiveSticker("r" + col);   // "Renkli Çıraklar" album page
             GM.OnBoardChanged();
         }
 
@@ -656,7 +673,7 @@ namespace KaraPati
             {
                 Scare(chaseTarget);
                 chaseTarget = null;
-                chaseCd = Random.Range(4f, 7f);
+                chaseCd = ap.color == KittenColors.SiyahBeyaz ? Random.Range(2f, 3f) : Random.Range(4f, 7f);
                 ap.Idle(Random.Range(1.5f, 2.5f));
                 Tween.Punch(ap.rt, 0.15f, 0.25f);
                 if (!chaseHintShown)
@@ -766,14 +783,17 @@ namespace KaraPati
             var d = B.Get(a.stirCell);
             if (d == null || d.chain != Chains.Simya) { a.StopStir(); return; }   // the pot was moved away
             // every real second counts double: take one extra second off the timer
-            if (d.Brewing) d.brewUntil -= TimeSpan.FromSeconds(dt).Ticks;
+            // a grey apprentice is the best stirrer: 2.5x instead of 2x
+            float extra = a.color == KittenColors.Gri ? 1.5f : 1f;
+            if (d.Brewing) d.brewUntil -= TimeSpan.FromSeconds(dt * extra).Ticks;
         }
 
         // ------------------------------------------------------------ master: expeditions
-        public void SetTrip(int trip, long until)
+        public void SetTrip(int trip, long until, int color)
         {
             Trip = trip;
             TripUntil = until;
+            TripColor = color;
         }
 
         public void SendOnTrip(int k)
@@ -783,6 +803,7 @@ namespace KaraPati
             if (m.state == KittenAgent.State.Napping || m.IsHeld) return;
             if (Selected == m) { Selected = null; GM.ShowInfo(null); }
             Trip = k;
+            TripColor = m.color;
             TripUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(Expeditions.Minutes[k]).Ticks;
             Say(m, "Görüşürüz!", UIKit.Cream);
             m.Leave();
@@ -814,7 +835,7 @@ namespace KaraPati
             var h = Half;
             float side = Random.value < 0.5f ? -1f : 1f;
             var land = new Vector2(side * (h.x - 60f), Random.Range(-h.y * 0.5f, h.y * 0.5f));
-            var m = Create(3, new Vector2(side * (h.x + 200f), land.y - 80f));
+            var m = Create(3, new Vector2(side * (h.x + 200f), land.y - 80f), TripColor);
             m.JumpIn(m.Pos, land);
             m.cd = MasterInterval;
 

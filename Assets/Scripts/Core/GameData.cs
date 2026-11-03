@@ -76,6 +76,7 @@ namespace KaraPati
         public int brew;           // recipe id being brewed / ready (0 = none)
         public long brewUntil;     // UTC ticks when the potion is ready
         public int cats;           // cat house: kittens waiting inside (0-2)
+        public string catCols = "";  // cat house: their colours, one digit each (e.g. "03")
         [NonSerialized] public bool readyNotified;
 
         public bool Brewing => brew > 0 && DateTime.UtcNow.Ticks < brewUntil;
@@ -179,7 +180,7 @@ namespace KaraPati
         public static int Price(int level) => 6 * level + 4 * (level - 1) * (level - 1);
     }
 
-    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; public int cats; }
+    [Serializable] public class CellSave { public int x, y; public string chain; public int level; public bool nap; public float cd; public bool bubble; public long bubbleUntil; public string mix; public int brew; public long brewUntil; public int cats; public string catCols; }
     [Serializable] public class ReqSave { public string chain; public int level; }
     [Serializable] public class PlacedSave { public string id; public int floor; public float x, y; public bool flip; }
 
@@ -203,6 +204,7 @@ namespace KaraPati
         public float cd;
         public bool stir;          // apprentice sitting at the alchemy pot, stirring
         public int stirX, stirY;
+        public int colorPlus;      // fur colour + 1 (0 in old saves = the old look for that level)
     }
 
     [Serializable]
@@ -229,7 +231,8 @@ namespace KaraPati
         public List<string> inventory = new List<string>();      // tower ornaments not placed yet, "s0v1:2"
         public List<PlacedSave> placed = new List<PlacedSave>();
         public int ustaTrip;                    // Master cat's expedition: 0 = at home, otherwise trip index + 1
-        public long ustaTripUntil;              // UTC ticks when the Master comes back // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
+        public long ustaTripUntil;              // UTC ticks when the Master comes back
+        public int ustaTripColor;               // colour + 1 of the Master who is away // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -263,6 +266,7 @@ namespace KaraPati
             new StickerSet { id = "ghosts", name = "Hayalet Dostlar", ids = new[] { "g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7" } },
             new StickerSet { id = "cats", name = "Dükkân Kedileri", ids = new[] { "c_yavru", "c_uykucu", "c_cirak", "c_usta", "c_karapati", "c_hayaletkedi" } },
             new StickerSet { id = "witch", name = "Cadının Eşyaları", ids = new[] { "w_sapka", "w_supurge", "w_kitap", "w_kure", "w_kazan", "w_mektup" } },
+            new StickerSet { id = "renkli", name = "Renkli Çıraklar", ids = new[] { "r0", "r1", "r2", "r3", "r4" } },
         };
 
         static readonly Dictionary<string, string> names = new Dictionary<string, string>
@@ -271,6 +275,8 @@ namespace KaraPati
             { "c_usta", "Usta Kedi" }, { "c_karapati", "Kara Pati" }, { "c_hayaletkedi", "Hayalet Kedi" },
             { "w_sapka", "Sivri Şapka" }, { "w_supurge", "Uçan Süpürge" }, { "w_kitap", "Büyü Kitabı" },
             { "w_kure", "Kristal Küre" }, { "w_kazan", "Eski Kazan" }, { "w_mektup", "Kayıp Mektup" },
+            { "r0", "Turuncu Tekir Çırak" }, { "r1", "Gri Çırak" }, { "r2", "Beyaz Çırak" },
+            { "r3", "Siyah-Beyaz Çırak" }, { "r4", "Üç Renkli Çırak" },
         };
 
         public static string Name(string id)
@@ -767,6 +773,38 @@ namespace KaraPati
 
         public static string Text(EventMilestone m) =>
             m.type == "sticker" ? m.amount + " altın + etiket" : PumpkinEvent.RewardText(m);
+    }
+
+    /// <summary>
+    /// Kitten fur colours. Two kittens merge into an Apprentice of one of their colours, and each colour's
+    /// Apprentice has a small talent. "Gece" is only the old dark look of Masters from earlier saves.
+    /// </summary>
+    public static class KittenColors
+    {
+        public const int Turuncu = 0, Gri = 1, Beyaz = 2, SiyahBeyaz = 3, UcRenkli = 4, Gece = 5;
+        public const int Count = 5;   // colours that can arrive on the table
+        public static readonly string[] Names = { "Turuncu Tekir", "Gri", "Beyaz", "Siyah-Beyaz", "Üç Renkli", "Gece" };
+        static readonly int[] weights = { 35, 30, 20, 12, 3 };   // out of 100: the calico is rare
+
+        public static readonly string[] Talents =
+        {
+            "Şanslı: bazen 2. seviye malzeme getirir.",
+            "Usta karıştırıcı: kazanı 2,5 kat hızlı karıştırır.",
+            "Çalışkan: daha sık malzeme getirir (8 sn'de bir).",
+            "Çevik: yavruları çok hızlı kovalar.",
+            "Sadık: 2 değil 3 saat kalır.",
+            "",
+        };
+
+        public static int Pick()
+        {
+            int r = UnityEngine.Random.Range(0, 100);
+            for (int i = 0; i < weights.Length; i++) { if (r < weights[i]) return i; r -= weights[i]; }
+            return 0;
+        }
+
+        /// <summary>The look cats had before colours existed (old saves).</summary>
+        public static int Legacy(int level) => level == 2 ? Gri : level >= 3 ? Gece : Turuncu;
     }
 
     /// <summary>The Master cat's expeditions: longer trips bring better finds, but it doesn't work at the table meanwhile.</summary>

@@ -710,7 +710,7 @@ namespace KaraPati
             {
                 var d = data[c.x, c.y];
                 if (d == null) continue;
-                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil, mix = d.mix, brew = d.brew, brewUntil = d.brewUntil, cats = d.cats });
+                list.Add(new CellSave { x = c.x, y = c.y, chain = d.chain, level = d.level, nap = d.nap, cd = d.cd, bubble = d.bubble, bubbleUntil = d.bubbleUntil, mix = d.mix, brew = d.brew, brewUntil = d.brewUntil, cats = d.cats, catCols = d.catCols });
             }
         }
 
@@ -723,7 +723,7 @@ namespace KaraPati
                 // cats used to live on the grid in the first prototype; they walk freely now
                 if (!InBounds(c) || string.IsNullOrEmpty(s.chain) || s.chain == Chains.Kedi) continue;
                 if (s.bubble && s.bubbleUntil <= System.DateTime.UtcNow.Ticks) continue; // popped while away
-                var item = new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil, mix = s.mix ?? "", brew = s.brew, brewUntil = s.brewUntil, cats = s.cats };
+                var item = new ItemData(s.chain, s.level) { nap = s.nap, bubble = s.bubble, bubbleUntil = s.bubbleUntil, mix = s.mix ?? "", brew = s.brew, brewUntil = s.brewUntil, cats = s.cats, catCols = (s.catCols ?? "").PadRight(s.cats, '0') };   // houses from before colours: orange kittens
                 item.readyNotified = item.BrewReady; // finished while away: no extra toast on load
                 Set(c, item);
             }

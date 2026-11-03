@@ -5,31 +5,53 @@ namespace KaraPati
     /// <summary>Second half of the placeholder art: walking cats, shop props, stickers, icons.</summary>
     public static partial class ProcArt
     {
+        // fur, eyes and coat pattern for each KittenColors index (0 none, 1 stripes, 2 black patches, 3 calico)
         static readonly Color[] catFur =
         {
-            new Color(0.96f, 0.63f, 0.32f), new Color(0.64f, 0.66f, 0.74f), new Color(0.2f, 0.15f, 0.26f)
+            new Color(0.96f, 0.63f, 0.32f), new Color(0.64f, 0.66f, 0.74f), new Color(0.97f, 0.95f, 0.91f),
+            new Color(0.96f, 0.95f, 0.93f), new Color(0.97f, 0.95f, 0.91f), new Color(0.2f, 0.15f, 0.26f)
         };
         static readonly Color[] catEye =
         {
-            new Color(0.45f, 0.8f, 0.35f), new Color(0.4f, 0.7f, 1f), new Color(1f, 0.85f, 0.2f)
+            new Color(0.45f, 0.8f, 0.35f), new Color(0.4f, 0.7f, 1f), new Color(0.4f, 0.7f, 1f),
+            new Color(0.75f, 0.85f, 0.3f), new Color(1f, 0.75f, 0.25f), new Color(1f, 0.85f, 0.2f)
         };
+        static readonly int[] catPattern = { 1, 0, 0, 2, 3, 0 };
+        static readonly Color patchDark = new Color(0.2f, 0.15f, 0.24f), patchOrange = new Color(0.96f, 0.6f, 0.3f);
 
         /// <summary>Side-view cat. level 0 = Kara Pati, 1 = kitten, 2 = apprentice, 3 = master.
-        /// frame 0-3 walk cycle, 4 sit, 5 sleep.</summary>
-        public static Sprite SideCat(int level, int frame) => Make("sidecat_" + level + "_" + frame, Size, p =>
+        /// frame 0-3 walk cycle, 4 sit, 5 sleep. color = KittenColors index (-1: the old look for that level).</summary>
+        public static Sprite SideCat(int level, int frame, int color = -1)
         {
-            int li = level <= 0 ? 2 : Mathf.Clamp(level - 1, 0, 2);
-            int hat = level <= 1 ? 0 : (level == 2 ? 1 : 2);
-            DrawSideCat(p, catFur[li], catEye[li], level == 1, hat, frame);
-        });
+            if (level <= 0) color = KittenColors.Gece;
+            else if (color < 0 || color > KittenColors.Gece) color = KittenColors.Legacy(level);
+            int c = color;
+            return Make("sidecat_" + level + "_" + frame + "_" + c, Size, p =>
+            {
+                int hat = level <= 1 ? 0 : (level == 2 ? 1 : 2);
+                DrawSideCat(p, catFur[c], catEye[c], catPattern[c], hat, frame);
+            });
+        }
 
         static void Leg(Painter p, float x, float swing, Color c) =>
             p.FillOutlined(q => S.Seg(q, new Vector2(x, -0.25f), new Vector2(x + swing, -0.64f), 0.065f), c, 0.045f);
 
-        static void DrawSideCat(Painter p, Color fur, Color eye, bool stripes, int hat, int frame)
+        /// <summary>Two coat patches painted inside the body ellipse (black-and-white or calico cats).</summary>
+        static void Patches(Painter p, int pattern, Vector2 bc, Vector2 br, Vector2 a, float ra, Vector2 b, float rb)
+        {
+            if (pattern < 2) return;
+            p.Fill(q => S.I(S.Ellipse(q, bc, br * 0.97f), S.Circle(q, a, ra)), pattern == 3 ? patchOrange : patchDark);
+            p.Fill(q => S.I(S.Ellipse(q, bc, br * 0.97f), S.Circle(q, b, rb)), patchDark);
+        }
+
+        static void DrawSideCat(Painter p, Color fur, Color eye, int pattern, int hat, int frame)
         {
             var furDark = new Color(fur.r * 0.72f, fur.g * 0.68f, fur.b * 0.7f);
             bool black = fur.r < 0.3f;
+            bool stripes = pattern == 1;
+            // the tail and legs of patched cats take the patch colour, so they read as two-tone
+            var limb = pattern == 2 ? patchDark : pattern == 3 ? patchOrange : fur;
+            Color? headPatch = pattern == 2 ? patchDark : pattern == 3 ? patchOrange : (Color?)null;
             if (frame <= 3)
             {
                 float ph = frame * Mathf.PI * 0.5f;
@@ -38,38 +60,41 @@ namespace KaraPati
                 for (int i = 1; i < 4; i += 2) Leg(p, lx[i], Mathf.Sin(ph + off[i]) * 0.1f, furDark);
                 float sw = Mathf.Sin(ph) * 0.06f;
                 p.FillOutlined(q => S.U(S.Seg(q, new Vector2(-0.5f, -0.05f), new Vector2(-0.74f, 0.2f + sw), 0.065f),
-                    S.Seg(q, new Vector2(-0.74f, 0.2f + sw), new Vector2(-0.66f + sw, 0.5f), 0.06f)), fur, 0.045f);
+                    S.Seg(q, new Vector2(-0.74f, 0.2f + sw), new Vector2(-0.66f + sw, 0.5f), 0.06f)), limb, 0.045f);
                 p.FillOutlined(q => S.Ellipse(q, new Vector2(-0.05f, -0.12f), new Vector2(0.52f, 0.26f)), fur, 0.05f);
+                Patches(p, pattern, new Vector2(-0.05f, -0.12f), new Vector2(0.52f, 0.26f), new Vector2(-0.28f, 0.02f), 0.2f, new Vector2(0.14f, -0.24f), 0.14f);
                 if (stripes)
                     p.Fill(q => S.U(S.Seg(q, new Vector2(-0.32f, 0.12f), new Vector2(-0.3f, -0.02f), 0.035f),
                         S.U(S.Seg(q, new Vector2(-0.14f, 0.14f), new Vector2(-0.12f, 0f), 0.035f),
                             S.Seg(q, new Vector2(0.04f, 0.13f), new Vector2(0.06f, 0f), 0.035f))), furDark);
                 for (int i = 0; i < 4; i += 2) Leg(p, lx[i], Mathf.Sin(ph + off[i]) * 0.1f, fur);
-                SideHead(p, new Vector2(0.44f, 0.14f), 1f, fur, eye, false, hat, black);
+                SideHead(p, new Vector2(0.44f, 0.14f), 1f, fur, eye, false, hat, black, headPatch);
             }
             else if (frame == 4)
             {
-                p.FillOutlined(q => S.Seg(q, new Vector2(-0.4f, -0.58f), new Vector2(0.08f, -0.66f), 0.06f), fur, 0.045f);
+                p.FillOutlined(q => S.Seg(q, new Vector2(-0.4f, -0.58f), new Vector2(0.08f, -0.66f), 0.06f), limb, 0.045f);
                 p.FillOutlined(q => S.Ellipse(q, new Vector2(-0.08f, -0.24f), new Vector2(0.36f, 0.4f)), fur, 0.05f);
+                Patches(p, pattern, new Vector2(-0.08f, -0.24f), new Vector2(0.36f, 0.4f), new Vector2(-0.24f, -0.06f), 0.19f, new Vector2(0.04f, -0.46f), 0.14f);
                 if (stripes)
                     p.Fill(q => S.U(S.Seg(q, new Vector2(-0.3f, -0.05f), new Vector2(-0.2f, -0.12f), 0.035f),
                         S.Seg(q, new Vector2(-0.32f, -0.25f), new Vector2(-0.2f, -0.3f), 0.035f)), furDark);
                 p.FillOutlined(q => S.U(S.Seg(q, new Vector2(0.1f, -0.3f), new Vector2(0.12f, -0.66f), 0.065f),
                     S.Seg(q, new Vector2(0.22f, -0.3f), new Vector2(0.25f, -0.66f), 0.065f)), fur, 0.045f);
-                SideHead(p, new Vector2(0.18f, 0.28f), 1f, fur, eye, false, hat, black);
+                SideHead(p, new Vector2(0.18f, 0.28f), 1f, fur, eye, false, hat, black, headPatch);
             }
             else
             {
                 p.FillOutlined(q => S.Ellipse(q, new Vector2(-0.02f, -0.42f), new Vector2(0.6f, 0.26f)), fur, 0.05f);
+                Patches(p, pattern, new Vector2(-0.02f, -0.42f), new Vector2(0.6f, 0.26f), new Vector2(-0.26f, -0.3f), 0.2f, new Vector2(0.16f, -0.5f), 0.13f);
                 if (stripes)
                     p.Fill(q => S.U(S.Seg(q, new Vector2(-0.3f, -0.2f), new Vector2(-0.28f, -0.32f), 0.035f),
                         S.Seg(q, new Vector2(-0.1f, -0.18f), new Vector2(-0.08f, -0.3f), 0.035f)), furDark);
-                p.FillOutlined(q => S.Seg(q, new Vector2(-0.55f, -0.55f), new Vector2(0.18f, -0.62f), 0.07f), fur, 0.045f);
-                SideHead(p, new Vector2(0.38f, -0.3f), 0.85f, fur, eye, true, hat, black);
+                p.FillOutlined(q => S.Seg(q, new Vector2(-0.55f, -0.55f), new Vector2(0.18f, -0.62f), 0.07f), limb, 0.045f);
+                SideHead(p, new Vector2(0.38f, -0.3f), 0.85f, fur, eye, true, hat, black, headPatch);
             }
         }
 
-        static void SideHead(Painter p, Vector2 hc, float s, Color fur, Color eye, bool sleeping, int hat, bool black)
+        static void SideHead(Painter p, Vector2 hc, float s, Color fur, Color eye, bool sleeping, int hat, bool black, Color? patch = null)
         {
             Vector2 P(float x, float y) => hc + new Vector2(x, y) * s;
             var earA = new[] { P(-0.18f, 0.15f), P(-0.14f, 0.44f), P(-0.01f, 0.25f) };
@@ -80,6 +105,8 @@ namespace KaraPati
             var dark = new Color(0.12f, 0.08f, 0.15f);
 
             p.FillOutlined(q => S.U(S.Circle(q, hc, 0.27f * s), S.U(S.Poly(q, earA), S.Poly(q, earB))), fur, 0.05f);
+            if (patch.HasValue)   // a patch over the back ear and eye side of the head
+                p.Fill(q => S.I(S.U(S.Circle(q, hc, 0.25f * s), S.U(S.Poly(q, earA), S.Poly(q, earB))), S.Circle(q, P(-0.14f, 0.16f), 0.17f * s)), patch.Value);
             p.Fill(q => S.U(S.Poly(q, inA), S.Poly(q, inB)), black ? new Color(0.5f, 0.3f, 0.45f) : pink);
             if (sleeping)
                 p.Fill(q => S.Seg(q, P(0.03f, 0.02f), P(0.16f, 0f), 0.025f * s), dark);
@@ -124,16 +151,16 @@ namespace KaraPati
                 p.Fill(q => S.Poly(q - new Vector2(-0.3f, 0.8f), S.Star(4, 0.07f, 0.02f)), new Color(1f, 1f, 0.85f, 0.9f));
                 p.Fill(q => S.Poly(q - new Vector2(-0.68f, 0.45f), S.Star(4, 0.06f, 0.02f)), new Color(1f, 1f, 0.85f, 0.8f));
             }
-            if (layer == 0) CatHead(p, new Vector2(0f, -0.2f), 0.72f, catFur[2], catEye[2], false, false, 2);
+            if (layer == 0) CatHead(p, new Vector2(0f, -0.2f), 0.72f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 2);
             // adaptive icons are cropped to the centre ~66%, so the cat is drawn smaller there
-            else if (layer == 2) CatHead(p, new Vector2(0f, -0.14f), 0.5f, catFur[2], catEye[2], false, false, 2);
+            else if (layer == 2) CatHead(p, new Vector2(0f, -0.14f), 0.5f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 2);
             var tex = p.ToTexture(true);
             tex.name = "app_icon_" + layer;
             return tex;
         }
 
         public static Sprite KaraPatiHead => Make("karapati_head", Size, p =>
-            CatHead(p, new Vector2(0f, -0.05f), 0.95f, catFur[2], catEye[2], false, false, 0));
+            CatHead(p, new Vector2(0f, -0.05f), 0.95f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 0));
 
         public static Sprite GhostCat => Make("ghostcat", Size, p =>
         {
@@ -249,6 +276,7 @@ namespace KaraPati
         public static Sprite StickerIcon(string id)
         {
             if (id.StartsWith("g") && int.TryParse(id.Substring(1), out int gi)) return Ghost(gi);
+            if (id.StartsWith("r") && int.TryParse(id.Substring(1), out int ci)) return SideCat(2, 4, ci);   // coloured apprentices
             switch (id)
             {
                 case "c_yavru": return Item(Chains.Kedi, 1);

@@ -21,7 +21,7 @@ namespace KaraPati
 
         static readonly Color[] setColors =
         {
-            new Color(0.45f, 0.62f, 0.95f), new Color(0.95f, 0.6f, 0.3f), new Color(0.65f, 0.4f, 0.9f)
+            new Color(0.45f, 0.62f, 0.95f), new Color(0.95f, 0.6f, 0.3f), new Color(0.65f, 0.4f, 0.9f), new Color(0.35f, 0.75f, 0.55f)
         };
 
         public bool IsOpen => gameObject.activeSelf;
@@ -121,35 +121,42 @@ namespace KaraPati
                 grandClaim.interactable = ok;
             }
 
-            for (int i = 0; i < Stickers.Sets.Length; i++)
+            // cards side by side; narrower when there are more sets (4 sets: 220 wide instead of 280)
+            int setCount = Stickers.Sets.Length;
+            float cardW = setCount > 3 ? 220f : 280f, inner = cardW - 24f;
+            for (int i = 0; i < setCount; i++)
             {
                 int idx = i;
                 var set = Stickers.Sets[i];
                 var card = UIKit.Img("Set" + i, overview, ProcArt.Rounded, new Color(1f, 0.93f, 0.85f), true);
                 card.raycastTarget = true;
                 var rt = card.rectTransform;
-                rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2((i - 1) * 300f, -490f), new Vector2(280f, 420f));
+                rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2((i - (setCount - 1) / 2f) * (cardW + 18f), -490f), new Vector2(cardW, 420f));
                 var btn = card.gameObject.AddComponent<Button>();
                 btn.onClick.AddListener(() => ShowSet(idx));
 
                 var strip = UIKit.Img("Strip", rt, ProcArt.Rounded, setColors[i], true);
-                strip.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -12f), new Vector2(256f, 90f));
+                strip.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -12f), new Vector2(inner, 90f));
                 var name = UIKit.Txt("Name", strip.transform, set.name, 30, Color.white);
                 name.fontStyle = FontStyle.Bold;
+                name.resizeTextForBestFit = true;
+                name.resizeTextMinSize = 20;
+                name.resizeTextMaxSize = 30;
                 UIKit.Stretch(name.rectTransform, 8f, 8f);
 
                 var cover = UIKit.Img("Cover", rt, ProcArt.Rounded, new Color(0.18f, 0.12f, 0.26f), true);
-                cover.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -112f), new Vector2(256f, 220f));
+                cover.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -112f), new Vector2(inner, 220f));
                 var glow = UIKit.Img("Glow", cover.transform, ProcArt.GlowSprite, new Color(setColors[i].r, setColors[i].g, setColors[i].b, 0.5f));
-                glow.rectTransform.sizeDelta = new Vector2(240f, 240f);
+                glow.rectTransform.sizeDelta = new Vector2(inner - 16f, inner - 16f);
                 var icon = UIKit.Img("Icon", cover.transform, CoverIcon(set.id), Color.white);
-                icon.rectTransform.sizeDelta = new Vector2(170f, 170f);
+                icon.rectTransform.sizeDelta = new Vector2(Mathf.Min(170f, inner - 40f), Mathf.Min(170f, inner - 40f));
 
                 int n = GM.StickerCount(set);
                 var bar = UIKit.Img("Bar", rt, ProcArt.Rounded, new Color(0.3f, 0.24f, 0.38f), true);
-                bar.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 26f), new Vector2(240f, 48f));
+                float barW = cardW - 40f;
+                bar.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 26f), new Vector2(barW, 48f));
                 var bfill = UIKit.Img("Fill", bar.transform, ProcArt.Rounded, UIKit.Green, true);
-                bfill.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(4f, 0f), new Vector2(Mathf.Max(30f, 232f * n / set.ids.Length), 40f));
+                bfill.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(4f, 0f), new Vector2(Mathf.Max(30f, (barW - 8f) * n / set.ids.Length), 40f));
                 bfill.gameObject.SetActive(n > 0);
                 var cnt = UIKit.Txt("Count", bar.transform, n + "/" + set.ids.Length, 30, Color.white);
                 UIKit.Stretch(cnt.rectTransform);
@@ -179,6 +186,7 @@ namespace KaraPati
             {
                 case "ghosts": return ProcArt.Ghost(2);
                 case "cats": return ProcArt.KaraPatiHead;
+                case "renkli": return ProcArt.SideCat(2, 4, KittenColors.UcRenkli);
                 default: return ProcArt.WitchItem("w_sapka");
             }
         }

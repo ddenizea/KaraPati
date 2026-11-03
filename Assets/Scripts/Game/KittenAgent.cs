@@ -12,6 +12,7 @@ namespace KaraPati
         public enum State { Entering, Idle, Walking, Napping, Leaving, Dragged, Stirring }
 
         public int level;
+        public int color;   // KittenColors index
         public State state { get; private set; }
         public Vector2Int napCell = new Vector2Int(-1, -1);
         public long expires;   // apprentice leaves at this UTC tick
@@ -41,10 +42,11 @@ namespace KaraPati
         public bool Stirring => state == State.Stirring;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
-        public void Init(KittenChaos s, int lvl, Vector2 pos)
+        public void Init(KittenChaos s, int lvl, Vector2 pos, int col)
         {
             sys = s;
             level = lvl;
+            color = col;
             rt = (RectTransform)transform;
             rt.sizeDelta = new Vector2(130f, 130f);
 
@@ -57,7 +59,7 @@ namespace KaraPati
             ring.rectTransform.At(new Vector2(0f, -46f), new Vector2(126f, 36f));
             ring.gameObject.SetActive(false);
 
-            for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i);
+            for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i, color);
             float size = level == 1 ? 128f : 140f;
             body = UIKit.Img("Body", rt, frames[4], Color.white);
             body.rectTransform.sizeDelta = new Vector2(size, size);
@@ -223,7 +225,9 @@ namespace KaraPati
                     if (jumping) break;
                     moving = true;
                     var d = target - Pos;
-                    float mult = state == State.Leaving ? 1.5f * runBoost : chasing ? 2.1f : 1f;
+                    // a black-and-white apprentice is the quickest chaser
+                    float chase = color == KittenColors.SiyahBeyaz ? 2.8f : 2.1f;
+                    float mult = state == State.Leaving ? 1.5f * runBoost : chasing ? chase : 1f;
                     float step = speed * dt * mult;
                     if (Mathf.Abs(d.x) > 2f) Face(d.x > 0f ? 1 : -1);
                     if (d.magnitude <= step)

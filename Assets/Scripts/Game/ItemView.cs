@@ -119,8 +119,11 @@ namespace KaraPati
                 // cat house: "1/2" under it; first kitten looks out of the attic window, the second sits in the door
                 potTimer.gameObject.SetActive(true);
                 potTimer.text = data.cats + "/" + KittenChaos.HouseSlots;
+                string cols = data.catCols ?? "";
+                int c0 = cols.Length > 0 ? cols[0] - '0' : 0, c1 = cols.Length > 1 ? cols[1] - '0' : 0;
                 potExtra.gameObject.SetActive(data.cats >= 1);
-                potExtra.sprite = ProcArt.SideCat(1, 4);
+                potExtra.sprite = ProcArt.SideCat(1, 4, c0);
+                doorCat.sprite = ProcArt.SideCat(1, 4, c1);
                 potExtra.rectTransform.At(new Vector2(0f, 26f), new Vector2(44f, 44f));
                 potExtra.color = Color.white;
                 doorCat.gameObject.SetActive(data.cats >= 2);
