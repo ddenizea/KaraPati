@@ -466,8 +466,9 @@ namespace KaraPati
             }
             int found2 = 0;
             foreach (var c in Story.Clues) if (GM.HasClue(c.id)) found2++;
-            caseBadge.gameObject.SetActive(found2 > 0);
-            caseBadgeText.text = found2.ToString();
+            int fresh = found2 - GM.CluesSeen;   // only clues not looked at yet
+            caseBadge.gameObject.SetActive(fresh > 0);
+            caseBadgeText.text = fresh.ToString();
         }
 
         public void RefreshUstaButton()

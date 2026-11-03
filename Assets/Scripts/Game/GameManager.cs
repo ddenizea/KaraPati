@@ -303,6 +303,7 @@ namespace KaraPati
             BuildTopBar(UIKit.Section(Root, "TopBar", 12f, 115f));
 
             var toastArea = UIKit.Section(Root, "Toast", 545f, 70f);
+            toastRt = toastArea;
             toastGroup = toastArea.gameObject.AddComponent<CanvasGroup>();
             toastGroup.alpha = 0f;
             toastGroup.blocksRaycasts = false;
@@ -721,7 +722,15 @@ namespace KaraPati
         {
             if (DailyAvailable && !OnBoard) StartCoroutine(After(0.6f, () => { if (!ModalOpen && DailyAvailable) dailyPanel.Open(); }));
         }
-        public void OpenCaseFile() => caseFile.Open();
+        /// <summary>How many found clues the player has already seen in the case file.</summary>
+        public int CluesSeen { get; private set; }
+
+        public void OpenCaseFile()
+        {
+            caseFile.Open();
+            if (CluesSeen != clues.Count) { CluesSeen = clues.Count; MarkDirty(); }   // the red badge goes away
+            home.Refresh(false);
+        }
         public void OpenRecipes() => recipePanel.Open();
         public void OpenChapters() => chapterPanel.Open();
         public void ShowHomeChapter(int ch) => home.ShowChapter(ch, true);
@@ -1712,9 +1721,14 @@ namespace KaraPati
         }
 
         // ------------------------------------------------------------------ toast
+        RectTransform toastRt;
+
         public void Toast(string msg, Color? color = null, float duration = 3f)
         {
             if (!toastText) return;
+            // on the table the messages show at the bottom, just above the info bar, so they don't cover
+            // the counter where the cats say their words; elsewhere they stay under the top bar
+            if (toastRt) toastRt.anchoredPosition = new Vector2(0f, OnBoard ? -1840f : -545f);
             toastText.text = msg;
             toastText.color = color ?? UIKit.Cream;
             if (toastCo != null) StopCoroutine(toastCo);
@@ -1763,6 +1777,7 @@ namespace KaraPati
             stickers.Clear();
             claimedSets.Clear();
             clues.Clear();
+            CluesSeen = 0;
             friends.Clear();
             UstaName = "";
             hintsSeen.Clear();
@@ -1774,6 +1789,7 @@ namespace KaraPati
             Board.Set(new Vector2Int(1, 4), new ItemData(Chains.Kazan, 1), true);
             Board.Set(new Vector2Int(5, 4), new ItemData(Chains.Sandik, 1), true);
             Board.Set(BoardController.PotCell, new ItemData(Chains.Simya, 1), true);   // on the counter
+            Board.Set(BoardController.HouseCell, new ItemData(Chains.KediEvi, 1), true);
             Board.Set(new Vector2Int(2, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(3, 6), new ItemData(Chains.Ot, 1), true);
             Board.Set(new Vector2Int(4, 6), new ItemData(Chains.Mantar, 1), true);
@@ -1826,6 +1842,7 @@ namespace KaraPati
                 placed = new List<PlacedSave>(placed),
                 stickers = new List<string>(stickers),
                 clues = new List<string>(clues),
+                cluesSeen = CluesSeen,
                 level = Level,
                 xp = Xp,
                 eventStart = eventStart,
@@ -1891,6 +1908,7 @@ namespace KaraPati
                 TasksDone = Mathf.Clamp(s.tasksDone, 0, Story.TotalTasks);
                 clues.Clear();
                 if (s.clues != null) foreach (var id in s.clues) clues.Add(id);
+                CluesSeen = Mathf.Min(s.cluesSeen, clues.Count);
                 introSeen = s.introSeen;
                 Tut.Step = s.tutorialStep;
                 discovered.Clear();

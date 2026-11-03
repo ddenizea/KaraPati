@@ -72,8 +72,6 @@ namespace KaraPati
             var hit = gameObject.AddComponent<Image>();
             hit.color = new Color(1f, 1f, 1f, 0f);
 
-            var shadow = UIKit.Img("Shadow", rt, ProcArt.Circle, new Color(0f, 0f, 0f, 0.28f));
-            shadow.rectTransform.At(new Vector2(0f, -46f), new Vector2(92f, 22f));
             ring = UIKit.Img("Ring", rt, ProcArt.Circle, new Color(1f, 0.66f, 0.3f, 0.45f));
             ring.rectTransform.At(new Vector2(0f, -46f), new Vector2(126f, 36f));
             ring.gameObject.SetActive(false);

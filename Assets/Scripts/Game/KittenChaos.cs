@@ -189,7 +189,7 @@ namespace KaraPati
             string msg = arriveLines[Random.Range(0, arriveLines.Length)];
             if (!GM.KittenHintShown)
             {
-                msg += " İki yavruyu üst üste sürükle: Çırak Kedi olurlar!";
+                msg += " Onu tezgahtaki Kedi Evi'ne sürükle: iki yavru toplanınca Çırak Kedi olurlar!";
                 GM.KittenHintShown = true;
             }
             if (!houseHintShown && (HasMaster || HasApprentice) && FindHouse(out _))
@@ -328,7 +328,7 @@ namespace KaraPati
             switch (a.level)
             {
                 case 1:
-                    GM.Toast(a.Training ? "Usta'dan ders alıyor, rahatsız etmeyelim!" : "Miyav! (İki yavruyu üst üste sürükle.)");
+                    GM.Toast(a.Training ? "Usta'dan ders alıyor, rahatsız etmeyelim!" : "Miyav! (Beni tezgahtaki Kedi Evi'ne sürükle.)");
                     break;
                 case 4:
                     GM.Toast(MiniBusy ? "Minik Çırak malzeme taşıyor!" : "Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.");
@@ -722,14 +722,11 @@ namespace KaraPati
         /// <summary>Once there is a Master (home or away) the table gets a cat house, if there is room.</summary>
         void EnsureHouse()
         {
-            if (!(HasMaster || UstaAway) || FindHouse(out _)) return;
+            // the cat house is always on the counter, from the very start
+            if (FindHouse(out _)) return;
             var e = BoardController.HouseCell;   // its place in the middle of the counter
             B.Evict(e);
-            B.Set(e, new ItemData(Chains.KediEvi, 1), true);
-            var v = B.ViewAt(e);
-            if (v) Tween.Pop(v.rt, 0.4f);
-            FX.Burst(B.FxLayer, BoardController.CellPos(e), new Color(1f, 0.8f, 0.55f), 10);
-            GM.Toast("Kedi Evi tezgaha geldi! Yavruları içine sürükle: Usta onlara tıslamaz. İki yavru olunca dokun, Çırak çıksın.", UIKit.Orange, 6f);
+            B.Set(e, new ItemData(Chains.KediEvi, 1));
             GM.OnBoardChanged();
         }
 

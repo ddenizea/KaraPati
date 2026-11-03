@@ -245,6 +245,7 @@ namespace KaraPati
         public long ustaPlayAt;                 // UTC ticks when the Master and Kara Pati can play with the yarn again
         public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order) // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
+        public int cluesSeen;                   // clues already looked at in the witch's case file (the red badge shows the rest)
         public int level = 1;
         public int xp;
         public List<ReqSave> storage = new List<ReqSave>();
