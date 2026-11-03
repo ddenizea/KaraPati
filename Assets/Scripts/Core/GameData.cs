@@ -197,6 +197,8 @@ namespace KaraPati
         public int napX, napY;
         public long expires;
         public float cd;
+        public bool stir;          // apprentice sitting at the alchemy pot, stirring
+        public int stirX, stirY;
     }
 
     [Serializable]
@@ -221,7 +223,9 @@ namespace KaraPati
         public int towerFloors;                 // how many tower floors are open (0 in old saves = 1)
         public long lastFed, lastWatered;       // UTC ticks when the bowls were last filled
         public List<string> inventory = new List<string>();      // tower ornaments not placed yet, "s0v1:2"
-        public List<PlacedSave> placed = new List<PlacedSave>(); // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
+        public List<PlacedSave> placed = new List<PlacedSave>();
+        public int ustaTrip;                    // Master cat's expedition: 0 = at home, otherwise trip index + 1
+        public long ustaTripUntil;              // UTC ticks when the Master comes back // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -759,6 +763,33 @@ namespace KaraPati
 
         public static string Text(EventMilestone m) =>
             m.type == "sticker" ? m.amount + " altın + etiket" : PumpkinEvent.RewardText(m);
+    }
+
+    /// <summary>The Master cat's expeditions: longer trips bring better finds, but it doesn't work at the table meanwhile.</summary>
+    public static class Expeditions
+    {
+        public static readonly string[] Names = { "Kısa Gezinti", "Orman Turu", "Dolunay Seferi" };
+        public static readonly int[] Minutes = { 30, 120, 480 };
+        public static readonly int[] Items = { 3, 3, 4 };      // how many ingredients it brings back
+        public static readonly int[] MinLevel = { 2, 3, 4 };
+        public static readonly int[] MaxLevel = { 3, 4, 5 };
+        public static readonly int[] Gold = { 20, 0, 0 };
+        public static readonly int[] Stamps = { 0, 2, 4 };
+        public static readonly float[] StickerChance = { 0f, 0.4f, 1f };
+        public static readonly bool[] Ornament = { false, false, true };   // the long trip finds a tower ornament
+
+        public static string Rewards(int k)
+        {
+            var parts = new List<string> { Items[k] + " malzeme (Sv. " + MinLevel[k] + "-" + MaxLevel[k] + ")" };
+            if (Gold[k] > 0) parts.Add(Gold[k] + " altın");
+            if (Stamps[k] > 0) parts.Add(Stamps[k] + " mühür");
+            if (StickerChance[k] >= 1f) parts.Add("etiket");
+            else if (StickerChance[k] > 0f) parts.Add("belki etiket");
+            if (Ornament[k]) parts.Add("kule süsü");
+            return string.Join(", ", parts);
+        }
+
+        public static string Duration(int k) => Minutes[k] < 60 ? Minutes[k] + " dk" : Minutes[k] / 60 + " saat";
     }
 
     public static class Ghosts

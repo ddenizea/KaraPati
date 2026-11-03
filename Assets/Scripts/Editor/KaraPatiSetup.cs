@@ -84,6 +84,70 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Yavru Çağır (Play modunda)")]
+        static void CallKitten()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugSpawn(1);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Çırak Kedi Ekle (Play modunda)")]
+        static void AddApprentice()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugSpawn(2);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Çırak'ı Kazana Koy (Play modunda)")]
+        static void ApprenticeToPot()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugStir();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Usta Kedi Ekle (Play modunda)")]
+        static void AddMaster()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugSpawn(3);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Usta'nın Keşfini Bitir (Play modunda)")]
+        static void FinishTrip()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugFinishTrip();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        // ------------------------------------------------------------ save backup for testing
+        // Test on the real save, then put it back exactly as it was. The file lives in UserSettings/,
+        // which Git ignores, so it never ends up on GitHub.
+        const string SaveKey = "karapati_save_v1", BackupKey = "karapati_save_v1_backup";
+        const string BackupFile = "UserSettings/karapati_kayit_yedegi.json";
+
+        [MenuItem("KaraPati/Kayıt/Kaydı Dosyaya Yedekle")]
+        static void BackupSaveToFile()
+        {
+            if (Application.isPlaying) { Debug.LogWarning("KaraPati: önce Play modundan çık."); return; }
+            string json = PlayerPrefs.GetString(SaveKey, "");
+            if (string.IsNullOrEmpty(json)) { Debug.LogWarning("KaraPati: yedeklenecek kayıt yok."); return; }
+            Directory.CreateDirectory("UserSettings");
+            File.WriteAllText(BackupFile, json);
+            Debug.Log("KaraPati: kayıt yedeklendi -> " + BackupFile + " (" + json.Length + " karakter)");
+        }
+
+        [MenuItem("KaraPati/Kayıt/Yedekten Geri Yükle")]
+        static void RestoreSaveFromFile()
+        {
+            if (Application.isPlaying) { Debug.LogWarning("KaraPati: önce Play modundan çık."); return; }
+            if (!File.Exists(BackupFile)) { Debug.LogWarning("KaraPati: yedek dosyası yok."); return; }
+            string json = File.ReadAllText(BackupFile);
+            PlayerPrefs.SetString(SaveKey, json);
+            PlayerPrefs.SetString(BackupKey, json);
+            PlayerPrefs.Save();
+            Debug.Log("KaraPati: kayıt yedekten geri yüklendi (" + json.Length + " karakter).");
+        }
+
         const string ApkPath = "Builds/KaraPati.apk";
 
         [MenuItem("KaraPati/Android APK Oluştur")]

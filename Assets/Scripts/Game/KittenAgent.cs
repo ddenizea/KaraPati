@@ -9,7 +9,7 @@ namespace KaraPati
     /// <summary>One cat walking around on the table. Behaviour decisions come from <see cref="KittenChaos"/>.</summary>
     public class KittenAgent : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
-        public enum State { Entering, Idle, Walking, Napping, Leaving, Dragged }
+        public enum State { Entering, Idle, Walking, Napping, Leaving, Dragged, Stirring }
 
         public int level;
         public State state { get; private set; }
@@ -17,6 +17,9 @@ namespace KaraPati
         public long expires;   // apprentice leaves at this UTC tick
         public float cd;       // helper cooldown
         public RectTransform rt;
+        public Vector2Int stirCell = new Vector2Int(-1, -1);   // pot this apprentice is stirring
+        public bool chasing;   // apprentice running after a kitten
+        public float runBoost = 1f;   // a scared kitten runs off faster
 
         KittenChaos sys;
         Image body, ring;
@@ -28,11 +31,13 @@ namespace KaraPati
         Action onArrive;
         bool pressed, jumping;
         Vector2 dragOffset;
+        RectTransform spoon;
 
         public bool IsHeld => pressed || state == State.Dragged;
         public bool IsWild => level == 1;
         public bool IsGone => state == State.Leaving;
         public bool CanAct => state == State.Idle || state == State.Walking;
+        public bool Stirring => state == State.Stirring;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
         public void Init(KittenChaos s, int lvl, Vector2 pos)
@@ -82,6 +87,57 @@ namespace KaraPati
             state = State.Idle;
             idleTimer = t;
             onArrive = null;
+            chasing = false;
+        }
+
+        /// <summary>Run towards p (re-aimed every frame while chasing a kitten).</summary>
+        public void ChaseTo(Vector2 p)
+        {
+            target = sys.Clamp(p);
+            onArrive = null;
+            chasing = true;
+            state = State.Walking;
+        }
+
+        /// <summary>Sit next to the alchemy pot and stir it with a big wooden spoon.</summary>
+        public void StartStir(Vector2Int cell, Vector2 potPos)
+        {
+            Tween.Stop(Tween.Key(rt, "m"));
+            jumping = false;
+            chasing = false;
+            onArrive = null;
+            stirCell = cell;
+            int side = Pos.x >= potPos.x ? 1 : -1;            // sit on whichever side it was dropped
+            Pos = sys.Clamp(potPos + new Vector2(side * 92f, -8f));
+            Face(-side);                                       // look at the pot
+            state = State.Stirring;
+            if (!spoon) BuildSpoon();
+            spoon.gameObject.SetActive(true);
+            spoon.anchoredPosition = new Vector2(-side * 30f, 34f);   // in the paw that faces the pot
+            spoon.localScale = new Vector3(-side, 1f, 1f);   // the spoon reaches towards the pot
+        }
+
+        public void StopStir()
+        {
+            stirCell = new Vector2Int(-1, -1);
+            if (spoon) spoon.gameObject.SetActive(false);
+            if (state == State.Stirring) Idle(1f);
+        }
+
+        void BuildSpoon()
+        {
+            // pivot sits in the cat's paw; the spoon hangs into the pot and swings around it
+            spoon = UIKit.Rect("Spoon", rt);
+            spoon.sizeDelta = new Vector2(20f, 20f);
+            var wood = new Color(0.62f, 0.42f, 0.26f);
+            // drawn pointing right (+x): from the paw down into the pot; localScale.x flips it for the other side
+            var handle = UIKit.Img("Handle", spoon, ProcArt.Rounded, wood, true);
+            handle.rectTransform.At(new Vector2(35f, 2f), new Vector2(16f, 92f));
+            handle.rectTransform.localEulerAngles = new Vector3(0f, 0f, 70f);
+            handle.raycastTarget = false;
+            var bowl = UIKit.Img("Bowl", spoon, ProcArt.Circle, new Color(0.72f, 0.5f, 0.3f));
+            bowl.rectTransform.At(new Vector2(74f, -12f), new Vector2(40f, 30f));
+            bowl.raycastTarget = false;
         }
 
         public void JumpIn(Vector2 from, Vector2 to)
@@ -152,12 +208,21 @@ namespace KaraPati
                     idleTimer -= dt;
                     if (idleTimer <= 0f) WalkTo(sys.RandomPoint());
                     break;
+                case State.Stirring:
+                    if (spoon)
+                    {
+                        // a slow swirl; quicker while something is brewing
+                        float rate = sys.PotBrewing(stirCell) ? 7f : 2.5f;
+                        spoon.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(animT * rate) * 22f);
+                    }
+                    break;
                 case State.Walking:
                 case State.Leaving:
                     if (jumping) break;
                     moving = true;
                     var d = target - Pos;
-                    float step = speed * dt * (state == State.Leaving ? 1.5f : 1f);
+                    float mult = state == State.Leaving ? 1.5f * runBoost : chasing ? 2.1f : 1f;
+                    float step = speed * dt * mult;
                     if (Mathf.Abs(d.x) > 2f) Face(d.x > 0f ? 1 : -1);
                     if (d.magnitude <= step)
                     {
@@ -194,7 +259,7 @@ namespace KaraPati
             {
                 var left = TimeSpan.FromTicks(Math.Max(0L, expires - DateTime.UtcNow.Ticks));
                 label.text = left.TotalHours >= 1.0
-                    ? (int)left.TotalHours + "s " + left.Minutes + "dk"
+                    ? (int)left.TotalHours + "sa " + left.Minutes + "dk"
                     : left.Minutes + "dk " + left.Seconds + "sn";
                 label.color = cd > 0f ? new Color(1f, 1f, 1f, 0.55f) : UIKit.Cream;
             }
@@ -217,11 +282,13 @@ namespace KaraPati
             int frame;
             if (state == State.Napping) frame = 5;
             else if (jumping) frame = 1;
-            else if (moving) frame = (int)(animT * 8f) % 4;
+            else if (moving) frame = (int)(animT * (chasing || runBoost > 1f ? 13f : 8f)) % 4;
             else frame = 4;
             body.sprite = frames[frame];
 
-            float bob = moving ? Mathf.Abs(Mathf.Sin(animT * 16f)) * 5f : (state == State.Napping ? Mathf.Sin(animT * 2f) * 1.5f : 0f);
+            float bob = moving ? Mathf.Abs(Mathf.Sin(animT * 16f)) * 5f
+                : state == State.Napping ? Mathf.Sin(animT * 2f) * 1.5f
+                : state == State.Stirring ? Mathf.Abs(Mathf.Sin(animT * 3.5f)) * 3f : 0f;
             body.rectTransform.anchoredPosition = new Vector2(0f, bob);
             body.rectTransform.localScale = new Vector3(facing, 1f, 1f);
             body.rectTransform.localEulerAngles = state == State.Dragged ? new Vector3(0f, 0f, Mathf.Sin(animT * 10f) * 8f) : Vector3.zero;
@@ -231,7 +298,7 @@ namespace KaraPati
         public void OnPointerDown(PointerEventData e)
         {
             pressed = true;
-            if (state == State.Walking) Idle(2f); // stop under the finger (cancels any mischief plan)
+            if (state == State.Walking) Idle(2f); // stop under the finger (cancels any mischief plan or chase)
             sys.Select(this);
         }
 
@@ -240,6 +307,7 @@ namespace KaraPati
         public void OnBeginDrag(PointerEventData e)
         {
             if (state == State.Napping || state == State.Entering || state == State.Leaving || jumping) return;
+            if (state == State.Stirring) StopStir();   // picked up from the pot
             Tween.Stop(Tween.Key(rt, "m"));
             onArrive = null;
             state = State.Dragged;

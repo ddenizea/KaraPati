@@ -244,6 +244,33 @@ def sfx_page():
     return bandpass(noise(d), 1500, 6000) * env(n, 0.03, 0.08)
 
 
+def sfx_hiss():
+    # the Master cat's cartoon "tsss": airy noise that swells, with a little shiver, then a tiny puff
+    d = 0.5
+    n = int(SR * d)
+    tt = t_axis(d)
+    air = bandpass(noise(d), 2500, 7500)
+    swell = np.sin(np.pi * np.clip(tt / 0.45, 0, 1)) ** 0.6
+    shiver = 1 + 0.25 * np.sin(2 * np.pi * 28 * tt)
+    puff = lowpass(noise(0.08), 900) * env(int(SR * 0.08), 0.002, 0.03)
+    return mix(air * swell * shiver * 0.8, at(puff * 0.6, 0.0, d))
+
+
+def sfx_scurry():
+    # a kitten running off: quick pitter-patter that speeds away and gets quieter
+    total = 0.55
+    out = np.zeros(int(SR * total))
+    t0 = 0.0
+    for k in range(7):
+        d = 0.035
+        n = int(SR * d)
+        f = 900 + 120 * (k % 2) + 60 * k
+        tap = tone(f, d, "tri") * env(n, 0.001, 0.012) + 0.3 * lowpass(noise(d), 3000) * env(n, 0.0005, 0.006)
+        out += at(tap * (1 - k * 0.11), t0, total)
+        t0 += 0.075 - k * 0.006
+    return out
+
+
 # ------------------------------------------------------------------ music
 def music():
     """A 16-bar music-box waltz in A minor, 100 bpm 3/4, loops seamlessly."""
@@ -322,4 +349,6 @@ if __name__ == "__main__":
     save("error", sfx_error(), 0.6)
     save("whoosh", sfx_whoosh(), 0.5)
     save("page", sfx_page(), 0.4)
+    save("hiss", sfx_hiss(), 0.5)
+    save("scurry", sfx_scurry(), 0.55)
     save("music", music(), 0.55, fade=False)

@@ -1,14 +1,16 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 namespace KaraPati
 {
     /// <summary>
     /// The cat system. Wild kittens hop onto the table, push items around and fall asleep on them.
-    /// Drag one kitten onto another and they become an Apprentice: while it is here (2 real hours)
-    /// no kittens come. The Apprentice can be promoted to a permanent Master for gold.
+    /// Drag one kitten onto another and they become an Apprentice (2 real hours). Kittens keep coming,
+    /// but the Apprentice chases them off; dropped next to the alchemy pot it stirs and potions brew twice as fast.
+    /// The Apprentice can be promoted to a permanent Master, who hisses kittens away and can go on expeditions.
     /// </summary>
     public class KittenChaos : MonoBehaviour
     {
@@ -17,10 +19,21 @@ namespace KaraPati
         public const double ApprenticeHours = 2.0;
         public const int PromoteCost = 150;
         const int MaxWild = 3;
+        const float SpawnMin = 25f, SpawnMax = 40f;   // seconds between kittens jumping onto the table
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
         RectTransform layer;
-        float spawnTimer = 6f;
+        float spawnTimer = 10f;
+
+        // chasing (apprentice) and hissing (master)
+        KittenAgent chaseTarget;
+        float chaseCd = 2f, hissCd = 4f;
+        bool chaseHintShown, hissHintShown;
+
+        // the master's expedition
+        public int Trip { get; private set; } = -1;     // -1 = at home
+        public long TripUntil { get; private set; }
+        public bool UstaAway => Trip >= 0;
 
         public KittenAgent Selected { get; private set; }
 
@@ -117,17 +130,23 @@ namespace KaraPati
                 if (a.level < 2 || a.IsGone) continue;
                 if (a.cd > 0f) a.cd = Mathf.Max(0f, a.cd - dt);
                 if (a.level == 2 && now >= a.expires) { Farewell(a); continue; }
+                if (a.level == 2 && a.Stirring) StirTick(a, dt);
                 if (a.level == 3 && a.cd <= 0f && a.CanAct)
                     a.cd = ProduceNear(a, 2) ? MasterInterval : 3f;
             }
 
-            if (!HasApprentice && WildCount < MaxWild && !B.AnyHeld)
+            ChaseTick(dt);
+            HissTick(dt);
+            TripTick(now);
+
+            // kittens keep coming even with an apprentice around - it's the one who shoos them
+            if (WildCount < MaxWild && !B.AnyHeld)
             {
                 spawnTimer -= dt;
                 if (spawnTimer <= 0f)
                 {
                     SpawnWild();
-                    spawnTimer = Random.Range(12f, 20f) * (HasMaster ? 1.8f : 1f);
+                    spawnTimer = Random.Range(SpawnMin, SpawnMax) * (HasMaster ? 1.6f : 1f);
                 }
             }
         }
@@ -305,6 +324,7 @@ namespace KaraPati
 
         public void OnDropped(KittenAgent a)
         {
+            if (a.level == 2) { TryStir(a); return; }
             if (!a.IsWild) return;
             KittenAgent other = null;
             float best = 100f * 100f;
@@ -314,7 +334,9 @@ namespace KaraPati
                 float d = (o.Pos - a.Pos).sqrMagnitude;
                 if (d < best) { best = d; other = o; }
             }
-            if (other) MergeKittens(a, other);
+            if (!other) return;
+            if (HasApprentice) { GM.Toast("Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!"); return; }
+            MergeKittens(a, other);
         }
 
         void MergeKittens(KittenAgent a, KittenAgent b)
@@ -335,7 +357,7 @@ namespace KaraPati
             }
 
             Select(c);
-            GM.Toast("Yavrular birleşti: Çırak Kedi! 2 saat yanında kalacak, yavrular onu görünce kaçışıyor.", UIKit.Orange, 5f);
+            GM.Toast("Yavrular birleşti: Çırak Kedi! 2 saat kalacak ve yavruları kovalayacak. Kazanın yanına sürüklersen iksir karıştırır.", UIKit.Orange, 6f);
             Sfx.Play("levelup", 1.2f);
             GM.GiveSticker("c_cirak", false);
             GM.OnBoardChanged();
@@ -375,7 +397,7 @@ namespace KaraPati
                 : "Çırak kedi vedalaştı. Yavrular yeniden gelebilir!", UIKit.Orange, 5f);
             if (Selected == a) { Selected = null; GM.ShowInfo(null); }
             a.Leave();
-            spawnTimer = 8f;
+            spawnTimer = 15f;
             GM.MarkDirty();
         }
 
@@ -383,6 +405,7 @@ namespace KaraPati
         {
             if (!a || a.level != 2 || a.IsGone) return;
             if (HasMaster) { GM.Toast("Dükkânda zaten bir Usta Kedi var."); return; }
+            if (UstaAway) { GM.Toast("Usta Kedi keşifte. Dönünce yine burada olacak."); return; }
             if (!GM.TrySpendGold(PromoteCost)) return;
             var pos = a.Pos;
             Release(a);
@@ -391,7 +414,7 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
             Select(m);
-            GM.Toast("Usta Kedi! Artık hep burada, kendi kendine malzeme getirir.", UIKit.Orange, 4.5f);
+            GM.Toast("Usta Kedi! Artık hep burada: malzeme getirir, yavrulara tıslar, keşfe de çıkabilir.", UIKit.Orange, 5f);
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
         }
@@ -420,7 +443,8 @@ namespace KaraPati
                     level = a.level, x = a.Pos.x, y = a.Pos.y,
                     napping = a.state == KittenAgent.State.Napping,
                     napX = a.napCell.x, napY = a.napCell.y,
-                    expires = a.expires, cd = a.cd
+                    expires = a.expires, cd = a.cd,
+                    stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y
                 });
             }
         }
@@ -436,6 +460,13 @@ namespace KaraPati
                     var a = Create(s.level, Clamp(new Vector2(s.x, s.y)));
                     a.expires = s.expires;
                     a.cd = s.cd;
+                    if (s.stir && s.level == 2)
+                    {
+                        var pc = new Vector2Int(s.stirX, s.stirY);
+                        var pd = B.Get(pc);
+                        if (pd != null && pd.chain == Chains.Simya) a.StartStir(pc, BoardController.CellPos(pc));
+                        continue;
+                    }
                     if (!s.napping) continue;
                     var c = new Vector2Int(s.napX, s.napY);
                     var d = B.Get(c);
@@ -457,7 +488,281 @@ namespace KaraPati
             foreach (var a in agents) if (a) Destroy(a.gameObject);
             agents.Clear();
             Selected = null;
-            spawnTimer = 6f;
+            chaseTarget = null;
+            spawnTimer = 10f;
+            Trip = -1;
+            TripUntil = 0;
+        }
+
+        // ------------------------------------------------------------ test helpers (editor menu)
+        public void DebugSpawn(int level)
+        {
+            if (level == 1) { SpawnWild(); return; }
+            if (level == 2 && HasApprentice) return;
+            if (level == 3 && (HasMaster || UstaAway)) return;
+            var a = Create(level, RandomPoint());
+            if (level == 2) a.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(ApprenticeHours).Ticks;
+            else a.cd = MasterInterval;
+            Tween.Pop(a.rt, 0.35f);
+            GM.MarkDirty();
+        }
+
+        public void DebugFinishTrip() { if (Trip >= 0) TripUntil = DateTime.UtcNow.Ticks; }
+
+        /// <summary>Test: put the apprentice at the pot; a finished potion gets 60 s back on its timer so the speed-up shows.</summary>
+        public void DebugStir()
+        {
+            var ap = Apprentice();
+            if (!ap || !B.FindFirst(d => d.chain == Chains.Simya, out var pot)) return;
+            var pd = B.Get(pot);
+            if (pd.brew > 0 && pd.BrewReady) { pd.brewUntil = DateTime.UtcNow.Ticks + TimeSpan.FromSeconds(60).Ticks; pd.readyNotified = false; B.RefreshView(pot); }
+            ap.Pos = BoardController.CellPos(pot) + new Vector2(-100f, -20f);
+            TryStir(ap);
+        }
+
+        // ------------------------------------------------------------ apprentice: chase kittens
+        KittenAgent Apprentice()
+        {
+            foreach (var a in agents) if (a && a.level == 2 && !a.IsGone) return a;
+            return null;
+        }
+
+        KittenAgent Master()
+        {
+            foreach (var a in agents) if (a && a.level == 3 && !a.IsGone) return a;
+            return null;
+        }
+
+        static bool Shooable(KittenAgent k) =>
+            k && k.IsWild && !k.IsGone && !k.IsHeld && k.state != KittenAgent.State.Entering;
+
+        KittenAgent NearestWild(Vector2 from, float maxDist)
+        {
+            KittenAgent best = null;
+            float bd = maxDist * maxDist;
+            foreach (var k in agents)
+            {
+                if (!Shooable(k)) continue;
+                float d = (k.Pos - from).sqrMagnitude;
+                if (d < bd) { bd = d; best = k; }
+            }
+            return best;
+        }
+
+        void ChaseTick(float dt)
+        {
+            var ap = Apprentice();
+            if (!ap || ap.Stirring || ap.IsHeld) { chaseTarget = null; return; }
+
+            if (chaseTarget == null)
+            {
+                chaseCd -= dt;
+                if (chaseCd > 0f || !ap.CanAct) return;
+                chaseTarget = NearestWild(ap.Pos, 99999f);
+                if (chaseTarget == null) { chaseCd = 1f; return; }
+                // the kitten notices and scampers away (unless it's asleep)
+                if (chaseTarget.CanAct)
+                    chaseTarget.WalkTo(chaseTarget.Pos + (chaseTarget.Pos - ap.Pos).normalized * 260f);
+                Say(ap, "Kışt!", UIKit.Orange);
+                Sfx.Play("paw", 0.9f, 0.6f);
+            }
+
+            if (!Shooable(chaseTarget)) { chaseTarget = null; ap.Idle(1f); return; }
+            if (ap.state == KittenAgent.State.Idle && !ap.chasing && ap.IsHeld) return;
+            ap.ChaseTo(chaseTarget.Pos);
+            if ((chaseTarget.Pos - ap.Pos).sqrMagnitude < 75f * 75f)
+            {
+                Scare(chaseTarget);
+                chaseTarget = null;
+                chaseCd = Random.Range(4f, 7f);
+                ap.Idle(Random.Range(1.5f, 2.5f));
+                Tween.Punch(ap.rt, 0.15f, 0.25f);
+                if (!chaseHintShown)
+                {
+                    chaseHintShown = true;
+                    GM.Toast("Çırak Kedi yavruyu kovaladı! Kazanın yanına sürüklersen iksir karıştırır.", UIKit.Orange, 5f);
+                }
+            }
+        }
+
+        /// <summary>A kitten gets a fright and runs off the table.</summary>
+        void Scare(KittenAgent k)
+        {
+            if (k.state == KittenAgent.State.Napping) WakeItem(k);
+            if (Selected == k) { Selected = null; GM.ShowInfo(null); }
+            Say(k, "Miy!", new Color(1f, 0.75f, 0.85f));
+            FX.Burst(B.FxLayer, k.Pos + new Vector2(0f, 20f), new Color(1f, 0.85f, 0.6f), 5);
+            Sfx.Play("scurry");
+            k.runBoost = 2f;
+            k.Leave();
+            GM.OnBoardChanged();
+        }
+
+        // ------------------------------------------------------------ master: hiss
+        void HissTick(float dt)
+        {
+            var m = Master();
+            if (!m || !m.CanAct) return;
+            hissCd -= dt;
+            if (hissCd > 0f) return;
+            var k = NearestWild(m.Pos, 560f);
+            if (k == null || k == chaseTarget) { hissCd = 1.5f; return; }
+            hissCd = Random.Range(7f, 11f);
+            m.Idle(2f);
+            m.Face(k.Pos.x >= m.Pos.x ? 1 : -1);
+            Tween.Punch(m.rt, 0.2f, 0.3f);
+            Say(m, "Tısss!", new Color(0.85f, 0.7f, 1f));
+            Sfx.Play("hiss");
+            Scare(k);
+            if (!hissHintShown)
+            {
+                hissHintShown = true;
+                GM.Toast("Usta Kedi tısladı, yavru masadan atladı!", UIKit.Orange);
+            }
+        }
+
+        /// <summary>A little word that floats up from a cat and fades.</summary>
+        void Say(KittenAgent a, string word, Color c)
+        {
+            var t = UIKit.Txt("Say", layer, word, 34, c);
+            t.fontStyle = FontStyle.Bold;
+            t.raycastTarget = false;
+            var outline = t.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.1f, 0.05f, 0.15f, 0.9f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            var rt = t.rectTransform;
+            var start = a.Pos + new Vector2(0f, 80f);
+            rt.At(start, new Vector2(200f, 50f));
+            Tween.Run(0.9f, k =>
+            {
+                if (!rt) return;
+                rt.anchoredPosition = start + new Vector2(0f, 50f * Tween.OutCubic(k));
+                var cc = c; cc.a = k < 0.6f ? 1f : 1f - (k - 0.6f) / 0.4f;
+                t.color = cc;
+            }, () => { if (rt) Destroy(rt.gameObject); });
+        }
+
+        // ------------------------------------------------------------ apprentice: stir the pot
+        public bool PotBrewing(Vector2Int cell)
+        {
+            var d = B.Get(cell);
+            return d != null && d.Brewing;
+        }
+
+        void TryStir(KittenAgent a)
+        {
+            Vector2Int best = new Vector2Int(-1, -1);
+            float bd = 170f * 170f;
+            foreach (var c in B.AllCells())
+            {
+                var d = B.Get(c);
+                if (d == null || d.chain != Chains.Simya) continue;
+                float dist = (BoardController.CellPos(c) - a.Pos).sqrMagnitude;
+                if (dist < bd) { bd = dist; best = c; }
+            }
+            if (best.x < 0) return;
+            chaseTarget = null;
+            a.StartStir(best, BoardController.CellPos(best));
+            Tween.Pop(a.rt, 0.3f);
+            Sfx.Play("brew", 1.3f, 0.6f);
+            var pot = B.Get(best);
+            GM.Toast(pot != null && pot.Brewing
+                ? "Çırak kazanı karıştırıyor: iksir 2 kat hızlı pişiyor!"
+                : "Çırak kazanın başında bekliyor. İksir koyunca 2 kat hızlı karıştıracak.", UIKit.Orange, 4.5f);
+            GM.ShowKittenInfo(a);
+            GM.MarkDirty();
+        }
+
+        void StirTick(KittenAgent a, float dt)
+        {
+            var d = B.Get(a.stirCell);
+            if (d == null || d.chain != Chains.Simya) { a.StopStir(); return; }   // the pot was moved away
+            // every real second counts double: take one extra second off the timer
+            if (d.Brewing) d.brewUntil -= TimeSpan.FromSeconds(dt).Ticks;
+        }
+
+        // ------------------------------------------------------------ master: expeditions
+        public void SetTrip(int trip, long until)
+        {
+            Trip = trip;
+            TripUntil = until;
+        }
+
+        public void SendOnTrip(int k)
+        {
+            var m = Master();
+            if (!m) { GM.Toast("Masada Usta Kedi yok."); return; }
+            if (m.state == KittenAgent.State.Napping || m.IsHeld) return;
+            if (Selected == m) { Selected = null; GM.ShowInfo(null); }
+            Trip = k;
+            TripUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(Expeditions.Minutes[k]).Ticks;
+            Say(m, "Görüşürüz!", UIKit.Cream);
+            m.Leave();
+            Sfx.Play("whoosh");
+            GM.Toast("Usta Kedi " + Expeditions.Names[k] + " için yola çıktı. " + Expeditions.Duration(k) + " sonra dönecek.", UIKit.Orange, 4.5f);
+            GM.ShowInfo(null);
+            GM.MarkDirty();
+        }
+
+        void TripTick(long now)
+        {
+            if (Trip >= 0 && now >= TripUntil && !B.AnyHeld && !GM.ModalOpen) ReturnFromTrip();
+        }
+
+        /// <summary>"Dolunay Seferi · 7sa 12dk kaldı" for the info bar while the Master is away.</summary>
+        public string TripStatus()
+        {
+            if (Trip < 0) return "";
+            var left = TimeSpan.FromTicks(Math.Max(0L, TripUntil - DateTime.UtcNow.Ticks));
+            string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
+            return Expeditions.Names[Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1)] + ": " + time + " sonra döner, getirdiklerini masaya bırakır.";
+        }
+
+        void ReturnFromTrip()
+        {
+            int k = Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1);
+            Trip = -1;
+
+            var h = Half;
+            float side = Random.value < 0.5f ? -1f : 1f;
+            var land = new Vector2(side * (h.x - 60f), Random.Range(-h.y * 0.5f, h.y * 0.5f));
+            var m = Create(3, new Vector2(side * (h.x + 200f), land.y - 80f));
+            m.JumpIn(m.Pos, land);
+            m.cd = MasterInterval;
+
+            // what it found
+            int placed = 0, stored = 0, sold = 0;
+            var cell = BoardController.LocalToCellClamped(land);
+            for (int i = 0; i < Expeditions.Items[k]; i++)
+            {
+                var item = new ItemData(Chains.RandomIngredient(), Random.Range(Expeditions.MinLevel[k], Expeditions.MaxLevel[k] + 1));
+                if (B.NearestEmpty(cell, out var e)) { B.SpawnFromPos(land, e, item); GM.Discover(item.chain, item.level); placed++; }
+                else if (GM.Storage.Count < GM.StorageSlots) { GM.Storage.Add(item); stored++; }
+                else { GM.AddGold(Chains.Value(item.level)); sold++; }
+            }
+            var found = new List<string> { Expeditions.Items[k] + " malzeme" };
+            if (Expeditions.Gold[k] > 0) { GM.AddGold(Expeditions.Gold[k]); found.Add(Expeditions.Gold[k] + " altın"); }
+            if (Expeditions.Stamps[k] > 0) { GM.AddStamps(Expeditions.Stamps[k]); found.Add(Expeditions.Stamps[k] + " Pati Mührü"); }
+            if (Expeditions.Ornament[k])
+            {
+                string id = Decor.ItemId(Random.Range(0, Decor.Slots), Random.Range(1, Decor.Variants));
+                GM.GiftTowerDecor(id);
+                found.Add("kule için " + Decor.ItemName(id));
+            }
+            if (Random.value < Expeditions.StickerChance[k])
+            {
+                var cats = Stickers.Sets[1].ids;
+                GM.GiveSticker(cats[Random.Range(0, cats.Length)]);
+            }
+
+            string where = stored > 0 || sold > 0
+                ? " Masa doluydu: " + (stored > 0 ? stored + " tanesi depoya" : "") + (stored > 0 && sold > 0 ? ", " : "") + (sold > 0 ? sold + " tanesi altına" : "") + " gitti."
+                : "";
+            Sfx.Play("gift");
+            GM.ShowDialog("Usta Kedi", Expeditions.Names[k] + " bitti, miyav! Getirdiklerim: " + string.Join(", ", found) + "." + where);
+            GM.RefreshHud();
+            if (Selected == null) GM.ShowInfo(null);
+            GM.OnBoardChanged();
         }
     }
 }

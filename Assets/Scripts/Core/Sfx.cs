@@ -28,7 +28,7 @@ namespace KaraPati
         {
             { "click", 0.35f }, { "pop", 0.6f }, { "spawn", 0.5f }, { "coin", 0.6f }, { "stamp", 0.7f },
             { "brew", 0.55f }, { "ready", 0.6f }, { "gift", 0.7f }, { "levelup", 0.75f }, { "paw", 0.55f },
-            { "bubble", 0.55f }, { "error", 0.5f }, { "whoosh", 0.4f }, { "page", 0.45f },
+            { "bubble", 0.55f }, { "error", 0.5f }, { "whoosh", 0.4f }, { "page", 0.45f }, { "hiss", 0.5f }, { "scurry", 0.45f },
         };
 
         public static void Init()

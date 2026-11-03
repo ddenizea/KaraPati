@@ -12,7 +12,7 @@ namespace KaraPati
         GameManager GM => GameManager.I;
         RectTransform sheet, rows;
         Text title, goldText;
-        Button tabInv, tabShop;
+        Button tabInv, tabShop, prevFloor, nextFloor;
         bool shopTab;
         int floor;
         int armedSlot = -1, armedVariant = -1;
@@ -42,10 +42,18 @@ namespace KaraPati
 
             var icon = UIKit.Img("Icon", sheet, ProcArt.Brush, Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(26f, -18f), new Vector2(84f, 84f));
-            title = UIKit.Txt("Title", sheet, "", 40, UIKit.Orange, TextAnchor.MiddleLeft, false);
+            // floor picker: < 1. Kat > decides where a placed ornament goes
+            prevFloor = UIKit.Btn("PrevFloor", sheet, "<", UIKit.PanelDark, () => ChangeFloor(-1), 36);
+            ((RectTransform)prevFloor.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(122f, -14f), new Vector2(60f, 56f));
+            title = UIKit.Txt("Title", sheet, "", 34, UIKit.Orange, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(124f, -16f), new Vector2(560f, 50f));
-            var sub = UIKit.Txt("Sub", sheet, "Envanterden bir süse dokun, ekrandaki kata yerleşsin.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
+            title.resizeTextForBestFit = true;   // long floor names shrink instead of wrapping
+            title.resizeTextMinSize = 20;
+            title.resizeTextMaxSize = 34;
+            title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(190f, -16f), new Vector2(440f, 50f));
+            nextFloor = UIKit.Btn("NextFloor", sheet, ">", UIKit.PanelDark, () => ChangeFloor(1), 36);
+            ((RectTransform)nextFloor.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(638f, -14f), new Vector2(60f, 56f));
+            var sub = UIKit.Txt("Sub", sheet, "Oklarla katı seç, envanterden bir süse dokun.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
             sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(126f, -66f), new Vector2(640f, 34f));
 
             var coin = UIKit.Img("Coin", sheet, ProcArt.Coin, Color.white);
@@ -90,6 +98,15 @@ namespace KaraPati
             return false;
         }
 
+        void ChangeFloor(int dir)
+        {
+            int open = GM.TowerFloorsOpen;
+            if (open <= 1) { GM.Toast("Başka kat açmak için kulede kilitli kata dokun."); return; }
+            floor = (floor + dir + open) % open;   // wraps around: after the top floor comes floor 1
+            Sfx.Play("page");
+            Fill();
+        }
+
         void SetTab(bool shop)
         {
             shopTab = shop;
@@ -106,6 +123,9 @@ namespace KaraPati
         {
             for (int i = rows.childCount - 1; i >= 0; i--) Destroy(rows.GetChild(i).gameObject);
             title.text = (floor + 1) + ". Kat  •  " + Tower.FloorNames[floor];
+            bool many = GM.TowerFloorsOpen > 1;
+            prevFloor.gameObject.SetActive(many);
+            nextFloor.gameObject.SetActive(many);
             goldText.text = GM.Gold.ToString();
             tabInv.GetComponent<Image>().color = shopTab ? UIKit.PanelDark : UIKit.Orange;
             tabShop.GetComponent<Image>().color = shopTab ? UIKit.Orange : UIKit.PanelDark;
@@ -186,7 +206,7 @@ namespace KaraPati
             {
                 if (GM.InventoryCount(id) <= 0) { GM.Toast("Bu süsten yok. Dükkân sekmesinden alabilirsin."); return; }
                 Close();
-                GM.TowerUI.PlaceFromInventory(id);
+                GM.TowerUI.PlaceFromInventory(id, floor);
                 return;
             }
             int price = Decor.TowerPrice(slot, v);

@@ -73,7 +73,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -81,6 +81,7 @@ namespace KaraPati
         RecipePanel recipePanel;
         ItemInfoPanel itemInfo;
         ChapterPanel chapterPanel;
+        ExpeditionPanel expeditionPanel;
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
@@ -115,6 +116,7 @@ namespace KaraPati
         float resetArmedUntil;
         int tipIndex;
         KittenAgent infoKitten;
+        bool infoIdle;   // the info bar shows the tip (nothing selected)
         float kittenInfoTimer;
 
         // dialog
@@ -192,6 +194,8 @@ namespace KaraPati
             {
                 eventTick = 1f;
                 RefreshEventButton();
+                // keep the Master's expedition countdown ticking in the info bar
+                if (infoIdle && !infoKitten && Cats != null && Cats.UstaAway) infoDesc.text = Cats.TripStatus();
             }
 
             if (infoKitten)
@@ -329,6 +333,10 @@ namespace KaraPati
             var chaptersRt = UIKit.Rect("ChapterPanel", canvasRt);
             chapterPanel = chaptersRt.gameObject.AddComponent<ChapterPanel>();
             chapterPanel.Build();
+
+            var tripRt = UIKit.Rect("ExpeditionPanel", canvasRt);
+            expeditionPanel = tripRt.gameObject.AddComponent<ExpeditionPanel>();
+            expeditionPanel.Build();
 
             var decorRt = UIKit.Rect("DecorPanel", canvasRt);
             decorPanel = decorRt.gameObject.AddComponent<DecorPanel>();
@@ -700,6 +708,13 @@ namespace KaraPati
             return true;
         }
 
+        /// <summary>A free ornament (e.g. found by the Master cat) goes straight into the tower inventory.</summary>
+        public void GiftTowerDecor(string id)
+        {
+            inventory[id] = InventoryCount(id) + 1;
+            MarkDirty();
+        }
+
         /// <summary>Takes one ornament out of the inventory and puts it on a floor.</summary>
         public PlacedSave PlaceTowerDecor(string id, int floor, Vector2 pos)
         {
@@ -877,6 +892,7 @@ namespace KaraPati
         {
             if (speaker == "Cadı Hanım") return ProcArt.Witch;
             if (speaker == "Gölge") return ProcArt.SideCat(0, 4);
+            if (speaker == "Usta Kedi") return ProcArt.SideCat(3, 4);
             int gi = Array.IndexOf(Ghosts.Names, speaker);
             return gi >= 0 ? ProcArt.Ghost(gi) : ProcArt.KaraPatiHead;
         }
@@ -1083,10 +1099,12 @@ namespace KaraPati
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble);
+            infoIdle = d == null;
             if (d == null)
             {
-                infoTitle.text = "İpucu";
-                infoDesc.text = tips[tipIndex % tips.Length];
+                bool away = Cats != null && Cats.UstaAway;
+                infoTitle.text = away ? "Usta Kedi keşifte" : "İpucu";
+                infoDesc.text = away ? Cats.TripStatus() : tips[tipIndex % tips.Length];
                 bool armed = resetArmedUntil > Time.unscaledTime;
                 actionBtn.gameObject.SetActive(true);
                 actionBtn.Label().text = armed ? "Emin misin?" : "Yeni Oyun";
@@ -1185,6 +1203,7 @@ namespace KaraPati
             if (infoTitle == null) return;
             if (!a) { ShowInfo(null); return; }
             infoKitten = a;
+            infoIdle = false;
             kittenInfoTimer = 1f;
             if (infoBtn) infoBtn.gameObject.SetActive(false);
             var btnImg = actionBtn.GetComponent<Image>();
@@ -1205,8 +1224,10 @@ namespace KaraPati
                     infoTitle.text = "Çırak Kedi";
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
-                    infoDesc.text = "Dokun: bedava malzeme. Buradayken yavru gelmez. Kalan: " + time;
-                    if (Cats.HasMaster) infoDesc.text += " (Dükkânda zaten Usta var.)";
+                    infoDesc.text = a.Stirring
+                        ? (Cats.PotBrewing(a.stirCell) ? "Kazanı karıştırıyor: iksir 2 kat hızlı pişiyor! " : "Kazanın başında iksir bekliyor. ") + "Kalan: " + time
+                        : "Dokun: malzeme. Yavruları kovalar. Kazanın yanına sürükle: iksir 2x hızlı. Kalan: " + time;
+                    if (Cats.HasMaster || Cats.UstaAway) infoDesc.text += Cats.UstaAway ? " (Usta keşifte.)" : " (Dükkânda zaten Usta var.)";
                     else
                     {
                         actionBtn.gameObject.SetActive(true);
@@ -1217,7 +1238,10 @@ namespace KaraPati
                 }
                 default:
                     infoTitle.text = "Usta Kedi";
-                    infoDesc.text = "Kalıcı yardımcı! Her " + (int)KittenChaos.MasterInterval + " sn'de kendiliğinden malzeme getirir.";
+                    infoDesc.text = "Her " + (int)KittenChaos.MasterInterval + " sn'de malzeme getirir, yavrulara tıslar. Keşfe gönderirsen sandıkla döner.";
+                    actionBtn.gameObject.SetActive(true);
+                    actionBtn.Label().text = "Keşfe\nGönder";
+                    btnImg.color = UIKit.Green;
                     break;
             }
         }
@@ -1228,6 +1252,7 @@ namespace KaraPati
             {
                 if (infoKitten.level == 1) Cats.Adopt(infoKitten);
                 else if (infoKitten.level == 2) Cats.Promote(infoKitten);
+                else expeditionPanel.Open();
                 return;
             }
             var d = Board.Get(Board.Selected);
@@ -1457,7 +1482,7 @@ namespace KaraPati
             MarkDirty();
         }
 
-        void RefreshHud()
+        public void RefreshHud()
         {
             goldText.text = Gold.ToString();
             stampText.text = Stamps.ToString();
@@ -1605,6 +1630,8 @@ namespace KaraPati
             Orders.WriteSave(s.orders);
             foreach (var it in Storage) s.storage.Add(new ReqSave { chain = it.chain, level = it.level });
             Cats.WriteSave(s.kittens);
+            s.ustaTrip = Cats.Trip + 1;
+            s.ustaTripUntil = Cats.TripUntil;
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
         }
@@ -1699,6 +1726,7 @@ namespace KaraPati
                 Board.ReadSave(s.cells);
                 Board.EnsurePot();
                 Cats.ReadSave(s.kittens);
+                Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil);
                 Orders.ReadSave(s.orders);
                 RefreshHud();
                 ShowInfo(null);

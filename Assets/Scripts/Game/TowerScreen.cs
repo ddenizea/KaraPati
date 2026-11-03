@@ -386,13 +386,24 @@ namespace KaraPati
         public static Vector2 ClampOnFloor(Vector2 p) =>
             new Vector2(Mathf.Clamp(p.x, -FloorW / 2f + 90f, FloorW / 2f - 90f), Mathf.Clamp(p.y, -FloorH / 2f + 110f, FloorH / 2f - 110f));
 
-        /// <summary>The open floor closest to the middle of the screen.</summary>
+        /// <summary>
+        /// The open floor that takes up most of the screen. The screen is taller than one floor, so
+        /// looking only at its middle picked floor 2 even when floor 1 was fully visible at the bottom.
+        /// On a tie the lower floor wins.
+        /// </summary>
         public int FloorInView()
         {
             float viewH = ((RectTransform)scroll.transform).rect.height;
-            float centre = -content.anchoredPosition.y + viewH / 2f;
-            int i = Mathf.FloorToInt((centre - GroundH) / FloorH);
-            return Mathf.Clamp(i, 0, GM.TowerFloorsOpen - 1);
+            float bottom = -content.anchoredPosition.y, top = bottom + viewH;
+            int best = 0;
+            float bestShown = -1f;
+            for (int i = 0; i < GM.TowerFloorsOpen; i++)
+            {
+                float f0 = GroundH + i * FloorH, f1 = f0 + FloorH;
+                float shown = Mathf.Min(top, f1) - Mathf.Max(bottom, f0);   // visible height of this floor
+                if (shown > bestShown + 1f) { bestShown = shown; best = i; }
+            }
+            return best;
         }
 
         /// <summary>Rebuild every placed ornament from the save data (after loading or a new game).</summary>
@@ -420,9 +431,10 @@ namespace KaraPati
         }
 
         /// <summary>Called by the decoration sheet: put one ornament from the inventory on the floor in view.</summary>
-        public void PlaceFromInventory(string id)
+        public void PlaceFromInventory(string id, int floor)
         {
-            int floor = FloorInView();
+            floor = Mathf.Clamp(floor, 0, GM.TowerFloorsOpen - 1);
+            if (floor != FloorInView()) ScrollToFloor(floor, false);   // show where it landed
             var pos = new Vector2(Random.Range(-60f, 120f), -FloorH / 2f + 200f);   // standing on the floorboards
             if (Decor.ParseItem(id, out var slot, out _) && slot == 0) pos = new Vector2(0f, FloorH / 2f - 120f);
             var p = GM.PlaceTowerDecor(id, floor, pos);
