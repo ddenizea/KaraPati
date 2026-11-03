@@ -5,20 +5,28 @@ using UnityEngine.UI;
 namespace KaraPati
 {
     /// <summary>
-    /// Item encyclopedia opened with the "i" button: the whole merge chain (undiscovered levels stay "?"),
-    /// where the item comes from, and which potions use it.
+    /// Item encyclopedia opened with the "i" button: the whole merge chain as a grid of tiles with arrows
+    /// (undiscovered levels stay "?", the selected level is framed, a green badge shows how many of each
+    /// level are on the table), where the item comes from, and which potions use it.
+    /// The grid adapts to the chain length, so a future 14-level chain still fits.
     /// </summary>
     public class ItemInfoPanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
         RectTransform panel, body;
-        Image headIcon;
-        Text title, sub;
+        Text title;
 
         public bool IsOpen => gameObject.activeSelf;
 
-        static readonly Color Ink = new Color(1f, 0.96f, 0.88f);
-        static readonly Color Dim = new Color(1f, 1f, 1f, 0.6f);
+        static readonly Color Paper = new Color(0.93f, 0.86f, 0.72f);
+        static readonly Color Card = new Color(1f, 0.96f, 0.88f);
+        static readonly Color Ink = new Color(0.32f, 0.2f, 0.12f);
+        static readonly Color Dim = new Color(0.32f, 0.2f, 0.12f, 0.55f);
+        static readonly Color TileBg = new Color(0.86f, 0.79f, 0.66f);
+        static readonly Color TileUnknown = new Color(0.8f, 0.74f, 0.62f);
+        static readonly Color TileCurrent = new Color(0.6f, 0.82f, 0.42f);
+        static readonly Color Badge = new Color(0.3f, 0.72f, 0.42f);
+        const float Gap = 46f;   // room for the arrow between two tiles
 
         public void Build()
         {
@@ -30,29 +38,34 @@ namespace KaraPati
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
 
-            var bg = UIKit.Img("Panel", root, ProcArt.Rounded, new Color(0.24f, 0.17f, 0.36f, 0.99f), true);
+            var bg = UIKit.Img("Panel", root, ProcArt.Rounded, Paper, true);
             bg.raycastTarget = true;
-            bg.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+            bg.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;   // taps on the panel don't close it
             panel = bg.rectTransform;
-            panel.At(Vector2.zero, new Vector2(1000f, 1180f));
+            panel.At(Vector2.zero, new Vector2(960f, 1200f));
 
-            var iconBg = UIKit.Img("IconBg", panel, ProcArt.Circle, new Color(0.14f, 0.09f, 0.2f));
-            iconBg.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -24f), new Vector2(150f, 150f));
-            headIcon = UIKit.Img("Icon", iconBg.transform, null, Color.white);
-            headIcon.rectTransform.sizeDelta = new Vector2(124f, 124f);
-            headIcon.preserveAspect = true;
-
-            title = UIKit.Txt("Title", panel, "", 48, UIKit.Orange, TextAnchor.MiddleLeft, false);
+            // coloured header with the item name, like a recipe card
+            var head = UIKit.Img("Header", panel, ProcArt.Rounded, new Color(0.42f, 0.28f, 0.6f), true);
+            head.rectTransform.anchorMin = new Vector2(0f, 1f);
+            head.rectTransform.anchorMax = new Vector2(1f, 1f);
+            head.rectTransform.pivot = new Vector2(0.5f, 1f);
+            head.rectTransform.anchoredPosition = Vector2.zero;
+            head.rectTransform.sizeDelta = new Vector2(0f, 130f);
+            title = UIKit.Txt("Title", head.transform, "", 56, Color.white, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(200f, -40f), new Vector2(660f, 64f));
-            sub = UIKit.Txt("Sub", panel, "", 28, Dim, TextAnchor.MiddleLeft, false);
-            sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(202f, -108f), new Vector2(660f, 40f));
+            title.resizeTextForBestFit = true;
+            title.resizeTextMinSize = 30;
+            title.resizeTextMaxSize = 56;
+            UIKit.Stretch(title.rectTransform, 120f, 120f, 10f, 10f);
+            var outline = title.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.15f, 0.08f, 0.2f, 0.8f);
+            outline.effectDistance = new Vector2(2f, -2f);
 
-            var close = UIKit.Btn("Close", panel, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
-            ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-24f, -24f), new Vector2(90f, 90f));
+            var close = UIKit.Btn("Close", head.transform, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
+            ((RectTransform)close.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, 0f), new Vector2(90f, 90f));
 
             body = UIKit.Rect("Body", panel);
-            UIKit.Stretch(body, 30f, 30f, 200f, 30f);
+            UIKit.Stretch(body, 30f, 30f, 150f, 30f);
             gameObject.SetActive(false);
         }
 
@@ -69,16 +82,7 @@ namespace KaraPati
         public void Close() => gameObject.SetActive(false);
 
         // ------------------------------------------------------------ layout helpers
-        float y;
-
-        Text Heading(string s)
-        {
-            var t = UIKit.Txt("Heading", body, s, 32, UIKit.Orange, TextAnchor.MiddleLeft, false);
-            t.fontStyle = FontStyle.Bold;
-            Top(t.rectTransform, 46f);
-            y += 54f;
-            return t;
-        }
+        float y;   // how far down the body we have filled
 
         void Top(RectTransform rt, float h)
         {
@@ -89,56 +93,106 @@ namespace KaraPati
             rt.sizeDelta = new Vector2(0f, h);
         }
 
-        RectTransform Tile(RectTransform parent, float x, Sprite s, bool known, bool current, string label, int level)
+        Text Line(string s, float h, int size = 28, bool bold = false)
         {
-            var bg = UIKit.Img("Tile", parent, ProcArt.Rounded, current ? new Color(0.45f, 0.3f, 0.2f) : new Color(0.14f, 0.09f, 0.2f, 0.95f), true);
-            var rt = bg.rectTransform;
-            rt.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(x, 0f), new Vector2(150f, 150f));
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(x, 0f);
-            if (current)
-            {
-                var fr = UIKit.Img("Frame", rt, ProcArt.Frame, UIKit.Orange, true);
-                fr.rectTransform.sizeDelta = new Vector2(162f, 162f);
-            }
-            var ic = UIKit.Img("Icon", rt, s, known ? Color.white : new Color(0.08f, 0.04f, 0.12f, 0.9f));
-            ic.rectTransform.sizeDelta = new Vector2(124f, 124f);
-            ic.preserveAspect = true;
-            if (!known)
-            {
-                var q = UIKit.Txt("Q", rt, "?", 64, new Color(1f, 1f, 1f, 0.8f));
-                q.fontStyle = FontStyle.Bold;
-                UIKit.Stretch(q.rectTransform);
-            }
-            if (level > 0)
-            {
-                var lv = UIKit.Img("Lv", rt, ProcArt.Circle, new Color(0.1f, 0.06f, 0.15f, 0.95f));
-                lv.rectTransform.At(new Vector2(52f, -52f), new Vector2(42f, 42f));
-                var lt = UIKit.Txt("N", lv.transform, level.ToString(), 24, Ink, TextAnchor.MiddleCenter, false);
-                UIKit.Stretch(lt.rectTransform);
-            }
-            if (label != null)
-            {
-                var name = UIKit.Txt("Name", rt, known ? label : "???", 22, known ? Ink : Dim, TextAnchor.UpperCenter, false);
-                name.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -6f), new Vector2(170f, 60f));
-            }
-            return rt;
-        }
-
-        RectTransform Row(float h)
-        {
-            var r = UIKit.Rect("Row", body);
-            Top(r, h);
-            y += h;
-            return r;
-        }
-
-        Text Para(string s, float h = 44f)
-        {
-            var t = UIKit.Txt("Text", body, s, 27, Ink, TextAnchor.UpperLeft, false);
+            var t = UIKit.Txt("Text", body, s, size, Ink, TextAnchor.MiddleCenter, false);
+            if (bold) t.fontStyle = FontStyle.Bold;
             Top(t.rectTransform, h);
             y += h;
             return t;
+        }
+
+        /// <summary>A lighter card behind a section.</summary>
+        RectTransform CardBox(float h)
+        {
+            var c = UIKit.Img("Card", body, ProcArt.Rounded, Card, true);
+            Top(c.rectTransform, h);
+            y += h;
+            return c.rectTransform;
+        }
+
+        /// <summary>One square tile. count = how many are on the table (green badge), level = small number in the corner.</summary>
+        void Tile(RectTransform parent, Vector2 pos, float size, Sprite s, bool known, bool current, int count, int level)
+        {
+            var bg = UIKit.Img("Tile", parent, ProcArt.Rounded, current ? TileCurrent : known ? TileBg : TileUnknown, true);
+            var rt = bg.rectTransform;
+            rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(pos, new Vector2(size, size));
+            if (current)
+            {
+                var fr = UIKit.Img("Frame", rt, ProcArt.Frame, new Color(1f, 1f, 1f, 0.95f), true);
+                fr.rectTransform.sizeDelta = new Vector2(size + 16f, size + 16f);
+            }
+            if (known)
+            {
+                var ic = UIKit.Img("Icon", rt, s, Color.white);
+                ic.rectTransform.sizeDelta = new Vector2(size * 0.78f, size * 0.78f);
+                ic.preserveAspect = true;
+                if (level > 0)
+                {
+                    var lt = UIKit.Txt("Lv", rt, level.ToString(), Mathf.RoundToInt(size * 0.15f), new Color(0.32f, 0.2f, 0.12f, 0.7f), TextAnchor.LowerRight, false);
+                    lt.fontStyle = FontStyle.Bold;
+                    UIKit.Stretch(lt.rectTransform, 8f, 10f, 8f, 4f);
+                }
+            }
+            else
+            {
+                var q = UIKit.Txt("Q", rt, "?", Mathf.RoundToInt(size * 0.5f), new Color(1f, 1f, 1f, 0.85f));
+                q.fontStyle = FontStyle.Bold;
+                UIKit.Stretch(q.rectTransform);
+            }
+            if (count > 0)
+            {
+                // how many of these are on the table right now
+                var b = UIKit.Img("Count", rt, ProcArt.Circle, Badge);
+                b.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(6f, -6f), new Vector2(48f, 48f));
+                var bt = UIKit.Txt("N", b.transform, count.ToString(), 26, Color.white, TextAnchor.MiddleCenter, false);
+                bt.fontStyle = FontStyle.Bold;
+                UIKit.Stretch(bt.rectTransform);
+            }
+        }
+
+        void Arrow(RectTransform parent, Vector2 pos)
+        {
+            var a = UIKit.Txt("Arrow", parent, "›", 64, new Color(0.32f, 0.2f, 0.12f, 0.45f), TextAnchor.MiddleCenter, false);
+            a.fontStyle = FontStyle.Bold;
+            a.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(pos, new Vector2(Gap, 80f));
+        }
+
+        void Sign(RectTransform parent, string s, Vector2 pos)
+        {
+            var t = UIKit.Txt("Sign", parent, s, 60, Dim, TextAnchor.MiddleCenter, false);
+            t.fontStyle = FontStyle.Bold;
+            t.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(pos, new Vector2(80f, 80f));
+        }
+
+        Text CardTitle(RectTransform card, string s)
+        {
+            var t = UIKit.Txt("Head", card, s, 38, Dim, TextAnchor.MiddleCenter, false);
+            t.fontStyle = FontStyle.Bold;
+            t.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -16f), new Vector2(700f, 56f));
+            return t;
+        }
+
+        int OnTable(string chain, int level)
+        {
+            int n = 0;
+            foreach (var c in GM.Board.AllCells())
+            {
+                var d = GM.Board.Get(c);
+                if (d != null && !d.bubble && d.chain == chain && d.level == level) n++;
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// How to lay out a chain of `levels`: short chains sit on one centred row, up to 16 levels use 4 columns,
+        /// longer ones 5 smaller columns so even a 20-level chain fits on a phone screen.
+        /// </summary>
+        static void GridFor(int levels, out int columns, out float tile)
+        {
+            if (levels <= 4) { columns = levels; tile = 170f; }
+            else if (levels <= 16) { columns = 4; tile = 170f; }
+            else { columns = 5; tile = 128f; }
         }
 
         // ------------------------------------------------------------ content
@@ -146,105 +200,115 @@ namespace KaraPati
         {
             for (int i = body.childCount - 1; i >= 0; i--) Destroy(body.GetChild(i).gameObject);
             y = 0f;
-            headIcon.sprite = ProcArt.Item(d.chain, d.level);
             title.text = d.Name;
 
             if (Chains.IsIngredient(d.chain)) FillIngredient(d);
             else if (Chains.IsPotion(d.chain)) FillPotion(d);
             else if (Chains.IsGenerator(d.chain)) FillGenerator(d);
-            else { sub.text = Chains.ChainTitle(d.chain); Para("Dükkânın bir parçası."); }
-            // shrink the window to its content
-            panel.sizeDelta = new Vector2(1000f, Mathf.Clamp(200f + y + 50f, 560f, 1180f));
+            else Line("Dükkânın bir parçası.", 60f);
+            // the window grows with its content (but never past the screen)
+            panel.sizeDelta = new Vector2(960f, Mathf.Clamp(150f + y + 40f, 520f, 1900f));
         }
 
         void FillIngredient(ItemData d)
         {
             int max = Chains.MaxLevel(d.chain);
-            sub.text = "Seviye " + d.level + "/" + max + "  •  " + Chains.ChainTitle(d.chain);
-
-            Heading("Birleştirme zinciri");
-            var row = Row(250f);
-            float step = 940f / max;
-            for (int l = 1; l <= max; l++)
-            {
-                bool known = GM.IsDiscovered(d.chain, l);
-                float x = (l - 1) * step + (step - 150f) / 2f;
-                Tile(row, x, ProcArt.Item(d.chain, l), known, l == d.level, Chains.Name(d.chain, l), l);
-                if (l < max)
-                {
-                    var arrow = UIKit.Txt("Arrow", row, "›", 48, UIKit.Orange, TextAnchor.MiddleCenter, false);
-                    arrow.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(x + 150f + (step - 150f) / 2f, -75f), new Vector2(40f, 60f));
-                }
-            }
             int found = 0;
             for (int l = 1; l <= max; l++) if (GM.IsDiscovered(d.chain, l)) found++;
-            Para(found < max ? "Birleştirdikçe gizli seviyeler açılır. (" + found + "/" + max + " keşfedildi)" : "Bütün seviyeleri keşfettin!", 50f);
-            y += 10f;
 
-            Heading("Nereden gelir?");
+            // ---- the chain: rows of tiles with an arrow after each one (also at a row's end: the chain continues below)
+            GridFor(max, out int columns, out float tile);
+            int rows = (max + columns - 1) / columns;
+            float rowH = tile + 30f;
+            var card = CardBox(100f + rows * rowH + 60f);
+            CardTitle(card, "Sv. " + d.level + " / " + max);
+
+            float rowW = columns * tile + (columns - 1) * Gap;
+            float x0 = -rowW / 2f + tile / 2f;
+            for (int l = 1; l <= max; l++)
+            {
+                int i = l - 1, col = i % columns, row = i / columns;
+                var pos = new Vector2(x0 + col * (tile + Gap), -96f - row * rowH - tile / 2f);
+                bool known = GM.IsDiscovered(d.chain, l);
+                Tile(card, pos, tile, ProcArt.Item(d.chain, l), known, l == d.level, OnTable(d.chain, l), l);
+                if (l < max) Arrow(card, pos + new Vector2(tile / 2f + Gap / 2f, 0f));
+            }
+            var hint = UIKit.Txt("Hint", card,
+                found < max ? "Birleştirdikçe gizli seviyeler açılır (" + found + "/" + max + ")." : "Bütün seviyeleri keşfettin!",
+                26, Dim, TextAnchor.MiddleCenter, false);
+            hint.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 32f), new Vector2(800f, 44f));
+            y += 20f;
+
+            // ---- where it comes from: big picture of the source box
             string src = Chains.SourceOf(d.chain);
-            var srow = Row(170f);
-            Tile(srow, 0f, ProcArt.Item(src, 1), true, false, null, 0);
-            var st = UIKit.Txt("Src", srow, Chains.Name(src, 1) + ": dokun, 1 enerji harca.\nBazen 2. seviye çıkar. Kaynak kutu masada parlıyor.",
-                26, Ink, TextAnchor.MiddleLeft, false);
-            st.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(176f, -75f), new Vector2(760f, 150f));
-            st.rectTransform.pivot = new Vector2(0f, 0.5f);
-            st.rectTransform.anchoredPosition = new Vector2(176f, -75f);
-            y += 10f;
+            var srow = UIKit.Rect("Source", body);
+            Top(srow, 170f);
+            y += 170f;
+            var st = UIKit.Txt("Label", srow, "Nereden çıkar:", 40, Ink, TextAnchor.MiddleRight, false);
+            st.fontStyle = FontStyle.Bold;
+            st.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, 18f), new Vector2(420f, 60f));
+            var sd = UIKit.Txt("Desc", srow, "dokun: 1 enerji", 26, Dim, TextAnchor.MiddleRight, false);
+            sd.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, -26f), new Vector2(420f, 40f));
+            var icon = UIKit.Img("Src", srow, ProcArt.Item(src, 1), Color.white);
+            icon.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(150f, 150f));
+            icon.preserveAspect = true;
+            var sn = UIKit.Txt("Name", srow, Chains.Name(src, 1), 26, Ink, TextAnchor.MiddleLeft, false);
+            sn.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(170f, 0f), new Vector2(260f, 40f));
 
-            Heading("Nerede kullanılır?");
+            // ---- which potions use it (only unlocked recipes)
             var uses = new List<Recipe>();
             foreach (var r in Recipes.All)
                 if (Recipes.Unlocked(r, GM.TasksDone) && (r.aChain == d.chain || r.bChain == d.chain)) uses.Add(r);
-            if (uses.Count == 0) { Para("Hayalet siparişlerinde. İksir tarifleri ilerledikçe açılır."); return; }
-            var urow = Row(230f);
-            for (int i = 0; i < uses.Count && i < 5; i++)
+            if (uses.Count == 0) return;
+            y += 10f;
+            Line("İksirlerde kullanılır:", 50f, 32, true);
+            var urow = UIKit.Rect("Uses", body);
+            Top(urow, 180f);
+            y += 180f;
+            int n = Mathf.Min(uses.Count, 5);
+            for (int i = 0; i < n; i++)
             {
                 var r = uses[i];
                 int need = r.aChain == d.chain ? r.aLevel : r.bLevel;
-                Tile(urow, i * 188f, ProcArt.Item(Chains.Iksir, r.id), true, need == d.level, r.Name + "\n(Sv. " + need + ")", 0);
+                var pos = new Vector2((i - (n - 1) / 2f) * 170f, -64f);
+                Tile(urow, pos, 120f, ProcArt.Item(Chains.Iksir, r.id), true, need == d.level, 0, 0);
+                var cap = UIKit.Txt("Cap", urow, "Sv. " + need + " lazım", 22, Dim, TextAnchor.UpperCenter, false);
+                cap.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(pos + new Vector2(0f, -70f), new Vector2(170f, 34f));
             }
         }
 
         void FillPotion(ItemData d)
         {
             var r = Recipes.Get(d.level);
-            sub.text = Chains.ChainTitle(d.chain);
             if (r == null) return;
-            Heading("Tarif");
-            var row = Row(250f);
-            Tile(row, 60f, ProcArt.Item(r.aChain, r.aLevel), true, false, Chains.Name(r.aChain, r.aLevel), r.aLevel);
-            var plus = UIKit.Txt("Plus", row, "+", 64, UIKit.Orange, TextAnchor.MiddleCenter, false);
-            plus.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(270f, -75f), new Vector2(60f, 80f));
-            Tile(row, 330f, ProcArt.Item(r.bChain, r.bLevel), true, false, Chains.Name(r.bChain, r.bLevel), r.bLevel);
-            var eq = UIKit.Txt("Eq", row, "=", 64, UIKit.Orange, TextAnchor.MiddleCenter, false);
-            eq.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(540f, -75f), new Vector2(60f, 80f));
-            Tile(row, 600f, ProcArt.Item(Chains.Iksir, r.id), true, true, r.Name, 0);
-
-            Heading("Nereden gelir?");
-            Para("Simya Kazanı'nda kaynar: " + (r.seconds >= 60 ? (r.seconds / 60f).ToString("0.#") + " dakika" : r.seconds + " saniye") + ".", 50f);
-            Heading("Değeri");
-            Para("Hayalet siparişinde " + r.Gold + " altın + " + Recipes.PotionStamps + " Pati Mührü. Satarsan " + BoardController.PotionSellPrice(r.id) + " altın.", 80f);
+            var card = CardBox(300f);
+            CardTitle(card, "Tarif");
+            Tile(card, new Vector2(-300f, -170f), 160f, ProcArt.Item(r.aChain, r.aLevel), true, false, OnTable(r.aChain, r.aLevel), r.aLevel);
+            Sign(card, "+", new Vector2(-150f, -170f));
+            Tile(card, new Vector2(0f, -170f), 160f, ProcArt.Item(r.bChain, r.bLevel), true, false, OnTable(r.bChain, r.bLevel), r.bLevel);
+            Sign(card, "=", new Vector2(150f, -170f));
+            Tile(card, new Vector2(300f, -170f), 160f, ProcArt.Item(Chains.Iksir, r.id), true, true, 0, 0);
+            y += 20f;
+            Line("Simya Kazanı'nda kaynar: " + (r.seconds >= 60 ? (r.seconds / 60f).ToString("0.#") + " dakika" : r.seconds + " saniye") + ".", 50f);
+            Line("Siparişte " + r.Gold + " altın + " + Recipes.PotionStamps + " Pati Mührü. Satarsan " + BoardController.PotionSellPrice(r.id) + " altın.", 50f);
         }
 
         void FillGenerator(ItemData d)
         {
-            sub.text = "Üretici";
-            Heading("Ne üretir?");
-            var row = Row(250f);
+            int gl = GM.GeneratorLevel(d.chain);
             string a = d.chain == Chains.Kazan ? Chains.Ot : Chains.Kristal;
             string b = d.chain == Chains.Kazan ? Chains.Mantar : Chains.Ag;
-            Tile(row, 0f, ProcArt.Item(a, 1), GM.IsDiscovered(a, 1), false, Chains.Name(a, 1), 1);
-            Tile(row, 188f, ProcArt.Item(b, 1), GM.IsDiscovered(b, 1), false, Chains.Name(b, 1), 1);
-            Tile(row, 376f, ProcArt.Item(a, 2), GM.IsDiscovered(a, 2), false, Chains.Name(a, 2), 2);
-            Tile(row, 564f, ProcArt.Item(b, 2), GM.IsDiscovered(b, 2), false, Chains.Name(b, 2), 2);
-            int gl = GM.GeneratorLevel(d.chain);
-            sub.text = "Üretici  •  Seviye " + gl + "/" + Generators.MaxLevel;
-            Para("Her dokunuş 1 enerji. " + Generators.ChanceText(gl) + ".", 50f);
-            Heading("Yükseltme");
-            Para(gl < Generators.MaxLevel
-                ? "Sonraki seviye (" + Generators.UpgradeCost(gl) + " altın): " + Generators.ChanceText(gl + 1) + ".\nKutuyu seçip alttaki 'Yükselt'e bas."
-                : "En üst seviyede! Her dokunuş en verimli hâlinde.", 90f);
+            var card = CardBox(300f);
+            CardTitle(card, "Üretir  •  Sv. " + gl + "/" + Generators.MaxLevel);
+            Tile(card, new Vector2(-300f, -170f), 160f, ProcArt.Item(a, 1), GM.IsDiscovered(a, 1), false, OnTable(a, 1), 1);
+            Tile(card, new Vector2(-100f, -170f), 160f, ProcArt.Item(b, 1), GM.IsDiscovered(b, 1), false, OnTable(b, 1), 1);
+            Tile(card, new Vector2(100f, -170f), 160f, ProcArt.Item(a, 2), GM.IsDiscovered(a, 2), false, OnTable(a, 2), 2);
+            Tile(card, new Vector2(300f, -170f), 160f, ProcArt.Item(b, 2), GM.IsDiscovered(b, 2), false, OnTable(b, 2), 2);
+            y += 20f;
+            Line("Her dokunuş 1 enerji. " + Generators.ChanceText(gl) + ".", 50f);
+            Line(gl < Generators.MaxLevel
+                ? "Sonraki seviye " + Generators.UpgradeCost(gl) + " altın: " + Generators.ChanceText(gl + 1) + "."
+                : "En üst seviyede!", 50f);
         }
     }
 }
