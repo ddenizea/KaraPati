@@ -17,6 +17,7 @@ namespace KaraPati
 
         Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra, doorCat, tripChest;
         Text badgeText, zzz, potTimer;
+        Image reservedGlow, reservedHead;
         CanvasGroup cg;
         Vector2 dragOffset;
         Transform homeParent;
@@ -85,6 +86,17 @@ namespace KaraPati
             needed.rectTransform.At(new Vector2(-46f, -46f), new Vector2(38f, 38f));
             needed.gameObject.SetActive(false);
 
+            // locked for the Mini Apprentice: an orange frame and its little head in the corner
+            reservedGlow = UIKit.Img("Reserved", rt, ProcArt.Rounded, new Color(1f, 0.6f, 0.25f, 0.35f), true);
+            reservedGlow.rectTransform.sizeDelta = new Vector2(130f, 130f);
+            reservedGlow.raycastTarget = false;
+            reservedGlow.transform.SetSiblingIndex(0);
+            reservedHead = UIKit.Img("MiniHead", rt, ProcArt.SideCat(4, 4), Color.white);
+            reservedHead.rectTransform.At(new Vector2(-40f, 40f), new Vector2(62f, 62f));
+            reservedHead.raycastTarget = false;
+            reservedGlow.gameObject.SetActive(false);
+            reservedHead.gameObject.SetActive(false);
+
             napCat = UIKit.Img("NapCat", rt, ProcArt.SleepCat, Color.white);
             napCat.rectTransform.At(new Vector2(26f, 24f), new Vector2(84f, 84f));
             zzz = UIKit.Txt("Zzz", napCat.transform, "z", 34, UIKit.Cream);
@@ -98,6 +110,8 @@ namespace KaraPati
             if (data == null) return;
             icon.sprite = ProcArt.Item(data.chain, data.level);
             icon.color = data.nap ? new Color(0.7f, 0.7f, 0.78f) : Color.white;
+            reservedGlow.gameObject.SetActive(data.reserved);
+            reservedHead.gameObject.SetActive(data.reserved);
             napCat.gameObject.SetActive(false); // the sleeping kitten itself sits on top now
             bool gen = Chains.IsSpecial(data.chain);
             bool machine = Chains.IsGenerator(data.chain);

@@ -241,13 +241,13 @@ namespace KaraPati
 
         // ------------------------------------------------------------------ the Master's shelf
         // The Master Cat works in the shop during the day; at home it naps on a cushion on a wall shelf.
-        // Tap it and it plays with Kara Pati (once every two hours: the happiness bar fills a quarter).
+        // Tap it and it plays with Kara Pati (every 5 minutes; the happiness bar fills a little).
         RectTransform ustaShelf;
         Image ustaImg, yarn;
         Text ustaLabel;
         Vector2 ustaHome = new Vector2(250f, 40f);
         bool playing;
-        const float PlayHours = 2f;
+        const float PlayHours = 5f / 60f;   // they can play again after 5 minutes
 
         void BuildUstaShelf(RectTransform f)
         {
@@ -295,7 +295,7 @@ namespace KaraPati
                 var left = System.TimeSpan.FromTicks(GM.UstaPlayAt - now);
                 Tween.Punch(ustaImg.transform, 0.08f, 0.3f);
                 Sfx.Play("paw", 0.8f);
-                GM.Toast(who + " esniyor: \"Biraz sonra oynarız...\" (" + (left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk") + ")");
+                GM.Toast(who + " esniyor: \"Biraz sonra oynarız...\" (" + (left.Minutes > 0 ? left.Minutes + " dk " : "") + left.Seconds + " sn)");
                 return;
             }
             StartCoroutine(PlayYarn(who));

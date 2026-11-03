@@ -108,6 +108,14 @@ namespace KaraPati
                 S.Seg(q, new Vector2(0.42f, -0.62f), new Vector2(0.55f + tw, -0.28f), 0.06f)), limb, 0.045f);
         }
 
+        /// <summary>The Mini Apprentice's little red cap with a white pompom (graduation).</summary>
+        public static Sprite RedCap => Make("ui_redcap", 96, p =>
+        {
+            p.FillOutlined(q => S.U(S.Ellipse(q, new Vector2(0f, -0.05f), new Vector2(0.62f, 0.42f)),
+                S.Box(q, new Vector2(0f, -0.32f), new Vector2(0.72f, 0.13f), 0.08f)), new Color(0.88f, 0.3f, 0.32f), 0.08f);
+            p.FillOutlined(q => S.Circle(q, new Vector2(0.06f, 0.48f), 0.2f), new Color(1f, 0.95f, 0.9f), 0.06f);
+        });
+
         static void DrawCustomer(Painter p, string id, bool full)
         {
             switch (id)

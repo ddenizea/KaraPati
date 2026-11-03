@@ -22,7 +22,7 @@ namespace KaraPati
         const float SpawnMin = 25f, SpawnMax = 40f;   // seconds between kittens jumping onto the table
         public const int HouseSlots = 2;              // kittens that fit in the cat house
         public const double MiniHours = 1.0;          // a Mini Apprentice helps for one hour
-        public const float TrainMinutes = 10f;        // the Master trains a kitten for 10 minutes
+        public const float TrainMinutes = 3f;         // the Master trains a kitten for 3 minutes
         const float GraceSeconds = 10f;               // a kitten that just arrived is left alone for a bit
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
@@ -149,6 +149,7 @@ namespace KaraPati
             ChaseTick(dt);
             HissTick(dt);
             MiniTick();
+            TrainYarnTick(dt);
             TripTick(now);
             houseCheck -= dt;
             if (houseCheck <= 0f) { houseCheck = 3f; EnsureHouse(); }
@@ -597,6 +598,17 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        /// <summary>Test: send the Mini away if there is one, then the Master starts training a new kitten.</summary>
+        public void DebugStartTraining()
+        {
+            var old = Mini();
+            if (old) { ReleaseReservations(); miniJob = null; Release(old); }
+            var m = Master();
+            if (!m || Trainee()) return;
+            var k = Create(1, m.Pos + new Vector2(110f, 0f), KittenColors.Pick());
+            StartTraining(m, k);
+        }
+
         public void DebugFinishTrip() { if (Trip >= 0) TripUntil = DateTime.UtcNow.Ticks; }
 
         /// <summary>Test: put the apprentice at the pot; a finished potion gets 60 s back on its timer so the speed-up shows.</summary>
@@ -761,7 +773,7 @@ namespace KaraPati
             int side = m.Pos.x > 0f ? -1 : 1;   // the kitten sits on the roomier side
             m.Sit(m.Pos, side);
             k.trainUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(TrainMinutes).Ticks;
-            k.Sit(m.Pos + new Vector2(side * 110f, -10f), -side);
+            k.Sit(m.Pos + new Vector2(side * 165f, -10f), -side);   // room between them for the yarn ball
             Tween.Pop(k.rt, 0.3f);
             Say(m, "Bak ve öğren!", UIKit.Cream);
             Sfx.Play("paw", 0.9f, 0.7f);
@@ -773,16 +785,69 @@ namespace KaraPati
         {
             var pos = k.Pos;
             int col = Mathf.Clamp(k.color, 0, KittenColors.Count - 1);
+            var m = Master();
+            // graduation: the Master tosses the little red cap onto the kitten's head
+            if (m) Graduation(m.Pos + new Vector2(0f, 60f), pos + new Vector2(0f, 46f));
             Release(k);
             var mini = Create(4, pos, col);
             mini.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(MiniHours).Ticks;
             Tween.Pop(mini.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
-            var m = Master();
+            Say(mini, "Artık Minik Çıraksın!", UIKit.Orange);
             if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
             Sfx.Play("levelup", 1.3f);
             GM.Toast(KittenColors.Name(col) + " Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", UIKit.Orange, 6f);
             GM.OnBoardChanged();
+        }
+
+        void Graduation(Vector2 from, Vector2 to)
+        {
+            var cap = UIKit.Img("Cap", layer, ProcArt.RedCap, Color.white);
+            cap.raycastTarget = false;
+            var crt = cap.rectTransform;
+            crt.sizeDelta = new Vector2(70f, 70f);
+            crt.anchoredPosition = from;
+            Tween.Run(0.6f, t =>
+            {
+                if (!crt) return;
+                crt.anchoredPosition = Vector2.Lerp(from, to, t) + new Vector2(0f, Mathf.Sin(t * Mathf.PI) * 90f);
+                crt.localEulerAngles = new Vector3(0f, 0f, (1f - t) * 360f);
+            }, () =>
+            {
+                if (!crt) return;
+                FX.Burst(B.FxLayer, to, new Color(1f, 0.85f, 0.4f), 10);
+                Destroy(crt.gameObject);
+            });
+        }
+
+        // ------------------------------------------------------------ training: the Master and the kitten pass a yarn ball
+        Image trainYarn;
+        float yarnT;
+
+        void TrainYarnTick(float dt)
+        {
+            var k = Trainee();
+            var m = Master();
+            bool on = k && m && m.state == KittenAgent.State.Sitting && !k.IsHeld;
+            if (!on) { if (trainYarn) trainYarn.gameObject.SetActive(false); return; }
+            if (!trainYarn)
+            {
+                trainYarn = UIKit.Img("TrainYarn", layer, ProcArt.Item(Chains.Ag, 2), Color.white);
+                trainYarn.raycastTarget = false;
+                trainYarn.rectTransform.sizeDelta = new Vector2(46f, 46f);
+            }
+            if (!trainYarn.gameObject.activeSelf) { trainYarn.gameObject.SetActive(true); yarnT = 0f; }
+            trainYarn.transform.SetAsLastSibling();
+            const float pass = 1.3f;   // seconds per pass
+            int before = (int)(yarnT / pass);
+            yarnT += dt;
+            int leg = (int)(yarnT / pass);
+            if (leg != before) { Tween.Punch((leg % 2 == 0 ? m : k).rt, 0.1f, 0.2f); Sfx.Play("paw", 1.4f, 0.35f); }
+            float e = (yarnT % pass) / pass;
+            Vector2 a = m.Pos + new Vector2(0f, -20f), b = k.Pos + new Vector2(0f, -20f);
+            if (leg % 2 == 1) { var tmp = a; a = b; b = tmp; }
+            trainYarn.rectTransform.anchoredPosition = Vector2.Lerp(a, b, e) + new Vector2(0f, Mathf.Sin(e * Mathf.PI) * 75f);
+            trainYarn.rectTransform.localEulerAngles = new Vector3(0f, 0f, -e * 360f);
         }
 
         void MiniFarewell(KittenAgent a)
@@ -800,7 +865,46 @@ namespace KaraPati
             public Recipe recipe;
             public readonly List<ReqSave> needs = new List<ReqSave>();   // still to bring
             public Vector2Int target = new Vector2Int(-1, -1);          // item cell it is walking to
+            public readonly List<Vector2Int> reserved = new List<Vector2Int>();   // locked items, one per need
             public bool carrying;
+        }
+
+        /// <summary>Lock or unlock an item the Mini Apprentice is going to fetch (orange frame + its little head).</summary>
+        void Reserve(Vector2Int c, bool on)
+        {
+            var d = B.Get(c);
+            if (d == null || d.reserved == on) return;
+            d.reserved = on;
+            B.RefreshView(c);
+        }
+
+        void ReleaseReservations()
+        {
+            if (miniJob == null) return;
+            foreach (var c in miniJob.reserved) Reserve(c, false);
+            miniJob.reserved.Clear();
+        }
+
+        /// <summary>"Vazgeç": the Mini Apprentice drops the job; what it carries goes back on the table.</summary>
+        public void CancelMiniJob()
+        {
+            var mini = Mini();
+            if (miniJob == null) return;
+            ReleaseReservations();
+            if (mini && miniJob.carrying && miniJob.needs.Count > 0)
+            {
+                var q = miniJob.needs[0];
+                var from = mini.Pos;
+                var near = BoardController.LocalToCellClamped(from);
+                if (B.NearestEmpty(near, out var e)) B.SpawnFromPos(from, e, new ItemData(q.chain, q.level));
+                else GM.Storage.Add(new ItemData(q.chain, q.level));
+                mini.carryChain = null;
+                mini.SetCarry(null);
+            }
+            miniJob = null;
+            if (mini) { mini.Idle(1.5f); Say(mini, "Peki!", UIKit.Cream); }
+            GM.Toast("Minik Çırak işi bıraktı, malzemeler serbest.");
+            GM.OnBoardChanged();
         }
         MiniJob miniJob;
 
@@ -845,6 +949,10 @@ namespace KaraPati
                 return;
             }
             miniJob = job;
+            // lock exactly the items it found, in the same order as the needs
+            var lockUsed = new HashSet<Vector2Int>();
+            foreach (var q in job.needs)
+                if (FindIngredient(q, lockUsed, out var rc)) { lockUsed.Add(rc); job.reserved.Add(rc); Reserve(rc, true); }
             Say(mini, "Hemen!", UIKit.Orange);
             Sfx.Play("paw", 1.3f, 0.7f);
         }
@@ -858,7 +966,7 @@ namespace KaraPati
             {
                 if (skip != null && skip.Contains(c)) continue;
                 var d = B.Get(c);
-                if (d == null || d.Locked || d.chain != q.chain || d.level != q.level) continue;
+                if (d == null || d.Locked || d.chain != q.chain || d.level != q.level) continue;   // reserved items count as locked
                 float dist = mini ? (BoardController.CellPos(c) - mini.Pos).sqrMagnitude : 0f;
                 if (dist < best) { best = dist; cell = c; }
             }
@@ -869,7 +977,7 @@ namespace KaraPati
         {
             if (miniJob == null) return;
             var mini = Mini();
-            if (!mini || mini.IsGone) { miniJob = null; return; }
+            if (!mini || mini.IsGone) { ReleaseReservations(); miniJob = null; return; }
             if (mini.IsHeld || mini.state == KittenAgent.State.Entering) return;
             if (!B.FindFirst(d => d.chain == Chains.Simya, out var pc)) { miniJob = null; return; }
 
@@ -877,24 +985,33 @@ namespace KaraPati
             {
                 if (miniJob.needs.Count == 0) { FinishMiniJob(mini, pc); return; }
                 var q = miniJob.needs[0];
+                // go for the item that was locked for it
+                if (miniJob.reserved.Count > 0) miniJob.target = miniJob.reserved[0];
                 var d = B.Get(miniJob.target);
-                // (re)pick the nearest matching item if the old target moved, merged or got sold
-                if (d == null || d.Locked || d.chain != q.chain || d.level != q.level)
+                // (re)pick the nearest matching item if the target is gone after all
+                if (d == null || d.nap || d.bubble || d.chain != q.chain || d.level != q.level)
                 {
+                    if (miniJob.reserved.Count > 0) { Reserve(miniJob.reserved[0], false); miniJob.reserved.RemoveAt(0); }
                     if (!FindIngredient(q, null, out miniJob.target))
                     {
                         mini.ShowWant(new List<Sprite> { ProcArt.Item(q.chain, q.level) }, 3f);
                         GM.Toast("Minik Çırak " + Chains.Name(q.chain, q.level) + " bulamadı.", new Color(1f, 0.7f, 0.6f));
+                        ReleaseReservations();
                         miniJob = null;
                         mini.Idle(1.5f);
                         return;
                     }
+                    miniJob.reserved.Insert(0, miniJob.target);
+                    Reserve(miniJob.target, true);
                 }
                 var tp = BoardController.CellPos(miniJob.target);
                 mini.ChaseTo(tp);
                 if ((mini.Pos - tp).sqrMagnitude < 30f * 30f)
                 {
                     // grab it
+                    if (miniJob.reserved.Count > 0) miniJob.reserved.RemoveAt(0);
+                    var grabbed = B.Get(miniJob.target);
+                    if (grabbed != null) grabbed.reserved = false;
                     B.Remove(miniJob.target);
                     mini.carryChain = q.chain;
                     mini.carryLevel = q.level;
@@ -920,6 +1037,7 @@ namespace KaraPati
                 // the pot changed meanwhile: put the ingredient back on the table
                 if (B.NearestEmpty(pc, out var e)) B.SpawnFromPos(mini.Pos, e, new ItemData(item.chain, item.level));
                 GM.Toast("Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı.");
+                ReleaseReservations();
                 miniJob = null;
                 mini.Idle(1.5f);
                 return;
@@ -930,6 +1048,7 @@ namespace KaraPati
 
         void FinishMiniJob(KittenAgent mini, Vector2Int pc)
         {
+            ReleaseReservations();
             miniJob = null;
             mini.Idle(2f);
             Say(mini, "Tamam!", UIKit.Orange);

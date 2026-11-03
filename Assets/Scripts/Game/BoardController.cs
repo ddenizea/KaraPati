@@ -383,7 +383,7 @@ namespace KaraPati
             if (b.Locked)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
-                GM.Toast(b.bubble ? "Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)" : "Orada bir yavru uyuyor! Önce dokunup okşa.");
+                GM.Toast(b.reserved ? "Minik Çırak bunu kazana taşıyacak." : b.bubble ? "Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)" : "Orada bir yavru uyuyor! Önce dokunup okşa.");
                 return;
             }
             if (a.chain == b.chain && a.level == b.level && Chains.IsIngredient(a.chain))

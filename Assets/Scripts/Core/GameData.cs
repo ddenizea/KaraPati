@@ -92,7 +92,8 @@ namespace KaraPati
         public bool IsWildKitten => chain == Chains.Kedi && level == 1;
         public string Name => Chains.Name(chain, level);
         /// <summary>Cannot be dragged, merged, sold, stored or delivered right now.</summary>
-        public bool Locked => nap || bubble;
+        [NonSerialized] public bool reserved;   // a Mini Apprentice is about to carry this to the pot (not saved)
+        public bool Locked => nap || bubble || reserved;
     }
 
     public class Recipe

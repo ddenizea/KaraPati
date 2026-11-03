@@ -890,11 +890,11 @@ namespace KaraPati
             MarkDirty();
         }
 
-        /// <summary>The Master and Kara Pati played: the happiness bar fills a quarter (both bowls a bit fuller).</summary>
+        /// <summary>The Master and Kara Pati played: the happiness bar fills a little (both bowls 5% fuller).</summary>
         public void UstaPlayed(float cooldownHours)
         {
             UstaPlayAt = DateTime.UtcNow.Ticks + TimeSpan.FromHours(cooldownHours).Ticks;
-            long boost = TimeSpan.FromHours(Tower.BowlHours * 0.25f).Ticks, now = DateTime.UtcNow.Ticks;
+            long boost = TimeSpan.FromHours(Tower.BowlHours * 0.05f).Ticks, now = DateTime.UtcNow.Ticks;
             if (lastFed > 0) lastFed = Math.Min(now, lastFed + boost);
             if (lastWatered > 0) lastWatered = Math.Min(now, lastWatered + boost);
             MarkDirty();
@@ -1235,6 +1235,12 @@ namespace KaraPati
             }
 
             infoTitle.text = d.Name + (Chains.IsSpecial(d.chain) ? "" : "  <size=26>(Sv. " + d.level + ")</size>");
+            if (d.reserved)
+            {
+                infoDesc.text = "Minik Çırak bunu kazana taşıyacak. Vazgeçmek için Minik Çırak'a dokun.";
+                actionBtn.gameObject.SetActive(false);
+                return;
+            }
             actionBtn.gameObject.SetActive(false);
             btnImg.color = UIKit.Orange;
 
@@ -1390,8 +1396,9 @@ namespace KaraPati
                     infoDesc.text = (Cats.MiniBusy ? "Malzemeleri kazana taşıyor..." : "Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın.")
                         + "\nKalan: " + (left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn");
                     actionBtn.gameObject.SetActive(true);
-                    actionBtn.Label().text = "Tarifler";
-                    btnImg.color = UIKit.Green;
+                    // while it runs for a recipe: "Vazgeç" drops the job and frees the locked items
+                    actionBtn.Label().text = Cats.MiniBusy ? "Vazgeç" : "Tarifler";
+                    btnImg.color = Cats.MiniBusy ? new Color(0.85f, 0.3f, 0.3f) : UIKit.Green;
                     break;
                 }
                 default:
@@ -1415,7 +1422,7 @@ namespace KaraPati
             {
                 if (infoKitten.level == 1) Cats.Adopt(infoKitten);
                 else if (infoKitten.level == 2) Cats.Promote(infoKitten);
-                else if (infoKitten.level == 4) OpenRecipes();
+                else if (infoKitten.level == 4) { if (Cats.MiniBusy) { Cats.CancelMiniJob(); ShowKittenInfo(infoKitten); } else OpenRecipes(); }
                 else if (infoKitten.state != KittenAgent.State.Sitting) expeditionPanel.Open();
                 return;
             }

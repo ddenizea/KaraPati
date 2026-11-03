@@ -154,6 +154,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Eğitimi Başlat (Play modunda)")]
+        static void StartTraining()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugStartTraining();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Müşteri Dostluğu +3 (Play modunda)")]
         static void FriendPlus()
         {
