@@ -77,6 +77,13 @@ namespace KaraPati
                 oa);
         }
 
+        /// <summary>Paint everything drawn so far in one flat colour, keeping its shape (a silhouette).</summary>
+        public void Silhouette(Color c)
+        {
+            for (int i = 0; i < px.Length; i++)
+                if (px[i].a > 0f) px[i] = new Color(c.r, c.g, c.b, px[i].a * c.a);
+        }
+
         public Texture2D ToTexture() => ToTexture(false);
 
         public Texture2D ToTexture(bool readable)

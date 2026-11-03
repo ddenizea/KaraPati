@@ -140,6 +140,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Müşteri Dostluğu +3 (Play modunda)")]
+        static void FriendPlus()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Orders.DebugFriendship(3);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         // ------------------------------------------------------------ save backup for testing
         // Test on the real save, then put it back exactly as it was. The file lives in UserSettings/,
         // which Git ignores, so it never ends up on GitHub.

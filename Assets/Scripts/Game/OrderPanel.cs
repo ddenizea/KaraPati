@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>Three ghost customers asking for potion ingredients.</summary>
+    /// <summary>Three customers (ghosts and fantasy creatures) asking for ingredients; each order makes them a better friend.</summary>
     public class OrderPanel : MonoBehaviour
     {
         const int SlotCount = 3;
@@ -15,7 +15,8 @@ namespace KaraPati
             public RectTransform root;
             public CanvasGroup group;
             public Image ghost;
-            public Text name;
+            public Image fog, glow, heart;
+            public Text name, heartText;
             public RectTransform[] tiles = new RectTransform[2];
             public Image[] icons = new Image[2];
             public Image[] checks = new Image[2];
@@ -43,8 +44,26 @@ namespace KaraPati
                 card.root.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2((i - 1) * 345f, 0f), new Vector2(330f, 395f));
                 card.group = bg.gameObject.AddComponent<CanvasGroup>();
 
+                // golden glow behind a best friend
+                card.glow = UIKit.Img("Glow", card.root, ProcArt.Sparkle, new Color(1f, 0.85f, 0.35f, 0.8f));
+                card.glow.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(150f, 150f));
                 card.ghost = UIKit.Img("Ghost", card.root, ProcArt.Ghost(0), Color.white);
-                card.ghost.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(118f, 118f));
+                card.ghost.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(124f, 124f));
+                card.ghost.preserveAspect = true;
+                // tap the customer: how good friends you are
+                card.ghost.raycastTarget = true;
+                var cb = card.ghost.gameObject.AddComponent<Button>();
+                cb.transition = Selectable.Transition.None;
+                cb.onClick.AddListener(() => ShowFriendInfo(slot));
+                card.fog = UIKit.Img("Fog", card.ghost.transform, ProcArt.Fog, Color.white);
+                card.fog.rectTransform.At(new Vector2(0f, -34f), new Vector2(150f, 80f));
+                card.fog.raycastTarget = false;
+                // friendship heart, top left
+                card.heart = UIKit.Img("Heart", card.root, ProcArt.Heart, Color.white);
+                card.heart.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(36f, -36f), new Vector2(56f, 56f));
+                card.heartText = UIKit.Txt("N", card.heart.transform, "0", 26, Color.white);
+                card.heartText.fontStyle = FontStyle.Bold;
+                card.heartText.rectTransform.At(new Vector2(0f, 3f), new Vector2(50f, 34f));
 
                 card.name = UIKit.Txt("Name", card.root, "", 28, UIKit.Cream);
                 card.name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -126f), new Vector2(320f, 36f));
@@ -90,9 +109,28 @@ namespace KaraPati
             {
                 var g = cards[i]?.ghost;
                 if (g) g.rectTransform.anchoredPosition = new Vector2(0f, -8f + Mathf.Sin(t * 2f + i * 1.7f) * 6f);
+                var f = cards[i]?.fog;
+                if (f && f.gameObject.activeSelf) f.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(t * 0.7f + i) * 8f, -34f);
+                var gl = cards[i]?.glow;
+                if (gl && gl.gameObject.activeSelf) gl.rectTransform.localRotation = Quaternion.Euler(0f, 0f, t * 20f);
                 if (ready[i] && cards[i].give)
                     cards[i].give.transform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
             }
+        }
+
+        void ShowFriendInfo(int slot)
+        {
+            var o = orders[slot];
+            var c = o != null ? Customers.Get(o.cust) : null;
+            if (c == null) return;
+            Tween.Punch(cards[slot].ghost.rectTransform, 0.1f, 0.25f);
+            Sfx.Play("click");
+            int st = GM.FriendStage(c), pts = GM.FriendPoints(c);
+            string who = st == 0 ? "Sisin içindeki yabancı" : c.name;
+            if (st >= c.MaxStage) { GM.Toast(who + " artık " + Customers.BestFriend + "! Siparişleri +1 Pati Mührü verir.", UIKit.Orange, 4f); return; }
+            int need = c.PointsFor(st + 1) - pts;
+            GM.Toast(who + " · " + Customers.StageName(c, st) + " (" + st + "/" + c.MaxStage + ", " + c.difficulty + ")\n"
+                + Customers.StageName(c, st + 1) + " olmak için " + need + " sipariş puanı daha. İksir 2 sayar.", UIKit.Cream, 4f);
         }
 
         void ShowReqInfo(int slot, int k)
@@ -127,17 +165,20 @@ namespace KaraPati
             int minLvl = Mathf.Max(1, maxLvl - 2);
             int count = (served >= 2 && Random.value < 0.45f) ? 2 : 1;
 
+            // only customers that already visit at the player's level, and not one already waiting
             var used = new HashSet<string>();
-            foreach (var o in orders) if (o != null) used.Add(o.ghost);
-            int gi;
-            int guard = 0;
-            do { gi = Random.Range(0, Ghosts.Names.Length); } while (used.Contains(Ghosts.Names[gi]) && guard++ < 20);
+            foreach (var o in orders) if (o != null && o.cust != null) used.Add(o.cust);
+            var pool = new List<CustomerDef>();
+            foreach (var c in Customers.All) if (c.unlockLevel <= GM.Level && !used.Contains(c.id)) pool.Add(c);
+            if (pool.Count == 0) foreach (var c in Customers.All) if (c.unlockLevel <= GM.Level) pool.Add(c);
+            var cust = pool[Random.Range(0, pool.Count)];
 
             var order = new OrderSave
             {
-                ghost = Ghosts.Names[gi],
-                tint = gi,
-                line = Random.Range(0, Ghosts.Lines.Length)
+                cust = cust.id,
+                ghost = cust.name,
+                tint = 0,
+                line = Random.Range(0, ThankLines.Length)
             };
             // sometimes a ghost wants a potion instead (only recipes the player has unlocked)
             int unlocked = Recipes.UnlockedCount(GM.TasksDone);
@@ -151,6 +192,30 @@ namespace KaraPati
             for (int i = 0; i < count; i++)
                 order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(minLvl, maxLvl + 1) });
             return order;
+        }
+
+        static readonly string[] ThankLines =
+        {
+            "Tam aradığım şey! Teşekkürler!",
+            "Bu dükkânı çok seviyorum.",
+            "Kara Pati'ye selamlar!",
+            "Harika, yine geleceğim!",
+            "Mis gibi kokuyor. Sağ ol!",
+            "Bunu bulmak ne zordu, iyi ki varsın.",
+        };
+
+        /// <summary>Friendship points for an order: one per item, a potion counts double.</summary>
+        static int FriendPointsOf(OrderSave o)
+        {
+            int n = 0;
+            foreach (var q in o.reqs) n += Chains.IsPotion(q.chain) ? 2 : 1;
+            return n;
+        }
+
+        static bool IsBestFriend(OrderSave o)
+        {
+            var c = o != null ? Customers.Get(o.cust) : null;
+            return c != null && GameManager.I != null && GameManager.I.IsBestFriend(c);
         }
 
         static int Reward(OrderSave o)
@@ -173,6 +238,7 @@ namespace KaraPati
         {
             int r = 0;
             foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 4 ? 2 : 1;
+            if (IsBestFriend(o)) r += 1;   // a best friend tips one extra stamp
             return r;
         }
 
@@ -189,6 +255,8 @@ namespace KaraPati
             var o = orders[i];
             bool has = o != null;
             card.ghost.gameObject.SetActive(has);
+            card.heart.gameObject.SetActive(has);
+            card.glow.gameObject.SetActive(false);
             card.name.text = has ? o.ghost : "...";
             card.give.gameObject.SetActive(has);
             card.stampBadge.SetActive(has);
@@ -204,7 +272,21 @@ namespace KaraPati
             }
             if (has)
             {
-                card.ghost.sprite = ProcArt.Ghost(o.tint);
+                var c = Customers.Get(o.cust);
+                int st = c != null ? GM.FriendStage(c) : 0;
+                bool best = c != null && st >= c.MaxStage;
+                if (c == null) card.ghost.sprite = ProcArt.Ghost(o.tint);
+                else if (st == 0) card.ghost.sprite = ProcArt.CustomerSilhouette(c.id);
+                else card.ghost.sprite = ProcArt.Customer(c.id, st >= c.FullLookStage);
+                // the fog thins out stage by stage
+                float fog = c == null ? 0f : st == 0 ? 0.6f : st == 1 ? 0.4f : st == 2 && c.MaxStage > 3 ? 0.25f : 0f;
+                card.fog.gameObject.SetActive(fog > 0f);
+                card.fog.color = new Color(1f, 1f, 1f, fog);
+                card.ghost.color = Color.white;
+                card.name.text = c == null ? o.ghost : st == 0 ? "???" : c.name;
+                card.heart.color = Color.white;
+                card.heartText.text = st.ToString();
+                card.glow.gameObject.SetActive(best);
                 card.giveText.text = "Ver  +" + Reward(o);
                 card.stampText.text = StampReward(o).ToString();
             }
@@ -253,9 +335,12 @@ namespace KaraPati
             GM.AddStamps(StampReward(o));
             GM.AddPumpkins(o.reqs.Count + (o.reqs.Count > 1 ? 1 : 0));
             GM.RegisterServed();
-            GM.Toast(o.ghost + ": \"" + Ghosts.Lines[o.line % Ghosts.Lines.Length] + "\"", UIKit.Cream, 4f);
+            var cust = Customers.Get(o.cust);
+            string who = cust != null && GM.FriendStage(cust) == 0 ? "???" : o.ghost;
+            GM.Toast(who + ": \"" + ThankLines[o.line % ThankLines.Length] + "\"", UIKit.Cream, 4f);
 
-            GM.OnOrderDelivered(Mathf.Max(0, System.Array.IndexOf(Ghosts.Names, o.ghost)));
+            GM.OnOrderDelivered(Random.Range(0, Ghosts.Names.Length));   // the old ghost sticker set stays collectable
+            if (cust != null) GM.AddFriendship(cust.id, FriendPointsOf(o));
             orders[i] = null;
             ready[i] = false;
             Tween.Punch(card.root, 0.08f, 0.3f);
@@ -279,6 +364,14 @@ namespace KaraPati
             GM.MarkDirty();
         }
 
+        /// <summary>Test helper: friendship points for the first customer waiting, then redraw the cards.</summary>
+        public void DebugFriendship(int pts)
+        {
+            foreach (var o in orders)
+                if (o != null && Customers.Get(o.cust) != null) { GM.AddFriendship(o.cust, pts); break; }
+            for (int i = 0; i < SlotCount; i++) ShowCard(i);
+        }
+
         // ------------------------------------------------------------ save
         public void WriteSave(List<OrderSave> list)
         {
@@ -291,6 +384,14 @@ namespace KaraPati
             for (int i = 0; i < SlotCount; i++)
             {
                 orders[i] = (list != null && i < list.Count && list[i].reqs != null && list[i].reqs.Count > 0) ? list[i] : null;
+                // orders from before the customers update: give them to a customer who visits now
+                if (orders[i] != null && Customers.Get(orders[i].cust) == null)
+                {
+                    var c = Customers.ByName(orders[i].ghost);
+                    if (c == null || c.unlockLevel > GM.Level) c = Customers.All[i % 3];
+                    orders[i].cust = c.id;
+                    orders[i].ghost = c.name;
+                }
                 cards[i].group.alpha = 1f;
                 ShowCard(i);
             }

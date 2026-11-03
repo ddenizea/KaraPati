@@ -187,7 +187,8 @@ namespace KaraPati
     [Serializable]
     public class OrderSave
     {
-        public string ghost;
+        public string cust;    // customer id (Customers.All)
+        public string ghost;   // display name (old saves only had this)
         public int tint;
         public int line;
         public List<ReqSave> reqs = new List<ReqSave>();
@@ -235,7 +236,8 @@ namespace KaraPati
         public List<PlacedSave> placed = new List<PlacedSave>();
         public int ustaTrip;                    // Master cat's expedition: 0 = at home, otherwise trip index + 1
         public long ustaTripUntil;              // UTC ticks when the Master comes back
-        public int ustaTripColor;               // colour + 1 of the Master who is away // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
+        public int ustaTripColor;               // colour + 1 of the Master who is away
+        public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order) // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int level = 1;
         public int xp;
@@ -837,6 +839,126 @@ namespace KaraPati
         }
 
         public static string Duration(int k) => Minutes[k] < 60 ? Minutes[k] + " dk" : Minutes[k] / 60 + " saat";
+    }
+
+    /// <summary>One customer of the shop: who they are, how hard they are to befriend, what they tell you.</summary>
+    public class CustomerDef
+    {
+        public string id, name;
+        public bool ghost;          // one of the town's ghosts (the others are fantasy creatures)
+        public string difficulty;   // Kolay / Orta / Zor / En zor
+        public int unlockLevel;     // player level at which they start visiting
+        public int[] steps;         // points needed for each next friendship stage
+        public string[] lines;      // what they say when you reach stage 1..max
+        public float size;          // height compared to Kara Pati (for the tower)
+        public int MaxStage => steps.Length;
+
+        /// <summary>Points needed to reach `stage` (cumulative).</summary>
+        public int PointsFor(int stage)
+        {
+            int n = 0;
+            for (int i = 0; i < stage && i < steps.Length; i++) n += steps[i];
+            return n;
+        }
+
+        public int StageOf(int points)
+        {
+            int st = 0;
+            while (st < steps.Length && points >= PointsFor(st + 1)) st++;
+            return st;
+        }
+
+        /// <summary>From this stage on the customer shows its signature items (hat, sword, goggles...).</summary>
+        public int FullLookStage => Mathf.CeilToInt(steps.Length * 0.6f);
+    }
+
+    /// <summary>
+    /// The shop's customers. Everyone starts as a shadow in the fog ("???"); each delivered order is a friendship
+    /// point (a potion counts double) and every new stage shows a bit more of who they are.
+    /// </summary>
+    public static class Customers
+    {
+        public static readonly string[] StageNames = { "Yabancı", "Tanıdık", "Arkadaş", "Dost", "Yakın Dost", "Sırdaş" };
+        public const string BestFriend = "Can Dostu";
+
+        public static readonly CustomerDef[] All =
+        {
+            new CustomerDef { id = "kurbaga", name = "Kurbağa Prens", difficulty = "Kolay", unlockLevel = 1, size = 0.5f, steps = new[] { 2, 3, 4 }, lines = new[] {
+                "Vırak! Ben Kurbağa Prens. Bir cadı beni... neyse, uzun hikâye.",
+                "İksirlerin dudaklarımı gıdıklıyor. Belki biri beni yeniden prens yapar?",
+                "Prens olmasam da olur, burada dostlarım var. Tacımı sana göstermek isterim!" } },
+            new CustomerDef { id = "boo", name = "Minik Boo", ghost = true, difficulty = "Kolay", unlockLevel = 1, size = 0.7f, steps = new[] { 2, 3, 4 }, lines = new[] {
+                "Boo! Korktun mu? ...Korkmadın. Ben Minik Boo.",
+                "Ayıcığım Pamuk da seni sevdi. Onu kimseye göstermem ama sana gösterdim!",
+                "En iyi arkadaşım sensin! Kurdelemi senin için taktım." } },
+            new CustomerDef { id = "bocek", name = "Bay Böcek", difficulty = "Kolay", unlockLevel = 1, size = 0.4f, steps = new[] { 2, 3, 4, 5 }, lines = new[] {
+                "Şapkamı çıkarırım efendim. Bay Böcek, emrinize amade.",
+                "Bu dükkân annemin bahçesi gibi kokuyor: lavanta ve sihir.",
+                "Cuma akşamları uğur dağıtırım. Bu hafta hepsi senin!",
+                "En sevdiğim papyonumu taktım. Dostluğumuza, efendim!" } },
+            new CustomerDef { id = "sis", name = "Sis Teyze", ghost = true, difficulty = "Kolay", unlockLevel = 2, size = 1.3f, steps = new[] { 2, 3, 5, 6 }, lines = new[] {
+                "Ah, yeni dükkâncı! Ben Sis Teyze. Her sabah sisi ben örerim.",
+                "Kasabayı saran bu kalın sis benim örgüm değil canım. Başka bir şey bu.",
+                "Sana bir şal örüyorum. Rengi sürpriz!",
+                "Şalın hazır! Bundan sonra sis seni üşütemez." } },
+            new CustomerDef { id = "tirtil", name = "Korsan Tırtıl", difficulty = "Orta", unlockLevel = 3, size = 0.55f, steps = new[] { 3, 4, 6, 7 }, lines = new[] {
+                "Yo-ho! Hazine kokusu aldım. Bu dükkânda bir şey var!",
+                "Bir gözümü martıya kaptırdım ama hazineyi kaptırmadım!",
+                "Bu kılıç mı? Aslında tereyağı bıçağı. Sakın kimseye söyleme.",
+                "Kelebek olunca bile senin tayfan olacağım!" } },
+            new CustomerDef { id = "pus", name = "Kaptan Pus", ghost = true, difficulty = "Orta", unlockLevel = 4, size = 1.3f, steps = new[] { 3, 5, 6, 8 }, lines = new[] {
+                "Ahoy! Kaptan Pus. Gemim sisin içinde kayboldu...",
+                "Batan gemim Gümüş Martı'ydı. Tayfam hâlâ beni arıyor olabilir.",
+                "Pipomu yaktım. Bu, bir kaptanın en büyük güvenidir.",
+                "Bu dükkân benim limanım oldu. Demir attım!" } },
+            new CustomerDef { id = "kartal", name = "Pilot Kartal", difficulty = "Orta", unlockLevel = 5, size = 1.35f, steps = new[] { 3, 4, 6, 8, 10 }, lines = new[] {
+                "Acil teslimat! Ben Pilot Kartal, kanatlarım emrinde.",
+                "Sis yüzünden üç mektubu yanlış bacaya attım. Aramızda kalsın!",
+                "Gözlüğüm dedemden kalma. Fırtınaların içini gösterir.",
+                "Bir gün seni bulutların üstüne götüreceğim. Söz!",
+                "Atkım artık senin. Her kanat çırpışımda seni düşüneceğim." } },
+            new CustomerDef { id = "baykus", name = "Baykuş Kütüphaneci", difficulty = "Zor", unlockLevel = 6, size = 0.8f, steps = new[] { 4, 5, 7, 9, 11 }, lines = new[] {
+                "Hu-hu. Kütüphaneden geliyorum. Biraz sessiz lütfen.",
+                "Cadının kitaplarını ben ödünç verirdim. Hepsinin süresi geçti!",
+                "Sen benim gözlüğüm gibisin: işleri netleştiriyorsun.",
+                "Sisin kaydı eski bir kitapta var: 'Kaybolan dostlukların gölgesi'...",
+                "Kütüphanenin anahtarı artık sende. Kitaplar senin de." } },
+            new CustomerDef { id = "ugultu", name = "Profesör Uğultu", ghost = true, difficulty = "En zor", unlockLevel = 7, size = 1.4f, steps = new[] { 4, 6, 8, 10, 12, 15 }, lines = new[] {
+                "Hmm. Profesör Uğultu. Eski bir öğretmen, yorgun bir hayalet.",
+                "Cadı Hanım'a ilk büyüsünü ben öğrettim. Kaşlarını yakmıştı!",
+                "Papyonum mu? Mezuniyet günümden kalma. Yüz yıl önceydi.",
+                "İksirlerin dengesi kusursuz. Öğrencim olsaydın birinci olurdun.",
+                "Bir sır vereyim: Cadı, aynanın arkasındaki kediyi hiç unutmadı.",
+                "Son dersim bitti. Bundan sonra öğretmen sensin, sevgili dostum." } },
+            new CustomerDef { id = "ejderha", name = "Ejderha Yavrusu", difficulty = "En zor", unlockLevel = 8, size = 0.9f, steps = new[] { 5, 6, 8, 11, 13, 16 }, lines = new[] {
+                "*hık* Pardon! Ben bir ejderha yavrusuyum. Adım Kıvılcım.",
+                "Hıçkırınca alev çıkıyor. Kütüphaneyi bir kere az kalsın yakıyordum.",
+                "Annem dağlarda. Ben burada senin iksirlerini seviyorum.",
+                "Bak, uçabiliyorum! ...Üç saniye kadar.",
+                "Kazanının altını ben yakabilirim. Bedava!",
+                "Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*" } },
+        };
+
+        public static int IndexOf(string id)
+        {
+            for (int i = 0; i < All.Length; i++) if (All[i].id == id) return i;
+            return -1;
+        }
+
+        public static CustomerDef Get(string id) { int i = IndexOf(id); return i >= 0 ? All[i] : null; }
+
+        public static CustomerDef ByName(string name)
+        {
+            foreach (var c in All) if (c.name == name) return c;
+            return null;
+        }
+
+        public static string StageName(CustomerDef c, int stage) =>
+            stage >= c.MaxStage ? BestFriend : StageNames[Mathf.Clamp(stage, 0, StageNames.Length - 1)];
+
+        /// <summary>Reward for reaching `stage`: a bit of energy, stamps, more at the top.</summary>
+        public static int StageEnergy(int stage) => 5 + 2 * stage;
+        public static int StageStamps(CustomerDef c, int stage) => stage >= c.MaxStage ? 3 : 1;
     }
 
     public static class Ghosts

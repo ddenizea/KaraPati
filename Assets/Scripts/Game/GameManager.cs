@@ -63,6 +63,7 @@ namespace KaraPati
         bool introSeen;
         readonly HashSet<string> stickers = new HashSet<string>();
         readonly HashSet<string> claimedSets = new HashSet<string>();
+        readonly List<int> friends = new List<int>();   // friendship points per customer (Customers.All order)
         readonly HashSet<string> clues = new HashSet<string>();
 
         public RectTransform Root { get; private set; }
@@ -927,6 +928,8 @@ namespace KaraPati
             if (speaker == "Cadı Hanım") return ProcArt.Witch;
             if (speaker == "Gölge") return ProcArt.SideCat(0, 4);
             if (speaker == "Usta Kedi") return ProcArt.SideCat(3, 4);
+            var cust = Customers.ByName(speaker);
+            if (cust != null) return ProcArt.Customer(cust.id, I != null && I.FriendStage(cust) >= cust.FullLookStage);
             int gi = Array.IndexOf(Ghosts.Names, speaker);
             return gi >= 0 ? ProcArt.Ghost(gi) : ProcArt.KaraPatiHead;
         }
@@ -1078,6 +1081,41 @@ namespace KaraPati
             var missing = new List<string>();
             foreach (var id in set.ids) if (!stickers.Contains(id)) missing.Add(id);
             if (missing.Count > 0) GiveSticker(missing[Random.Range(0, missing.Count)], false);
+        }
+
+        // ------------------------------------------------------------------ customer friendships
+        public int FriendPoints(CustomerDef c)
+        {
+            int i = Customers.IndexOf(c.id);
+            return i >= 0 && i < friends.Count ? friends[i] : 0;
+        }
+
+        public int FriendStage(CustomerDef c) => c.StageOf(FriendPoints(c));
+        public bool IsBestFriend(CustomerDef c) => FriendStage(c) >= c.MaxStage;
+
+        /// <summary>A delivered order makes a customer a bit more of a friend; new stages bring a line and a reward.</summary>
+        public void AddFriendship(string id, int points)
+        {
+            var c = Customers.Get(id);
+            if (c == null || points <= 0) return;
+            int i = Customers.IndexOf(id);
+            while (friends.Count <= i) friends.Add(0);
+            int before = c.StageOf(friends[i]);
+            friends[i] = Mathf.Min(friends[i] + points, c.PointsFor(c.MaxStage));
+            int after = c.StageOf(friends[i]);
+            for (int st = before + 1; st <= after; st++)
+            {
+                int en = Customers.StageEnergy(st), sp = Customers.StageStamps(c, st);
+                Energy += en;
+                AddStamps(sp);
+                string title = Customers.StageName(c, st);
+                string extra = st >= c.MaxStage ? " Siparişleri artık +1 Pati Mührü verir!" : "";
+                ShowDialog(c.name, c.lines[Mathf.Clamp(st - 1, 0, c.lines.Length - 1)]);
+                Toast(c.name + " ile " + title + " oldunuz! +" + en + " enerji, +" + sp + " mühür." + extra, UIKit.Orange, 5f);
+                Sfx.Play(st >= c.MaxStage ? "gift" : "levelup", 1.1f);
+            }
+            RefreshHud();
+            MarkDirty();
         }
 
         public void OnOrderDelivered(int ghostIndex)
@@ -1660,6 +1698,7 @@ namespace KaraPati
             stickers.Clear();
             claimedSets.Clear();
             clues.Clear();
+            friends.Clear();
 
             Cats.ClearAll();
             Board.ClearAll();
@@ -1725,7 +1764,8 @@ namespace KaraPati
                 eventClaimed = EventClaimed,
                 dailyIndex = DailyIndex,
                 lastDailyDay = lastDailyDay,
-                claimedSets = new List<string>(claimedSets)
+                claimedSets = new List<string>(claimedSets),
+                friends = new List<int>(friends)
             };
             Board.WriteSave(s.cells);
             // a real game always has machines on the table; an empty board means the game state was wiped
@@ -1807,6 +1847,8 @@ namespace KaraPati
                 if (s.stickers != null) foreach (var id in s.stickers) stickers.Add(id);
                 claimedSets.Clear();
                 if (s.claimedSets != null) foreach (var id in s.claimedSets) claimedSets.Add(id);
+                friends.Clear();
+                if (s.friends != null) friends.AddRange(s.friends);
 
                 eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
                 Pumpkins = s.pumpkins;
