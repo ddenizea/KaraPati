@@ -9,7 +9,7 @@ namespace KaraPati
     /// <summary>One cat walking around on the table. Behaviour decisions come from <see cref="KittenChaos"/>.</summary>
     public class KittenAgent : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
-        public enum State { Entering, Idle, Walking, Napping, Leaving, Dragged, Stirring }
+        public enum State { Entering, Idle, Walking, Napping, Leaving, Dragged, Stirring, Sitting }
 
         public int level;
         public int color;   // KittenColors index
@@ -22,6 +22,10 @@ namespace KaraPati
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
         public float age;             // seconds on the table (new kittens get a grace period)
+        public long trainUntil;       // a kitten in training with the Master (0 = not training)
+        public string carryChain;     // Mini Apprentice: ingredient in its mouth
+        public int carryLevel;
+        Image carry;
 
         KittenChaos sys;
         Image body, ring;
@@ -40,6 +44,8 @@ namespace KaraPati
         public bool IsGone => state == State.Leaving;
         public bool CanAct => state == State.Idle || state == State.Walking;
         public bool Stirring => state == State.Stirring;
+        public bool IsMini => level == 4;
+        public bool Training => trainUntil > 0;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
         public void Init(KittenChaos s, int lvl, Vector2 pos, int col)
@@ -60,15 +66,15 @@ namespace KaraPati
             ring.gameObject.SetActive(false);
 
             for (int i = 0; i < frames.Length; i++) frames[i] = ProcArt.SideCat(level, i, color);
-            float size = level == 1 ? 128f : 140f;
+            float size = level == 1 ? 128f : level == 4 ? 118f : 140f;
             body = UIKit.Img("Body", rt, frames[4], Color.white);
             body.rectTransform.sizeDelta = new Vector2(size, size);
 
             label = UIKit.Txt("Label", rt, "", 22, UIKit.Cream);
             label.rectTransform.At(new Vector2(0f, -72f), new Vector2(170f, 30f));
-            label.gameObject.SetActive(level == 2);
+            label.gameObject.SetActive(level == 2 || level == 4);
 
-            speed = level == 1 ? 95f : 75f;
+            speed = level == 1 ? 95f : level == 4 ? 105f : 75f;
             Pos = pos;
             mischiefTimer = Random.Range(5f, 10f);
             Idle(Random.Range(0.5f, 2f));
@@ -118,6 +124,57 @@ namespace KaraPati
             spoon.gameObject.SetActive(true);
             spoon.anchoredPosition = new Vector2(-side * 30f, 34f);   // in the paw that faces the pot
             spoon.localScale = new Vector3(-side, 1f, 1f);   // the spoon reaches towards the pot
+        }
+
+        /// <summary>Sit still (a kitten in training, or the Master while it teaches).</summary>
+        public void Sit(Vector2 p, int face)
+        {
+            Tween.Stop(Tween.Key(rt, "m"));
+            jumping = false;
+            chasing = false;
+            onArrive = null;
+            Pos = sys.Clamp(p);
+            Face(face);
+            state = State.Sitting;
+        }
+
+        /// <summary>Mini Apprentice: show (or hide with null) the ingredient it carries in its mouth.</summary>
+        public void SetCarry(Sprite s)
+        {
+            if (!carry)
+            {
+                carry = UIKit.Img("Carry", rt, null, Color.white);
+                carry.rectTransform.At(new Vector2(40f, 4f), new Vector2(62f, 62f));
+                carry.preserveAspect = true;
+            }
+            carry.sprite = s;
+            carry.gameObject.SetActive(s != null);
+        }
+
+        /// <summary>A thought bubble with the items it is missing; disappears after `seconds`.</summary>
+        public void ShowWant(System.Collections.Generic.List<Sprite> items, float seconds)
+        {
+            var old = rt.Find("Want");
+            if (old) Destroy(old.gameObject);
+            float w = items.Count * 78f + 30f;
+            var bg = UIKit.Img("Want", rt, ProcArt.Rounded, new Color(1f, 0.97f, 0.92f, 0.97f), true);
+            var brt = bg.rectTransform;
+            brt.At(new Vector2(0f, 118f), new Vector2(w, 96f));
+            var tail = UIKit.Img("Tail", brt, ProcArt.Circle, new Color(1f, 0.97f, 0.92f, 0.97f));
+            tail.rectTransform.At(new Vector2(-12f, -56f), new Vector2(24f, 24f));
+            for (int i = 0; i < items.Count; i++)
+            {
+                var ic = UIKit.Img("Item", brt, items[i], Color.white);
+                ic.rectTransform.At(new Vector2((i - (items.Count - 1) / 2f) * 78f, 4f), new Vector2(70f, 70f));
+                ic.preserveAspect = true;
+                var x = UIKit.Txt("No", ic.transform, "?", 30, new Color(0.9f, 0.3f, 0.3f), TextAnchor.UpperRight, false);
+                x.fontStyle = FontStyle.Bold;
+                UIKit.Stretch(x.rectTransform, 0f, -6f, -10f, 0f);
+            }
+            Tween.Pop(brt, 0.3f);
+            var group = bg.gameObject.AddComponent<CanvasGroup>();
+            Tween.Run(seconds, t => { if (group) group.alpha = t < 0.85f ? 1f : 1f - (t - 0.85f) / 0.15f; },
+                () => { if (brt) Destroy(brt.gameObject); });
         }
 
         public void StopStir()
@@ -261,7 +318,16 @@ namespace KaraPati
 
         void UpdateLabel()
         {
-            if (level == 2)
+            if (Training)
+            {
+                // countdown over the kitten that is being trained
+                if (!label.gameObject.activeSelf) label.gameObject.SetActive(true);
+                var tl = TimeSpan.FromTicks(Math.Max(0L, trainUntil - DateTime.UtcNow.Ticks));
+                label.text = "Eğitim " + tl.Minutes + ":" + tl.Seconds.ToString("00");
+                label.rectTransform.anchoredPosition = new Vector2(0f, -72f);
+                label.color = new Color(1f, 0.85f, 0.4f);
+            }
+            else if (level == 2 || level == 4)
             {
                 var left = TimeSpan.FromTicks(Math.Max(0L, expires - DateTime.UtcNow.Ticks));
                 label.text = left.TotalHours >= 1.0
@@ -312,7 +378,7 @@ namespace KaraPati
 
         public void OnBeginDrag(PointerEventData e)
         {
-            if (state == State.Napping || state == State.Entering || state == State.Leaving || jumping) return;
+            if (state == State.Napping || state == State.Entering || state == State.Leaving || state == State.Sitting || jumping) return;
             if (state == State.Stirring) StopStir();   // picked up from the pot
             Tween.Stop(Tween.Key(rt, "m"));
             onArrive = null;

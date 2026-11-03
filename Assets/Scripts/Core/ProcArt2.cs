@@ -28,7 +28,7 @@ namespace KaraPati
             int c = color;
             return Make("sidecat_" + level + "_" + frame + "_" + c, Size, p =>
             {
-                int hat = level <= 1 ? 0 : (level == 2 ? 1 : 2);
+                int hat = level <= 1 ? 0 : level == 2 ? 1 : level == 3 ? 2 : 3;   // 4 = Mini Apprentice: a little red cap
                 DrawSideCat(p, catFur[c], catEye[c], catPattern[c], hat, frame);
             });
         }
@@ -126,6 +126,12 @@ namespace KaraPati
                 var cone = new[] { P(-0.15f, 0.2f), P(0.15f, 0.2f), P(0.03f, 0.6f) };
                 p.FillOutlined(q => S.Poly(q, cone), new Color(0.3f, 0.5f, 0.9f), 0.035f);
                 p.FillOutlined(q => S.Ellipse(q, P(0f, 0.2f), new Vector2(0.23f, 0.045f) * s), new Color(0.25f, 0.4f, 0.8f), 0.035f);
+            }
+            else if (hat == 3)
+            {
+                // Mini Apprentice: small round red cap with a white pompom
+                p.FillOutlined(q => S.U(S.Ellipse(q, P(0.0f, 0.24f), new Vector2(0.17f, 0.11f) * s), S.Box(q, P(0f, 0.17f), new Vector2(0.2f, 0.035f) * s, 0.02f)), new Color(0.88f, 0.3f, 0.32f), 0.035f);
+                p.Fill(q => S.Circle(q, P(0.02f, 0.36f), 0.055f * s), new Color(1f, 0.95f, 0.9f));
             }
             else if (hat == 2)
             {

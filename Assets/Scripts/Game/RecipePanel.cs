@@ -59,7 +59,8 @@ namespace KaraPati
         {
             for (int i = list.childCount - 1; i >= 0; i--) Destroy(list.GetChild(i).gameObject);
             int done = GM.TasksDone;
-            count.text = Recipes.UnlockedCount(done) + "/" + Recipes.All.Length + " tarif açık. İki malzemeyi kazana sürükle!";
+            count.text = Recipes.UnlockedCount(done) + "/" + Recipes.All.Length + " tarif açık. " +
+                (GM.Cats != null && GM.Cats.HasMini ? "Minik Çırak'a 'Yaptır' de!" : "İki malzemeyi kazana sürükle!");
 
             for (int i = 0; i < Recipes.All.Length; i++)
             {
@@ -101,6 +102,18 @@ namespace KaraPati
                 var time = UIKit.Txt("Time", rt, "Süre: " + (r.seconds >= 60 ? (r.seconds / 60f).ToString("0.#") + " dk" : r.seconds + " sn"), 26, new Color(1f, 1f, 1f, 0.75f), TextAnchor.MiddleLeft, false);
                 time.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(470f, -2f), new Vector2(300f, 40f));
                 time.rectTransform.pivot = new Vector2(0f, 0.5f);
+
+                // with a Mini Apprentice on the table: "Yaptır" sends it to fetch both ingredients
+                if (GM.Cats != null && GM.Cats.HasMini)
+                {
+                    var rr = r;
+                    var make = UIKit.Btn("Make", rt, "Yaptır", GM.Cats.MiniBusy ? UIKit.Disabled : UIKit.Green, () =>
+                    {
+                        Close();
+                        GM.Cats.MiniBrew(rr);
+                    }, 30);
+                    ((RectTransform)make.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 34f), new Vector2(190f, 70f));
+                }
 
                 var coin = UIKit.Img("Coin", rt, ProcArt.Coin, Color.white);
                 coin.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-180f, -50f), new Vector2(44f, 44f));

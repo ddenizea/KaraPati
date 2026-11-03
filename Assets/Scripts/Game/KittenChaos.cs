@@ -21,6 +21,8 @@ namespace KaraPati
         const int MaxWild = 3;
         const float SpawnMin = 25f, SpawnMax = 40f;   // seconds between kittens jumping onto the table
         public const int HouseSlots = 2;              // kittens that fit in the cat house
+        public const double MiniHours = 1.0;          // a Mini Apprentice helps for one hour
+        public const float TrainMinutes = 10f;        // the Master trains a kitten for 10 minutes
         const float GraceSeconds = 10f;               // a kitten that just arrived is left alone for a bit
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
@@ -37,6 +39,9 @@ namespace KaraPati
         public int Trip { get; private set; } = -1;     // -1 = at home
         public long TripUntil { get; private set; }
         public bool UstaAway => Trip >= 0;
+        /// <summary>The trip is over: the Master waits in the cat house with a chest until you tap it.</summary>
+        public bool TripReady => Trip >= 0 && DateTime.UtcNow.Ticks >= TripUntil;
+        bool readyAnnounced;
         public int TripColor { get; private set; } = KittenColors.Gece;
 
         public KittenAgent Selected { get; private set; }
@@ -131,7 +136,9 @@ namespace KaraPati
             {
                 var a = agents[i];
                 if (!a) { agents.RemoveAt(i); continue; }
+                if (a.Training && !a.IsGone && now >= a.trainUntil) { FinishTraining(a); continue; }
                 if (a.level < 2 || a.IsGone) continue;
+                if (a.level == 4 && now >= a.expires && miniJob == null) { MiniFarewell(a); continue; }
                 if (a.cd > 0f) a.cd = Mathf.Max(0f, a.cd - dt);
                 if (a.level == 2 && now >= a.expires) { Farewell(a); continue; }
                 if (a.level == 2 && a.Stirring) StirTick(a, dt);
@@ -141,6 +148,7 @@ namespace KaraPati
 
             ChaseTick(dt);
             HissTick(dt);
+            MiniTick();
             TripTick(now);
             houseCheck -= dt;
             if (houseCheck <= 0f) { houseCheck = 3f; EnsureHouse(); }
@@ -316,7 +324,10 @@ namespace KaraPati
             switch (a.level)
             {
                 case 1:
-                    GM.Toast("Miyav! (İki yavruyu üst üste sürükle.)");
+                    GM.Toast(a.Training ? "Usta'dan ders alıyor, rahatsız etmeyelim!" : "Miyav! (İki yavruyu üst üste sürükle.)");
+                    break;
+                case 4:
+                    GM.Toast(MiniBusy ? "Minik Çırak malzeme taşıyor!" : "Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.");
                     break;
                 case 2:
                     if (a.cd > 0f) GM.Toast("Çırak dinleniyor... " + Mathf.CeilToInt(a.cd) + " sn");
@@ -336,13 +347,14 @@ namespace KaraPati
         public void OnDropped(KittenAgent a)
         {
             if (a.level == 2) { TryStir(a); return; }
-            if (!a.IsWild) return;
+            if (!a.IsWild || a.Training) return;
+            if (TryStartTraining(a)) return;
             if (TryEnterHouse(a)) return;
             KittenAgent other = null;
             float best = 100f * 100f;
             foreach (var o in agents)
             {
-                if (!o || o == a || !o.IsWild || o.IsGone || o.state == KittenAgent.State.Entering) continue;
+                if (!o || o == a || !o.IsWild || o.Training || o.IsGone || o.state == KittenAgent.State.Entering) continue;
                 float d = (o.Pos - a.Pos).sqrMagnitude;
                 if (d < best) { best = d; other = o; }
             }
@@ -457,6 +469,7 @@ namespace KaraPati
                     napping = a.state == KittenAgent.State.Napping,
                     napX = a.napCell.x, napY = a.napCell.y,
                     expires = a.expires, cd = a.cd, colorPlus = a.color + 1,
+                    trainUntil = a.trainUntil, carryChain = a.carryChain, carryLevel = a.carryLevel,
                     stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y
                 });
             }
@@ -469,10 +482,18 @@ namespace KaraPati
             {
                 foreach (var s in list)
                 {
-                    if (s.level < 1 || s.level > 3) continue;
+                    if (s.level < 1 || s.level > 4) continue;
                     var a = Create(s.level, Clamp(new Vector2(s.x, s.y)), s.colorPlus > 0 ? s.colorPlus - 1 : KittenColors.Legacy(s.level));
                     a.expires = s.expires;
                     a.cd = s.cd;
+                    if (!string.IsNullOrEmpty(s.carryChain))
+                    {
+                        // it was carrying an ingredient when the game closed: put it back on the table
+                        var back = new ItemData(s.carryChain, s.carryLevel);
+                        if (B.NearestEmpty(BoardController.LocalToCellClamped(a.Pos), out var be)) B.Set(be, back);
+                        else if (GM.Storage.Count < GM.StorageSlots) GM.Storage.Add(back);
+                    }
+                    if (s.trainUntil > 0 && s.level == 1) { a.trainUntil = s.trainUntil; a.Sit(a.Pos, 1); continue; }
                     if (s.stir && s.level == 2)
                     {
                         var pc = new Vector2Int(s.stirX, s.stirY);
@@ -488,6 +509,9 @@ namespace KaraPati
                     a.Nap(c, BoardController.CellPos(c) + new Vector2(0f, 12f));
                 }
             }
+            var tr = Trainee();
+            var ms = Master();
+            if (tr && ms) ms.Sit(ms.Pos, tr.Pos.x > ms.Pos.x ? 1 : -1);
             // no sleeping kitten -> item is free again
             foreach (var c in B.AllCells())
             {
@@ -505,6 +529,8 @@ namespace KaraPati
             spawnTimer = 10f;
             Trip = -1;
             TripUntil = 0;
+            readyAnnounced = false;
+            miniJob = null;
         }
 
         // ------------------------------------------------------------ test helpers (editor menu)
@@ -526,6 +552,17 @@ namespace KaraPati
             if (!FindHouse(out var hc)) return;
             var h = B.Get(hc);
             if (h.cats < HouseSlots) { h.catCols = (h.catCols ?? "") + KittenColors.Pick(); h.cats = h.catCols.Length; B.RefreshView(hc); GM.MarkDirty(); }
+        }
+
+        public void DebugFinishTraining() { var t = Trainee(); if (t) t.trainUntil = DateTime.UtcNow.Ticks; }
+
+        public void DebugMini()
+        {
+            if (HasMini) return;
+            var mini = Create(4, RandomPoint(), KittenColors.Pick());
+            mini.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(MiniHours).Ticks;
+            Tween.Pop(mini.rt, 0.35f);
+            GM.MarkDirty();
         }
 
         public void DebugFinishTrip() { if (Trip >= 0) TripUntil = DateTime.UtcNow.Ticks; }
@@ -589,7 +626,32 @@ namespace KaraPati
         {
             var h = B.Get(hc);
             if (h == null || !Chains.IsHouse(h.chain)) return;
-            if (h.cats < HouseSlots) { GM.Toast("Evde " + h.cats + "/" + HouseSlots + " yavru var. İki yavru olunca dokun, Çırak çıksın."); return; }
+            if (TripReady) { ClaimTrip(); return; }   // the Master is home with its chest
+            GM.OpenHouse(hc);
+        }
+
+        /// <summary>"Sahiplendir" in the cat house window: the kitten at `index` goes to a new family (+3 gold).</summary>
+        public void AdoptFromHouse(Vector2Int hc, int index)
+        {
+            var h = B.Get(hc);
+            if (h == null || index >= (h.catCols ?? "").Length) return;
+            int col = h.catCols[index] - '0';
+            h.catCols = h.catCols.Remove(index, 1);
+            h.cats = h.catCols.Length;
+            B.RefreshView(hc);
+            GM.AddGold(3);
+            Sfx.Play("coin");
+            GM.Toast(KittenColors.Name(col) + " yavru yeni ailesine kavuştu! +3 altın");
+            if (B.Selected == hc) GM.ShowInfo(h);   // keep the "1/2" in the info bar up to date
+            GM.OnBoardChanged();
+        }
+
+        /// <summary>"Çırak Yap" in the cat house window: the two kittens inside become an Apprentice.</summary>
+        public void MakeApprenticeFromHouse(Vector2Int hc)
+        {
+            var h = B.Get(hc);
+            if (h == null || !Chains.IsHouse(h.chain)) return;
+            if (h.cats < HouseSlots) { GM.Toast("Evde " + h.cats + "/" + HouseSlots + " yavru var. İki yavru olunca Çırak çıkar."); return; }
             if (HasApprentice) { GM.Toast("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın."); return; }
             string cols = h.catCols ?? "";
             int col = cols.Length > 0 ? cols[Random.Range(0, cols.Length)] - '0' : KittenColors.Pick();
@@ -603,6 +665,242 @@ namespace KaraPati
             FX.Burst(B.FxLayer, pos, UIKit.Orange, 10);
             Select(c);
             ApprenticeBorn(c);
+        }
+
+        // ------------------------------------------------------------ Mini Apprentice: training
+        // A kitten dropped on the Master (or sent from the cat house) sits with it for 10 minutes and becomes a
+        // Mini Apprentice for an hour. It carries potion ingredients to the alchemy pot when you order a recipe.
+        public KittenAgent Trainee()
+        {
+            foreach (var a in agents) if (a && a.Training && !a.IsGone) return a;
+            return null;
+        }
+
+        public KittenAgent Mini()
+        {
+            foreach (var a in agents) if (a && a.level == 4 && !a.IsGone) return a;
+            return null;
+        }
+
+        public bool HasMini => Mini() != null;
+
+        /// <summary>Why the Master can't train right now, or null if it can.</summary>
+        public string TrainBlock()
+        {
+            if (UstaAway) return "Usta keşifte. Dönünce eğitebilir.";
+            if (!Master()) return "Eğitim için masada bir Usta Kedi lazım.";
+            if (Trainee()) return "Usta zaten bir yavruyu eğitiyor.";
+            if (HasMini) return "Masada zaten bir Minik Çırak var.";
+            return null;
+        }
+
+        bool TryStartTraining(KittenAgent k)
+        {
+            var m = Master();
+            if (!m || (m.Pos - k.Pos).sqrMagnitude > 95f * 95f) return false;   // not dropped on the Master
+            var why = TrainBlock();
+            if (why != null) { GM.Toast(why); return true; }
+            StartTraining(m, k);
+            return true;
+        }
+
+        /// <summary>From the cat house window: the kitten at `index` goes to the Master for training.</summary>
+        public void TrainFromHouse(Vector2Int hc, int index)
+        {
+            var why = TrainBlock();
+            if (why != null) { GM.Toast(why); return; }
+            var h = B.Get(hc);
+            if (h == null || index >= (h.catCols ?? "").Length) return;
+            int col = h.catCols[index] - '0';
+            h.catCols = h.catCols.Remove(index, 1);
+            h.cats = h.catCols.Length;
+            B.RefreshView(hc);
+            if (B.Selected == hc) GM.ShowInfo(h);
+            var m = Master();
+            var k = Create(1, BoardController.CellPos(hc), Mathf.Clamp(col, 0, KittenColors.Count - 1));
+            StartTraining(m, k);
+        }
+
+        void StartTraining(KittenAgent m, KittenAgent k)
+        {
+            if (k.state == KittenAgent.State.Napping) WakeItem(k);
+            if (chaseTarget == k) chaseTarget = null;
+            if (Selected == m || Selected == k) { Selected = null; GM.ShowInfo(null); }
+            int side = m.Pos.x > 0f ? -1 : 1;   // the kitten sits on the roomier side
+            m.Sit(m.Pos, side);
+            k.trainUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(TrainMinutes).Ticks;
+            k.Sit(m.Pos + new Vector2(side * 110f, -10f), -side);
+            Tween.Pop(k.rt, 0.3f);
+            Say(m, "Bak ve öğren!", UIKit.Cream);
+            Sfx.Play("paw", 0.9f, 0.7f);
+            GM.Toast("Usta, " + KittenColors.Name(k.color) + " yavruyu eğitiyor. " + (int)TrainMinutes + " dakika sonra Minik Çırak olacak!", UIKit.Orange, 5f);
+            GM.MarkDirty();
+        }
+
+        void FinishTraining(KittenAgent k)
+        {
+            var pos = k.Pos;
+            int col = Mathf.Clamp(k.color, 0, KittenColors.Count - 1);
+            Release(k);
+            var mini = Create(4, pos, col);
+            mini.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(MiniHours).Ticks;
+            Tween.Pop(mini.rt, 0.4f);
+            FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
+            var m = Master();
+            if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
+            Sfx.Play("levelup", 1.3f);
+            GM.Toast(KittenColors.Name(col) + " Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", UIKit.Orange, 6f);
+            GM.OnBoardChanged();
+        }
+
+        void MiniFarewell(KittenAgent a)
+        {
+            if (Selected == a) { Selected = null; GM.ShowInfo(null); }
+            Say(a, "Hoşça kal!", UIKit.Cream);
+            a.Leave();
+            GM.Toast("Minik Çırak'ın süresi doldu, el salladı. Usta yeni bir yavru eğitebilir.", UIKit.Orange, 4.5f);
+            GM.MarkDirty();
+        }
+
+        // ------------------------------------------------------------ Mini Apprentice: fetching
+        class MiniJob
+        {
+            public Recipe recipe;
+            public readonly List<ReqSave> needs = new List<ReqSave>();   // still to bring
+            public Vector2Int target = new Vector2Int(-1, -1);          // item cell it is walking to
+            public bool carrying;
+        }
+        MiniJob miniJob;
+
+        public bool MiniBusy => miniJob != null;
+
+        /// <summary>"Yaptır" in the recipe book: the Mini Apprentice brings both ingredients of `r` to the pot.</summary>
+        public void MiniBrew(Recipe r)
+        {
+            var mini = Mini();
+            if (!mini) { GM.Toast("Önce Usta bir yavruyu Minik Çırak olarak eğitmeli."); return; }
+            if (miniJob != null) { GM.Toast("Minik Çırak şu an başka bir tarif için koşturuyor."); return; }
+            if (!B.FindFirst(d => d.chain == Chains.Simya, out var pc)) return;
+            var pot = B.Get(pc);
+            if (pot.brew > 0) { GM.Toast(pot.BrewReady ? "Kazanda hazır iksir var. Önce onu al." : "Kazan şu an kaynıyor, bitmesini bekle."); return; }
+
+            var job = new MiniJob { recipe = r };
+            job.needs.Add(new ReqSave { chain = r.aChain, level = r.aLevel });
+            job.needs.Add(new ReqSave { chain = r.bChain, level = r.bLevel });
+            if (!string.IsNullOrEmpty(pot.mix))
+            {
+                // one ingredient may already be waiting in the pot
+                int idx = job.needs.FindIndex(q => Recipes.Key(q.chain, q.level) == pot.mix);
+                if (idx < 0) { GM.Toast("Kazanda bu tarife uymayan bir malzeme var. Kazanı seçip 'Geri Al'a bas."); return; }
+                job.needs.RemoveAt(idx);
+            }
+
+            // check everything is on the table before it starts running
+            var used = new HashSet<Vector2Int>();
+            var missing = new List<Sprite>();
+            var missingNames = new List<string>();
+            foreach (var q in job.needs)
+            {
+                if (FindIngredient(q, used, out var c)) used.Add(c);
+                else { missing.Add(ProcArt.Item(q.chain, q.level)); missingNames.Add(Chains.Name(q.chain, q.level)); }
+            }
+            if (missing.Count > 0)
+            {
+                mini.ShowWant(missing, 3f);
+                Tween.Punch(mini.rt, 0.15f, 0.3f);
+                Sfx.Play("error");
+                GM.Toast("Masada eksik: " + string.Join(", ", missingNames), new Color(1f, 0.7f, 0.6f));
+                return;
+            }
+            miniJob = job;
+            Say(mini, "Hemen!", UIKit.Orange);
+            Sfx.Play("paw", 1.3f, 0.7f);
+        }
+
+        bool FindIngredient(ReqSave q, HashSet<Vector2Int> skip, out Vector2Int cell)
+        {
+            cell = new Vector2Int(-1, -1);
+            var mini = Mini();
+            float best = float.MaxValue;
+            foreach (var c in B.AllCells())
+            {
+                if (skip != null && skip.Contains(c)) continue;
+                var d = B.Get(c);
+                if (d == null || d.Locked || d.chain != q.chain || d.level != q.level) continue;
+                float dist = mini ? (BoardController.CellPos(c) - mini.Pos).sqrMagnitude : 0f;
+                if (dist < best) { best = dist; cell = c; }
+            }
+            return cell.x >= 0;
+        }
+
+        void MiniTick()
+        {
+            if (miniJob == null) return;
+            var mini = Mini();
+            if (!mini || mini.IsGone) { miniJob = null; return; }
+            if (mini.IsHeld || mini.state == KittenAgent.State.Entering) return;
+            if (!B.FindFirst(d => d.chain == Chains.Simya, out var pc)) { miniJob = null; return; }
+
+            if (!miniJob.carrying)
+            {
+                if (miniJob.needs.Count == 0) { FinishMiniJob(mini, pc); return; }
+                var q = miniJob.needs[0];
+                var d = B.Get(miniJob.target);
+                // (re)pick the nearest matching item if the old target moved, merged or got sold
+                if (d == null || d.Locked || d.chain != q.chain || d.level != q.level)
+                {
+                    if (!FindIngredient(q, null, out miniJob.target))
+                    {
+                        mini.ShowWant(new List<Sprite> { ProcArt.Item(q.chain, q.level) }, 3f);
+                        GM.Toast("Minik Çırak " + Chains.Name(q.chain, q.level) + " bulamadı.", new Color(1f, 0.7f, 0.6f));
+                        miniJob = null;
+                        mini.Idle(1.5f);
+                        return;
+                    }
+                }
+                var tp = BoardController.CellPos(miniJob.target);
+                mini.ChaseTo(tp);
+                if ((mini.Pos - tp).sqrMagnitude < 30f * 30f)
+                {
+                    // grab it
+                    B.Remove(miniJob.target);
+                    mini.carryChain = q.chain;
+                    mini.carryLevel = q.level;
+                    mini.SetCarry(ProcArt.Item(q.chain, q.level));
+                    miniJob.carrying = true;
+                    Sfx.Play("pop", 1.4f, 0.6f);
+                    GM.OnBoardChanged();
+                }
+                return;
+            }
+
+            // carrying: run to the pot and drop it in
+            var pp = BoardController.CellPos(pc) + new Vector2(pc.x > 3 ? -70f : 70f, 0f);
+            mini.ChaseTo(pp);
+            if ((mini.Pos - pp).sqrMagnitude > 30f * 30f) return;
+            var item = miniJob.needs[0];
+            miniJob.needs.RemoveAt(0);
+            miniJob.carrying = false;
+            mini.carryChain = null;
+            mini.SetCarry(null);
+            if (!B.FeedPot(pc, item.chain, item.level))
+            {
+                // the pot changed meanwhile: put the ingredient back on the table
+                if (B.NearestEmpty(pc, out var e)) B.SpawnFromPos(mini.Pos, e, new ItemData(item.chain, item.level));
+                GM.Toast("Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı.");
+                miniJob = null;
+                mini.Idle(1.5f);
+                return;
+            }
+            Tween.Punch(mini.rt, 0.12f, 0.25f);
+            if (miniJob.needs.Count == 0) FinishMiniJob(mini, pc);
+        }
+
+        void FinishMiniJob(KittenAgent mini, Vector2Int pc)
+        {
+            miniJob = null;
+            mini.Idle(2f);
+            Say(mini, "Tamam!", UIKit.Orange);
         }
 
         // ------------------------------------------------------------ colours
@@ -633,7 +931,7 @@ namespace KaraPati
         }
 
         static bool Shooable(KittenAgent k) =>
-            k && k.IsWild && !k.IsGone && !k.IsHeld && k.state != KittenAgent.State.Entering && k.age >= GraceSeconds;
+            k && k.IsWild && !k.Training && !k.IsGone && !k.IsHeld && k.state != KittenAgent.State.Entering && k.age >= GraceSeconds;
 
         KittenAgent NearestWild(Vector2 from, float maxDist)
         {
@@ -801,6 +1099,8 @@ namespace KaraPati
             var m = Master();
             if (!m) { GM.Toast("Masada Usta Kedi yok."); return; }
             if (m.state == KittenAgent.State.Napping || m.IsHeld) return;
+            if (Trainee()) { GM.Toast("Usta şu an bir yavruyu eğitiyor. Eğitim bitince keşfe çıkabilir."); return; }
+            if (!GM.TrySpendEnergy(Expeditions.Energy[k])) return;
             if (Selected == m) { Selected = null; GM.ShowInfo(null); }
             Trip = k;
             TripColor = m.color;
@@ -809,13 +1109,40 @@ namespace KaraPati
             m.Leave();
             Sfx.Play("whoosh");
             GM.Toast("Usta Kedi " + Expeditions.Names[k] + " için yola çıktı. " + Expeditions.Duration(k) + " sonra dönecek.", UIKit.Orange, 4.5f);
+            GM.RefreshTripButton();
             GM.ShowInfo(null);
             GM.MarkDirty();
         }
 
         void TripTick(long now)
         {
-            if (Trip >= 0 && now >= TripUntil && !B.AnyHeld && !GM.ModalOpen) ReturnFromTrip();
+            // when the trip ends the Master does not just appear: it waits in the cat house with its chest
+            if (Trip < 0 || now < TripUntil || readyAnnounced) return;
+            readyAnnounced = true;
+            if (FindHouse(out var hc)) B.RefreshView(hc);
+            GM.Toast("Usta Kedi döndü! Kedi Evi'nde sandığıyla bekliyor. Eve dokun!", UIKit.Orange, 5f);
+            Sfx.Play("ready");
+        }
+
+        /// <summary>The button next to the storage box: shows the trip, or brings the Master out when it is back.</summary>
+        public void TripButton()
+        {
+            if (Trip < 0) return;
+            if (TripReady) { ClaimTrip(); return; }
+            GM.Toast(TripStatus());
+        }
+
+        /// <summary>The Master jumps out of the cat house with its chest; the finds fly out of the chest onto the table.</summary>
+        public void ClaimTrip()
+        {
+            if (!TripReady || B.AnyHeld) return;
+            Vector2 origin;
+            if (FindHouse(out var hc)) origin = BoardController.CellPos(hc);
+            else { var hh = Half; origin = new Vector2(-hh.x + 60f, -hh.y + 60f); }
+            ReturnFromTrip(origin);
+            readyAnnounced = false;
+            GM.RefreshTripButton();
+            if (FindHouse(out var hc2)) B.RefreshView(hc2);
         }
 
         /// <summary>"Dolunay Seferi · 7sa 12dk kaldı" for the info bar while the Master is away.</summary>
@@ -824,28 +1151,43 @@ namespace KaraPati
             if (Trip < 0) return "";
             var left = TimeSpan.FromTicks(Math.Max(0L, TripUntil - DateTime.UtcNow.Ticks));
             string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
-            return Expeditions.Names[Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1)] + ": " + time + " sonra döner, getirdiklerini masaya bırakır.";
+            if (TripReady) return "Usta Kedi döndü! Kedi Evi'ne dokun, sandığı açılsın.";
+            return "Usta Kedi " + Expeditions.Names[Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1)] + " yolunda: " + time + " sonra döner.";
         }
 
-        void ReturnFromTrip()
+        void ReturnFromTrip(Vector2 origin)
         {
             int k = Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1);
             Trip = -1;
 
-            var h = Half;
-            float side = Random.value < 0.5f ? -1f : 1f;
-            var land = new Vector2(side * (h.x - 60f), Random.Range(-h.y * 0.5f, h.y * 0.5f));
-            var m = Create(3, new Vector2(side * (h.x + 200f), land.y - 80f), TripColor);
-            m.JumpIn(m.Pos, land);
+            // the Master hops out of the house...
+            var land = Clamp(origin + new Vector2(origin.x > 0f ? -150f : 150f, 30f));
+            var m = Create(3, origin, TripColor);
+            m.JumpIn(origin, land);
             m.cd = MasterInterval;
+            // ...and its chest pops open on top of the house
+            var chest = UIKit.Img("TripChest", layer, ProcArt.Item(Chains.Sandik, 1), Color.white);
+            chest.raycastTarget = false;
+            var crt = chest.rectTransform;
+            crt.At(origin + new Vector2(0f, 40f), new Vector2(110f, 110f));
+            Tween.Pop(crt, 0.35f);
+            Tween.Run(1.1f, t =>
+            {
+                if (!crt) return;
+                crt.anchoredPosition = origin + new Vector2(0f, 40f + 50f * Tween.OutCubic(Mathf.Min(1f, t * 2f)));
+                float fade = t < 0.6f ? 1f : 1f - (t - 0.6f) / 0.4f;
+                chest.color = new Color(1f, 1f, 1f, fade);
+            }, () => { if (crt) Destroy(crt.gameObject); });
+            FX.Burst(B.FxLayer, origin + new Vector2(0f, 80f), new Color(1f, 0.85f, 0.4f), 14);
+            var land2 = origin + new Vector2(0f, 90f);   // items fly out of the chest
 
             // what it found
             int placed = 0, stored = 0, sold = 0;
-            var cell = BoardController.LocalToCellClamped(land);
+            var cell = BoardController.LocalToCellClamped(origin);
             for (int i = 0; i < Expeditions.Items[k]; i++)
             {
                 var item = new ItemData(Chains.RandomIngredient(), Random.Range(Expeditions.MinLevel[k], Expeditions.MaxLevel[k] + 1));
-                if (B.NearestEmpty(cell, out var e)) { B.SpawnFromPos(land, e, item); GM.Discover(item.chain, item.level); placed++; }
+                if (B.NearestEmpty(cell, out var e)) { B.SpawnFromPos(land2, e, item); GM.Discover(item.chain, item.level); placed++; }
                 else if (GM.Storage.Count < GM.StorageSlots) { GM.Storage.Add(item); stored++; }
                 else { GM.AddGold(Chains.Value(item.level)); sold++; }
             }

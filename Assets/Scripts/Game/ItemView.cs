@@ -15,7 +15,7 @@ namespace KaraPati
         public bool IsPressed { get; private set; }
         public bool IsHeld => IsDragging || IsPressed;
 
-        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra, doorCat;
+        Image icon, cooldown, napCat, badge, needed, bubble, bubbleRing, potExtra, doorCat, tripChest;
         Text badgeText, zzz, potTimer;
         CanvasGroup cg;
         Vector2 dragOffset;
@@ -61,6 +61,15 @@ namespace KaraPati
             potExtra = UIKit.Img("PotExtra", rt, null, Color.white);
             potExtra.rectTransform.At(new Vector2(40f, 40f), new Vector2(60f, 60f));
             potExtra.raycastTarget = false;
+            // cat house: the Master's chest on the roof when it is back from an expedition
+            tripChest = UIKit.Img("TripChest", rt, ProcArt.Item(Chains.Sandik, 1), Color.white);
+            tripChest.rectTransform.At(new Vector2(30f, 44f), new Vector2(64f, 64f));
+            tripChest.raycastTarget = false;
+            var bang = UIKit.Img("Bang", tripChest.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            bang.rectTransform.At(new Vector2(24f, 22f), new Vector2(30f, 30f));
+            var bt = UIKit.Txt("!", bang.transform, "!", 22, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(bt.rectTransform);
+            tripChest.gameObject.SetActive(false);
             // cat house: the second kitten sits in the doorway
             doorCat = UIKit.Img("DoorCat", rt, ProcArt.SideCat(1, 4), Color.white);
             doorCat.rectTransform.At(new Vector2(0f, -24f), new Vector2(60f, 60f));
@@ -188,7 +197,15 @@ namespace KaraPati
                 icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
             else if (data.chain == Chains.Kazan)
                 icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
-            else if (Chains.IsHouse(data.chain) && data.cats > 0)
+            if (Chains.IsHouse(data.chain))
+            {
+                var cats = GameManager.I != null ? GameManager.I.Cats : null;
+                bool ready = cats != null && cats.TripReady;
+                if (tripChest.gameObject.activeSelf != ready) tripChest.gameObject.SetActive(ready);
+                if (ready) tripChest.rectTransform.anchoredPosition = new Vector2(30f, 44f + Mathf.Abs(Mathf.Sin(t * 4f)) * 8f);
+            }
+            if (data.bubble) return;   // a bubble item has nothing more to animate
+            if (Chains.IsHouse(data.chain) && data.cats > 0)
             {
                 // the kittens inside look around a little
                 potExtra.rectTransform.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(t * 1.7f) * 8f);

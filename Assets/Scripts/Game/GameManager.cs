@@ -73,7 +73,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -82,6 +82,7 @@ namespace KaraPati
         ItemInfoPanel itemInfo;
         ChapterPanel chapterPanel;
         ExpeditionPanel expeditionPanel;
+        HousePanel housePanel;
         Button infoBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
@@ -96,6 +97,10 @@ namespace KaraPati
         long lastFed, lastWatered;
         Button homeBtn;
         RectTransform storageBtn, levelBadge;
+        RectTransform tripBtn, infoPanelRt;   // Master's expedition button next to the storage box
+        Image tripIcon;
+        Text tripText;
+        int tripIconColor = -1;
         Text storageText, levelText;
         Image levelRing;
         StoragePanel storagePanel;
@@ -116,7 +121,6 @@ namespace KaraPati
         float resetArmedUntil;
         int tipIndex;
         KittenAgent infoKitten;
-        bool infoIdle;   // the info bar shows the tip (nothing selected)
         float kittenInfoTimer;
 
         // dialog
@@ -194,8 +198,7 @@ namespace KaraPati
             {
                 eventTick = 1f;
                 RefreshEventButton();
-                // keep the Master's expedition countdown ticking in the info bar
-                if (infoIdle && !infoKitten && Cats != null && Cats.UstaAway) infoDesc.text = Cats.TripStatus();
+                RefreshTripButton();
             }
 
             if (infoKitten)
@@ -334,6 +337,10 @@ namespace KaraPati
             chapterPanel = chaptersRt.gameObject.AddComponent<ChapterPanel>();
             chapterPanel.Build();
 
+            var houseRt = UIKit.Rect("HousePanel", canvasRt);
+            housePanel = houseRt.gameObject.AddComponent<HousePanel>();
+            housePanel.Build();
+
             var tripRt = UIKit.Rect("ExpeditionPanel", canvasRt);
             expeditionPanel = tripRt.gameObject.AddComponent<ExpeditionPanel>();
             expeditionPanel.Build();
@@ -443,6 +450,18 @@ namespace KaraPati
             storageText.alignment = TextAnchor.LowerCenter;
             storageText.text = "0/4";
 
+            // the Master's expedition: shown next to the storage box only while it is away
+            var trip = UIKit.Btn("Trip", area, "", new Color(0.42f, 0.28f, 0.6f), () => Cats.TripButton(), 22);
+            tripBtn = (RectTransform)trip.transform;
+            tripBtn.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(182f, 0f), new Vector2(120f, 134f));
+            tripIcon = UIKit.Img("Icon", tripBtn, ProcArt.SideCat(3, 4), Color.white);
+            tripIcon.rectTransform.At(new Vector2(0f, 16f), new Vector2(92f, 92f));
+            tripIcon.raycastTarget = false;
+            tripText = trip.Label();
+            tripText.alignment = TextAnchor.LowerCenter;
+            tripText.fontStyle = FontStyle.Bold;
+            tripBtn.gameObject.SetActive(false);
+
             homeBtn = UIKit.Btn("Home", area, "", new Color(0.3f, 0.55f, 0.6f), GoHome);
             ((RectTransform)homeBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-22f, 0f), new Vector2(150f, 134f));
             var hIcon = UIKit.Img("Icon", homeBtn.transform, ProcArt.House, Color.white);
@@ -450,6 +469,7 @@ namespace KaraPati
 
             var panel = UIKit.Img("Panel", area, ProcArt.Rounded, UIKit.Panel, true);
             UIKit.Stretch(panel.rectTransform, 186f, 186f, 0f, 0f);
+            infoPanelRt = panel.rectTransform;
             infoTitle = UIKit.Txt("Title", panel.transform, "", 34, UIKit.Orange, TextAnchor.UpperLeft);
             infoTitle.fontStyle = FontStyle.Bold;
             infoTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -462,6 +482,15 @@ namespace KaraPati
             infoDesc.rectTransform.anchorMax = new Vector2(1f, 1f);
             infoDesc.rectTransform.offsetMin = new Vector2(24f, 6f);
             infoDesc.rectTransform.offsetMax = new Vector2(-196f, -58f);
+            // long texts shrink to fit instead of running over each other (the bar gets narrower when the trip button shows)
+            infoTitle.resizeTextForBestFit = true;
+            infoTitle.resizeTextMinSize = 20;
+            infoTitle.resizeTextMaxSize = 34;
+            infoTitle.verticalOverflow = VerticalWrapMode.Truncate;
+            infoDesc.resizeTextForBestFit = true;
+            infoDesc.resizeTextMinSize = 16;
+            infoDesc.resizeTextMaxSize = 25;
+            infoDesc.verticalOverflow = VerticalWrapMode.Truncate;
             actionBtn = UIKit.Btn("Action", panel.transform, "", UIKit.Orange, OnAction, 28);
             ((RectTransform)actionBtn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 0f), new Vector2(176f, 96f));
             // "i" button: opens the merge chain / source info for the selected item
@@ -835,6 +864,11 @@ namespace KaraPati
             if (added) MarkDirty();
         }
 
+        /// <summary>Item encyclopedia for any item, e.g. one a customer asks for.</summary>
+        public void OpenItemInfo(ItemData d) { if (d != null) itemInfo.Open(d); }
+
+        public void OpenHouse(Vector2Int hc) => housePanel.Open(hc);
+
         void OpenSelectedInfo()
         {
             var d = Board.Get(Board.Selected);
@@ -1099,12 +1133,10 @@ namespace KaraPati
             Cats?.Deselect();
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
-            infoIdle = d == null;
             if (d == null)
             {
-                bool away = Cats != null && Cats.UstaAway;
-                infoTitle.text = away ? "Usta Kedi keşifte" : "İpucu";
-                infoDesc.text = away ? Cats.TripStatus() : tips[tipIndex % tips.Length];
+                infoTitle.text = "İpucu";
+                infoDesc.text = tips[tipIndex % tips.Length];
                 bool armed = resetArmedUntil > Time.unscaledTime;
                 actionBtn.gameObject.SetActive(true);
                 actionBtn.Label().text = armed ? "Emin misin?" : "Yeni Oyun";
@@ -1217,34 +1249,39 @@ namespace KaraPati
             if (infoTitle == null) return;
             if (!a) { ShowInfo(null); return; }
             infoKitten = a;
-            infoIdle = false;
             kittenInfoTimer = 1f;
             if (infoBtn) infoBtn.gameObject.SetActive(false);
             var btnImg = actionBtn.GetComponent<Image>();
             btnImg.color = UIKit.Orange;
             actionBtn.gameObject.SetActive(false);
+            string colName = KittenColors.Name(a.color);
             switch (a.level)
             {
                 case 1:
-                    infoTitle.text = "Yaramaz Yavru  <size=26>(" + KittenColors.Names[a.color] + ")</size>";
-                    infoDesc.text = a.state == KittenAgent.State.Napping
-                        ? "Mışıl mışıl uyuyor... Dokunup okşa, kalksın."
-                        : Cats.FindHouse(out _)
-                            ? "Eşyaları iter, üstlerine yatar! Kedi Evi'ne sürükle: orada güvende, iki yavru Çırak olur."
-                            : "Eşyaları iter, üstlerine yatar! Başka bir yavrunun üstüne sürükle: Çırak Kedi.";
+                    if (a.Training)
+                    {
+                        var tl = TimeSpan.FromTicks(Math.Max(0L, a.trainUntil - DateTime.UtcNow.Ticks));
+                        infoTitle.text = "Eğitimdeki Yavru  <size=24>(" + colName + ")</size>";
+                        infoDesc.text = "Usta'dan ders alıyor. " + tl.Minutes + " dk " + tl.Seconds + " sn sonra Minik Çırak olacak.";
+                        break;
+                    }
+                    infoTitle.text = "Yaramaz Yavru  <size=24>(" + colName + ")</size>";
+                    if (a.state == KittenAgent.State.Napping) infoDesc.text = "Mışıl mışıl uyuyor. Dokun, kalksın.";
+                    else if (Cats.TrainBlock() == null) infoDesc.text = "Usta'nın üstüne bırak: Minik Çırak olur. Kedi Evi'nde de güvende kalır.";
+                    else if (Cats.FindHouse(out _)) infoDesc.text = "Kedi Evi'ne sürükle: orada kovalanmaz, iki yavru Çırak olur.";
+                    else infoDesc.text = "Başka bir yavrunun üstüne sürükle: Çırak Kedi olurlar.";
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Sahiplendir +3";
                     break;
                 case 2:
                 {
-                    infoTitle.text = KittenColors.Names[a.color] + " Çırak";
+                    infoTitle.text = colName + " Çırak";
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
-                    infoDesc.text = a.Stirring
-                        ? (Cats.PotBrewing(a.stirCell) ? "Kazanı karıştırıyor: iksir 2 kat hızlı pişiyor! " : "Kazanın başında iksir bekliyor. ") + "Kalan: " + time
-                        : KittenColors.Talents[Mathf.Clamp(a.color, 0, KittenColors.Count - 1)] + " Kalan: " + time;
-                    if (Cats.HasMaster || Cats.UstaAway) infoDesc.text += Cats.UstaAway ? " (Usta keşifte.)" : " (Dükkânda zaten Usta var.)";
-                    else
+                    infoDesc.text = (a.Stirring
+                        ? (Cats.PotBrewing(a.stirCell) ? "Kazanı karıştırıyor, iksir hızlı pişiyor." : "Kazanın başında iksir bekliyor.")
+                        : KittenColors.Talents[Mathf.Clamp(a.color, 0, KittenColors.Count - 1)]) + "\nKalan: " + time;
+                    if (!Cats.HasMaster && !Cats.UstaAway)
                     {
                         actionBtn.gameObject.SetActive(true);
                         actionBtn.Label().text = "Usta Yap\n" + KittenChaos.PromoteCost + " altın";
@@ -1252,9 +1289,25 @@ namespace KaraPati
                     }
                     break;
                 }
+                case 4:
+                {
+                    infoTitle.text = colName + " Minik Çırak";
+                    var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
+                    infoDesc.text = (Cats.MiniBusy ? "Malzemeleri kazana taşıyor..." : "Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın.")
+                        + "\nKalan: " + left.Minutes + " dk " + left.Seconds + " sn";
+                    actionBtn.gameObject.SetActive(true);
+                    actionBtn.Label().text = "Tarifler";
+                    btnImg.color = UIKit.Green;
+                    break;
+                }
                 default:
-                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : KittenColors.Names[a.color] + " Usta";
-                    infoDesc.text = "Her " + (int)KittenChaos.MasterInterval + " sn'de malzeme getirir, yavrulara tıslar. Keşfe gönderirsen sandıkla döner.";
+                    infoTitle.text = a.color == KittenColors.Gece ? "Usta Kedi" : colName + " Usta";
+                    if (a.state == KittenAgent.State.Sitting)
+                    {
+                        infoDesc.text = "Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.";
+                        break;
+                    }
+                    infoDesc.text = "Malzeme getirir, yavrulara tıslar. Yavru bırakırsan eğitir, keşfe de çıkar.";
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = "Keşfe\nGönder";
                     btnImg.color = UIKit.Green;
@@ -1268,13 +1321,14 @@ namespace KaraPati
             {
                 if (infoKitten.level == 1) Cats.Adopt(infoKitten);
                 else if (infoKitten.level == 2) Cats.Promote(infoKitten);
-                else expeditionPanel.Open();
+                else if (infoKitten.level == 4) OpenRecipes();
+                else if (infoKitten.state != KittenAgent.State.Sitting) expeditionPanel.Open();
                 return;
             }
             var d = Board.Get(Board.Selected);
             if (d != null && d.bubble) { Board.OpenBubble(Board.Selected); return; }
             if (d != null && Chains.IsStation(d.chain)) { Board.PotAction(); return; }
-            if (d != null && Chains.IsHouse(d.chain)) { Cats.TapHouse(Board.Selected); ShowInfo(Board.Get(Board.Selected)); return; }
+            if (d != null && Chains.IsHouse(d.chain)) { Cats.MakeApprenticeFromHouse(Board.Selected); ShowInfo(Board.Get(Board.Selected)); return; }
             if (d != null && Chains.IsGenerator(d.chain)) { UpgradeGenerator(d.chain); return; }
             if (d != null) { Board.SellSelected(); return; }
             if (resetArmedUntil > Time.unscaledTime)
@@ -1462,6 +1516,39 @@ namespace KaraPati
             if (stampIcon) Tween.Punch(stampIcon, 0.3f, 0.35f);
             MarkDirty();
             if (!OnBoard && home) home.Refresh(false);
+        }
+
+        /// <summary>Show/hide the expedition button next to the storage box and update its countdown.</summary>
+        public void RefreshTripButton()
+        {
+            if (!tripBtn || Cats == null) return;
+            bool away = Cats.UstaAway;
+            if (tripBtn.gameObject.activeSelf != away)
+            {
+                tripBtn.gameObject.SetActive(away);
+                // make room: the info panel starts after the trip button while it is visible
+                infoPanelRt.offsetMin = new Vector2(away ? 312f : 186f, infoPanelRt.offsetMin.y);
+            }
+            if (!away) return;
+            bool ready = Cats.TripReady;
+            int want = ready ? -2 : Cats.TripColor;
+            if (want != tripIconColor)
+            {
+                tripIconColor = want;
+                tripIcon.sprite = ready ? ProcArt.Item(Chains.Sandik, 1) : ProcArt.SideCat(3, 4, Cats.TripColor);
+            }
+            if (ready)
+            {
+                tripText.text = "Döndü!";
+                tripText.color = new Color(1f, 0.85f, 0.4f);
+                Tween.Punch(tripBtn, 0.06f, 0.25f);
+            }
+            else
+            {
+                var left = TimeSpan.FromTicks(Math.Max(0L, Cats.TripUntil - DateTime.UtcNow.Ticks));
+                tripText.text = (int)left.TotalHours + ":" + left.Minutes.ToString("00") + ":" + left.Seconds.ToString("00");
+                tripText.color = UIKit.Cream;
+            }
         }
 
         public bool TrySpendEnergy(int amount)

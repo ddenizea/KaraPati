@@ -542,6 +542,41 @@ namespace KaraPati
             GM.Tut?.Notify("pot");
         }
 
+        /// <summary>
+        /// Put an ingredient that is not on the table (the Mini Apprentice carried it) into the pot.
+        /// First one waits in the pot, the matching second one starts the brew. False if the pot can't take it.
+        /// </summary>
+        public bool FeedPot(Vector2Int potCell, string chain, int level)
+        {
+            var pot = Get(potCell);
+            if (pot == null || !Chains.IsStation(pot.chain) || pot.brew > 0) return false;
+            int done = GM.TasksDone;
+            if (string.IsNullOrEmpty(pot.mix))
+            {
+                if (!Recipes.AnyUses(chain, level, done)) return false;
+                pot.mix = Recipes.Key(chain, level);
+                Sfx.Play("spawn", 0.8f);
+            }
+            else
+            {
+                Recipes.ParseKey(pot.mix, out var mc, out var ml);
+                var r = Recipes.Match(mc, ml, chain, level, done);
+                if (r == null) return false;
+                pot.mix = "";
+                pot.brew = r.id;
+                pot.brewUntil = System.DateTime.UtcNow.Ticks + System.TimeSpan.FromSeconds(r.seconds).Ticks;
+                pot.readyNotified = false;
+                Sfx.Play("brew");
+                FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
+                GM.Toast("Minik Çırak malzemeleri koydu: " + r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
+            }
+            RefreshView(potCell);
+            var pv = ViewAt(potCell);
+            if (pv) Tween.Punch(pv.rt, 0.15f, 0.3f);
+            GM.OnBoardChanged();
+            return true;
+        }
+
         void TapPot(Vector2Int c)
         {
             var pot = data[c.x, c.y];

@@ -112,6 +112,20 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Minik Çırak Ekle (Play modunda)")]
+        static void AddMini()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugMini();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Eğitimi Bitir (Play modunda)")]
+        static void FinishTraining()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugFinishTraining();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Usta Kedi Ekle (Play modunda)")]
         static void AddMaster()
         {

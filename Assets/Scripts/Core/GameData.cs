@@ -205,6 +205,9 @@ namespace KaraPati
         public bool stir;          // apprentice sitting at the alchemy pot, stirring
         public int stirX, stirY;
         public int colorPlus;      // fur colour + 1 (0 in old saves = the old look for that level)
+        public long trainUntil;    // kitten being trained by the Master: becomes a Mini Apprentice at this UTC tick
+        public string carryChain;  // Mini Apprentice: ingredient it was carrying to the pot
+        public int carryLevel;
     }
 
     [Serializable]
@@ -784,6 +787,7 @@ namespace KaraPati
         public const int Turuncu = 0, Gri = 1, Beyaz = 2, SiyahBeyaz = 3, UcRenkli = 4, Gece = 5;
         public const int Count = 5;   // colours that can arrive on the table
         public static readonly string[] Names = { "Turuncu Tekir", "Gri", "Beyaz", "Siyah-Beyaz", "Üç Renkli", "Gece" };
+        public static string Name(int c) => Names[Mathf.Clamp(c, 0, Names.Length - 1)];
         static readonly int[] weights = { 35, 30, 20, 12, 3 };   // out of 100: the calico is rare
 
         public static readonly string[] Talents =
@@ -812,6 +816,7 @@ namespace KaraPati
     {
         public static readonly string[] Names = { "Kısa Gezinti", "Orman Turu", "Dolunay Seferi" };
         public static readonly int[] Minutes = { 30, 120, 480 };
+        public static readonly int[] Energy = { 5, 10, 20 };     // energy it costs to send the Master
         public static readonly int[] Items = { 3, 3, 4 };      // how many ingredients it brings back
         public static readonly int[] MinLevel = { 2, 3, 4 };
         public static readonly int[] MaxLevel = { 3, 4, 5 };

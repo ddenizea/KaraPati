@@ -53,6 +53,12 @@ namespace KaraPati
                 {
                     var tile = UIKit.Img("Req" + k, card.root, ProcArt.Rounded, UIKit.PanelDark, true);
                     card.tiles[k] = tile.rectTransform;
+                    // tap what the customer wants: its info sheet opens (chain, where it comes from)
+                    tile.raycastTarget = true;
+                    var tb = tile.gameObject.AddComponent<Button>();
+                    tb.transition = Selectable.Transition.None;
+                    int kk = k;
+                    tb.onClick.AddListener(() => ShowReqInfo(slot, kk));
                     card.tiles[k].Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -166f), new Vector2(104f, 104f));
                     card.icons[k] = UIKit.Img("Icon", tile.transform, null, Color.white);
                     card.icons[k].rectTransform.sizeDelta = new Vector2(92f, 92f);
@@ -87,6 +93,15 @@ namespace KaraPati
                 if (ready[i] && cards[i].give)
                     cards[i].give.transform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
             }
+        }
+
+        void ShowReqInfo(int slot, int k)
+        {
+            var o = orders[slot];
+            if (o == null || k >= o.reqs.Count) return;
+            var q = o.reqs[k];
+            Tween.Punch(cards[slot].tiles[k], 0.1f, 0.2f);
+            GM.OpenItemInfo(new ItemData(q.chain, q.level));
         }
 
         // ------------------------------------------------------------ tutorial helpers

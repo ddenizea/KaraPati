@@ -8,6 +8,7 @@ namespace KaraPati
     {
         GameManager GM => GameManager.I;
         RectTransform panel;
+        readonly Image[] goImgs = new Image[3];
 
         public bool IsOpen => gameObject.activeSelf;
 
@@ -33,7 +34,7 @@ namespace KaraPati
             var title = UIKit.Txt("Title", panel, "Usta'yı Keşfe Gönder", 50, ink, TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(160f, -30f), new Vector2(640f, 64f));
-            var sub = UIKit.Txt("Sub", panel, "Keşifteyken malzeme getirmez ve yavrulara tıslamaz.", 26, new Color(0.4f, 0.28f, 0.2f), TextAnchor.MiddleLeft, false);
+            var sub = UIKit.Txt("Sub", panel, "Enerji harcar. Keşifteyken malzeme getirmez, yavrulara tıslamaz.", 26, new Color(0.4f, 0.28f, 0.2f), TextAnchor.MiddleLeft, false);
             sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(162f, -94f), new Vector2(700f, 40f));
 
             var close = UIKit.Btn("Close", panel, "X", new Color(0.75f, 0.3f, 0.35f), Close, 44);
@@ -71,13 +72,32 @@ namespace KaraPati
             reward.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(36f, -100f), new Vector2(560f, 140f));
 
             int kk = k;
-            var go = UIKit.Btn("Go", rt, "Gönder", UIKit.Green, () => { Close(); GM.Cats.SendOnTrip(kk); }, 36);
-            ((RectTransform)go.transform).Anchor(new Vector2(1f, 0f), new Vector2(1f, 0f)).At(new Vector2(-24f, 24f), new Vector2(240f, 100f));
+            var go = UIKit.Btn("Go", rt, "Gönder", UIKit.Green, () =>
+            {
+                if (GM.Energy < Expeditions.Energy[kk]) { GM.Toast("Bu keşif için " + Expeditions.Energy[kk] + " enerji gerekiyor."); Sfx.Play("error"); return; }
+                Close();
+                GM.Cats.SendOnTrip(kk);
+            }, 34);
+            ((RectTransform)go.transform).Anchor(new Vector2(1f, 0f), new Vector2(1f, 0f)).At(new Vector2(-24f, 24f), new Vector2(260f, 100f));
+            // the energy price on the button: bolt + number
+            var lbl = go.Label();
+            lbl.alignment = TextAnchor.MiddleLeft;
+            UIKit.Stretch(lbl.rectTransform, 24f, 0f, 0f, 0f);
+            var bolt = UIKit.Img("Bolt", go.transform, ProcArt.Bolt, Color.white);
+            bolt.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(-82f, 0f), new Vector2(50f, 50f));
+            bolt.raycastTarget = false;
+            var cost = UIKit.Txt("Cost", go.transform, Expeditions.Energy[k].ToString(), 36, Color.white, TextAnchor.MiddleLeft, false);
+            cost.fontStyle = FontStyle.Bold;
+            cost.raycastTarget = false;
+            cost.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(60f, 50f));
+            goImgs[k] = go.GetComponent<Image>();
         }
 
         public void Open()
         {
             Sfx.Play("page");
+            for (int k = 0; k < goImgs.Length; k++)
+                if (goImgs[k]) goImgs[k].color = GM.Energy >= Expeditions.Energy[k] ? UIKit.Green : UIKit.Disabled;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             Tween.Pop(panel, 0.3f);
