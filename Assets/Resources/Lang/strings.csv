@@ -427,6 +427,8 @@ Dükkân,Shop
 "Oklarla katı seç, envanterden bir süse dokun.","Pick a floor with the arrows, then tap an ornament in your inventory."
 Başka kat açmak için kulede kilitli kata dokun.,Tap a locked floor in the tower to open another one.
 {0}. Kat  •  {1},Floor {0}  •  {1}
+Can dostları kuleye gelsin: Açık,Best friends visit the tower: On
+Can dostları kuleye gelsin: Kapalı,Best friends visit the tower: Off
 Emin misin?,Are you sure?
 x{0}  Yerleştir,x{0}  Place
 Bu süsten yok. Dükkân sekmesinden alabilirsin.,You don't have this ornament. You can buy it in the Shop tab.
@@ -442,9 +444,12 @@ Gönder,Send
 Bu keşif için {0} enerji gerekiyor.,This trip needs {0} energy.
 Dostluk Defteri,Friendship Book
 < Defter,< Book
+Hediyeni Al,Take Your Gift
+Hediye: {0},Gift: {0}
 Sadece geceleri gelir (20:00-06:00),Only visits at night (20:00-06:00)
 Dostluğunuz ilerledikçe açılır.,Unlocks as your friendship grows.
 "Can Dostun! Siparişleri +1 Pati Mührü verir, kulede seni ziyaret edip her gün hediye bırakır.","Your best friend! Their orders give +1 Paw Seal, and they visit you in the tower with a gift every day."
+Kule ziyaretleri kapalı: bugün uğrayan can dostlarının hediyesini buradan alırsın.,Tower visits are off: you get today's visiting best friends' gifts here.
 Sonraki seviye: {0}/{1} sipariş puanı. İksir 2 sayar.,Next stage: {0}/{1} order points. A potion counts as 2.
 {0}/{1} müşteriyle tanıştın  ·  {2} Can Dostu,Met {0}/{1} customers  ·  Best friends: {2}
 {0}. seviyede gelir,Arrives at level {0}
@@ -453,6 +458,10 @@ Can Dostu!,Best Friend!
 {0}g {1}sa,{0}d {1}h
 {0}sa {1}dk,{0}h {1}m
 {0}dk {1}sn,{0}m {1}s
+"Oyun Odası açıldı! Fare Avı, Yumak Atma ve İksir Hafızası seni bekliyor. Her oyunu günde 2 kez bedava oynarsın, sonrası enerjiyle. Soldaki yeni düğmeye dokun!","The Game Room is open! Mouse Hunt, Yarn Toss and Potion Memory are waiting for you. You can play each game twice a day for free, after that it costs energy. Tap the new button on the left!"
+"Müşterilerinle dost oluyorsun! Sağdaki kalp düğmesi Dostluk Defteri'ni açar, herkesin hikâyesi orada. Bir müşteri Can Dostun olunca her gün kuleye uğrar ve hediye bırakır.","You're making friends with your customers! The heart button on the right opens the Friendship Book, with everyone's story inside. Once a customer becomes your Best Friend, they visit the tower every day and leave a gift."
+Can dostların yine kuleye uğrayacak!,Your best friends will visit the tower again!
+Can dostların artık kuleye gelmeyecek. Hediyelerini Dostluk Defteri'nden alabilirsin.,Your best friends won't visit the tower anymore. You can take their gifts from the Friendship Book.
 "Aynı iki eşyayı üst üste sürükle, birleşsinler.",Drag two identical items onto each other to merge them.
 Kazana ve sandığa dokunarak malzeme üret (1 enerji).,Tap the cauldron and the chest to make ingredients (1 energy).
 "Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas.","Gather what the ghosts want on the table, then press 'Give'."
@@ -621,6 +630,7 @@ Görevler,Tasks
 Albüm,Album
 Kule,Tower
 Dükkânı Aç,Open Shop
+YENİ,NEW
 "Kara Pati: ""{0}""","Kara Pati: ""{0}"""
 Ayarlar,Settings
 Dil,Language
@@ -707,8 +717,10 @@ Masada zaten bir Minik Çırak var.,There's already a Little Apprentice on the t
 Bak ve öğren!,Watch and learn!
 "Usta, {0} yavruyu eğitiyor. {1} dakika sonra Minik Çırak olacak!",The Master is training the {0} kitten. In {1} minutes it becomes a Little Apprentice!
 Artık Minik Çıraksın!,You're a Little Apprentice now!
+"Bir siparişte 'Hazırla'ya bas, Yıldızlı Minik Çırak işe koyulsun!",Press 'Prepare' on an order and the Star Little Apprentice gets to work!
 Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle.,"If you don't want the Little Apprentice wandering the table, drag it to its ball on the counter."
-Yıldızlı yavru artık Yıldızlı Minik Çırak! Hem iksir malzemelerini taşır hem de çok yakında müşterilerin siparişlerini kendisi hazırlayabilecek.,"The star kitten is now a Star Little Apprentice! It carries potion ingredients, and very soon it will be able to prepare customers' orders by itself."
+Yıldızlı yavru artık Yıldızlı Minik Çırak! Siparişlerde 'Hazırla'ya bas: siparişi iksiriyle birlikte baştan sona kendisi hazırlar.,"The star kitten is now a Star Little Apprentice! Press 'Prepare' on an order and it prepares the whole order by itself, potion included."
+Yıldızlı Minik Çırak hazır! Siparişlerde 'Hazırla'ya bas.,The Star Little Apprentice is ready! Press 'Prepare' on an order.
 "{0} Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.",The {0} Little Apprentice is ready! Tap 'Make' on a potion in the Recipe Book and it carries the ingredients to the pot.
 "Minik Çırak'ın süresi doldu, el salladı. Usta yeni bir yavru eğitebilir.",The Little Apprentice's time is up and it waved goodbye. The Master can train a new kitten.
 {0} Çırak doğdu!,A {0} Apprentice is born!
@@ -762,6 +774,7 @@ Bitti!,Done!
 Yakala!,Catch!
 Yaptır,Make
 Ver,Give
+"İyi geceler, genç simyacı... Ben Yarasa Kontes. Yalnızca geceleri, 20:00 ile 06:00 arasında uğrarım. Siparişlerim zordur ama karşılığında 1,5 kat altın ve fazladan Pati Mührü öderim.","Good evening, young alchemist... I am the Bat Countess. I only visit at night, between 20:00 and 06:00. My orders are hard, but I pay one and a half times the gold and extra Paw Seals."
 Meşgul,Busy
 Hazırla,Prepare
 Sisin içindeki yabancı,The stranger in the fog
@@ -790,7 +803,6 @@ Depo,Storage
 Eşyayı masadan depo kutusunun üstüne sürükle. Geri almak için dokun.,Drag an item from the table onto the storage box. Tap to take it back.
 Depo  {0}/{1},Storage  {0}/{1}
 "{0}: ""Yarın yine uğrarım!""","{0}: ""I'll drop by again tomorrow!"""
-Hediye: {0},Gift: {0}
 Cadı Kulesi,Witch's Tower
 Süsle,Decorate
 {0}. Kat: {1},Floor {0}: {1}

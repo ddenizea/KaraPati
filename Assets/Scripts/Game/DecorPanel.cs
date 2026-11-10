@@ -12,7 +12,7 @@ namespace KaraPati
         GameManager GM => GameManager.I;
         RectTransform sheet, rows;
         Text title, goldText;
-        Button tabInv, tabShop, prevFloor, nextFloor;
+        Button tabInv, tabShop, prevFloor, nextFloor, friendsToggle;
         bool shopTab;
         int floor;
         int armedSlot = -1, armedVariant = -1;
@@ -37,7 +37,7 @@ namespace KaraPati
             sheet.anchorMin = new Vector2(0f, 0f);
             sheet.anchorMax = new Vector2(1f, 0f);
             sheet.pivot = new Vector2(0.5f, 0f);
-            sheet.sizeDelta = new Vector2(-20f, 980f);
+            sheet.sizeDelta = new Vector2(-20f, 1080f);
             sheet.anchoredPosition = new Vector2(0f, 10f);
 
             var icon = UIKit.Img("Icon", sheet, ProcArt.Brush, Color.white);
@@ -70,7 +70,11 @@ namespace KaraPati
             ((RectTransform)tabShop.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(180f, -116f), new Vector2(340f, 76f));
 
             rows = UIKit.Rect("Rows", sheet);
-            UIKit.Stretch(rows, 20f, 20f, 210f, 16f);
+            UIKit.Stretch(rows, 20f, 20f, 210f, 116f);
+
+            // best friends visiting the tower: on / off
+            friendsToggle = UIKit.Btn("FriendsToggle", sheet, "", UIKit.PanelDark, () => { GM.SetTowerFriends(!GM.TowerFriendsOn); Fill(); }, 28);
+            ((RectTransform)friendsToggle.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 56f), new Vector2(720f, 76f));
             gameObject.SetActive(false);
         }
 
@@ -85,7 +89,7 @@ namespace KaraPati
             transform.SetAsLastSibling();
             Fill();
             var s = sheet;
-            Tween.Run(0.3f, t => { if (s) s.anchoredPosition = new Vector2(0f, Mathf.Lerp(-980f, 10f, Tween.OutCubic(t))); });
+            Tween.Run(0.3f, t => { if (s) s.anchoredPosition = new Vector2(0f, Mathf.Lerp(-1080f, 10f, Tween.OutCubic(t))); });
         }
 
         public void Close() => gameObject.SetActive(false);
@@ -127,6 +131,10 @@ namespace KaraPati
             prevFloor.gameObject.SetActive(many);
             nextFloor.gameObject.SetActive(many);
             goldText.text = GM.Gold.ToString();
+            bool on = GM.TowerFriendsOn;
+            friendsToggle.gameObject.SetActive(GM.BestFriendsToday(1).Count > 0);   // only once there is a best friend
+            friendsToggle.Label().text = on ? L.T("Can dostları kuleye gelsin: Açık") : L.T("Can dostları kuleye gelsin: Kapalı");
+            friendsToggle.GetComponent<Image>().color = on ? UIKit.Green : UIKit.PanelDark;
             tabInv.GetComponent<Image>().color = shopTab ? UIKit.PanelDark : UIKit.Orange;
             tabShop.GetComponent<Image>().color = shopTab ? UIKit.Orange : UIKit.PanelDark;
 

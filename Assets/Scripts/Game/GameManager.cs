@@ -105,6 +105,38 @@ namespace KaraPati
             MarkDirty();
             return true;
         }
+
+        public bool Seen(string id) => hintsSeen.Contains(id);
+
+        // ------------------------------------------------------------------ new-feature intros
+        // The first time a feature opens, Kara Pati explains it in a dialog; its home button wears a "YENİ" tag until opened.
+        public bool GameRoomNew => GameRoomUnlocked && !Seen("open_gameroom");
+        public bool FriendBookNew => Seen("intro_friendbook") && !Seen("open_friendbook");
+
+        /// <summary>Called when the home screen refreshes: introduce features that just became available.</summary>
+        public void CheckIntros()
+        {
+            if (OnBoard || OnTower || (Tut != null && Tut.Active)) return;
+            if (GameRoomUnlocked && FirstTime("intro_gameroom"))
+                ShowDialog(L.T("Kara Pati"), L.T("Oyun Odası açıldı! Fare Avı, Yumak Atma ve İksir Hafızası seni bekliyor. Her oyunu günde 2 kez bedava oynarsın, sonrası enerjiyle. Soldaki yeni düğmeye dokun!"));
+            if (AnyFriendNew && FirstTime("intro_friendbook"))
+                ShowDialog(L.T("Kara Pati"), L.T("Müşterilerinle dost oluyorsun! Sağdaki kalp düğmesi Dostluk Defteri'ni açar, herkesin hikâyesi orada. Bir müşteri Can Dostun olunca her gün kuleye uğrar ve hediye bırakır."));
+        }
+
+        // ------------------------------------------------------------------ best friends in the tower (can be turned off)
+        public bool TowerFriendsOn { get; private set; } = true;
+
+        public void SetTowerFriends(bool on)
+        {
+            if (TowerFriendsOn == on) return;
+            TowerFriendsOn = on;
+            MarkDirty();
+            if (tower) tower.Refresh();
+            Toast(on ? L.T("Can dostların yine kuleye uğrayacak!") : L.T("Can dostların artık kuleye gelmeyecek. Hediyelerini Dostluk Defteri'nden alabilirsin."));
+        }
+
+        /// <summary>One of today's visitors (the tower shows them; with visits off, the book gives their gift).</summary>
+        public bool IsVisitorToday(CustomerDef c) => BestFriendsToday(TowerFriends.MaxVisitors).Contains(c);
         public bool UstaNew { get; private set; }
         public long UstaPlayAt { get; set; }
         Button infoBtn, popBtn;
@@ -938,6 +970,7 @@ namespace KaraPati
                 Sfx.Play("error");
                 return;
             }
+            if (!Seen("open_gameroom")) { hintsSeen.Add("open_gameroom"); MarkDirty(); }
             gameRoom.Open();
         }
 
@@ -1032,7 +1065,11 @@ namespace KaraPati
         }
 
         // ------------------------------------------------------------------ friendship book and best friends in the tower
-        public void OpenFriendBook() => friendBook.Open();
+        public void OpenFriendBook()
+        {
+            if (!Seen("open_friendbook")) { hintsSeen.Add("open_friendbook"); MarkDirty(); }
+            friendBook.Open();
+        }
 
         public void OnFriendBookClosed()
         {
@@ -2045,6 +2082,7 @@ namespace KaraPati
             friendSeen.Clear();
             friendGifts.Clear();
             friendGiftDay = 0;
+            TowerFriendsOn = true;
             UstaName = "";
             hintsSeen.Clear();
             UstaNew = false;
@@ -2124,7 +2162,8 @@ namespace KaraPati
                 friends = new List<int>(friends),
                 friendSeen = new List<int>(friendSeen),
                 friendGiftDay = friendGiftDay,
-                friendGifts = new List<string>(friendGifts)
+                friendGifts = new List<string>(friendGifts),
+                towerFriendsOff = !TowerFriendsOn
             };
             Board.WriteSave(s.cells);
             // a real game always has machines on the table; an empty board means the game state was wiped
@@ -2222,6 +2261,7 @@ namespace KaraPati
                 friendGiftDay = s.friendGiftDay;
                 friendGifts.Clear();
                 if (s.friendGifts != null) friendGifts.AddRange(s.friendGifts);
+                TowerFriendsOn = !s.towerFriendsOff;
 
                 eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
                 Pumpkins = s.pumpkins;

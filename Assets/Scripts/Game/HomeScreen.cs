@@ -43,6 +43,7 @@ namespace KaraPati
         RectTransform taskList;
         Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge, ustaBadge, ustaIcon;
         Image gameBadge, gameIcon, gameLock, friendBadge;
+        RectTransform gameNew, friendNew;   // "YENİ" tags until the feature is opened once
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -136,6 +137,7 @@ namespace KaraPati
             friendBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var fbt = UIKit.Txt("!", friendBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(fbt.rectTransform);
+            friendNew = NewTag(book.transform);
             BuildSettings();
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
@@ -165,6 +167,7 @@ namespace KaraPati
             gameBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var gbt = UIKit.Txt("!", gameBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(gbt.rectTransform);
+            gameNew = NewTag(games.transform);
             // the chapter title also opens the list
             chapterTitle.raycastTarget = true;
             var titleBtn = chapterTitle.gameObject.AddComponent<Button>();
@@ -216,6 +219,20 @@ namespace KaraPati
             play.Label().rectTransform.offsetMin = new Vector2(110f, 4f);
             var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Item(Chains.Kazan, 1), Color.white);
             pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 4f), new Vector2(100f, 100f));
+        }
+
+        /// <summary>A small orange "YENİ" tag under a round button.</summary>
+        RectTransform NewTag(Transform parent)
+        {
+            var tag = UIKit.Img("New", parent, ProcArt.Rounded, UIKit.Orange, true);
+            tag.raycastTarget = false;
+            tag.rectTransform.At(new Vector2(0f, -58f), new Vector2(96f, 38f));
+            var tt = UIKit.Txt("T", tag.transform, L.T("YENİ"), 24, Color.white, TextAnchor.MiddleCenter, false);
+            tt.fontStyle = FontStyle.Bold;
+            tt.raycastTarget = false;
+            UIKit.Stretch(tt.rectTransform);
+            tag.gameObject.SetActive(false);
+            return tag.rectTransform;
         }
 
         Button RoundButton(RectTransform parent, string name, Sprite icon, Vector2 anchor, Vector2 pos, System.Action onClick)
@@ -697,6 +714,9 @@ namespace KaraPati
             gameLock.gameObject.SetActive(!room);
             gameBadge.gameObject.SetActive(GM.AnyMiniFree);
             friendBadge.gameObject.SetActive(GM.AnyFriendNew);
+            GM.CheckIntros();   // may introduce a feature that just opened (and start its "YENİ" tag)
+            gameNew.gameObject.SetActive(GM.GameRoomNew);
+            friendNew.gameObject.SetActive(GM.FriendBookNew);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);
@@ -941,6 +961,9 @@ namespace KaraPati
                     candleGlows[i].rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 7f + i * 2f) * 0.06f + Mathf.Sin(t * 13f + i) * 0.03f);
             if (circleGlow && circleGlow.gameObject.activeSelf)
                 circleGlow.color = new Color(0.7f, 0.4f, 1f, 0.45f + Mathf.Sin(t * 2f) * 0.12f);
+            float pulse = 1f + Mathf.Sin(t * 4f) * 0.08f;
+            if (gameNew && gameNew.gameObject.activeSelf) gameNew.localScale = Vector3.one * pulse;
+            if (friendNew && friendNew.gameObject.activeSelf) friendNew.localScale = Vector3.one * pulse;
             if (karaPati && GM != null && Story.IsDone("yatak", GM.TasksDone))
                 karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
 

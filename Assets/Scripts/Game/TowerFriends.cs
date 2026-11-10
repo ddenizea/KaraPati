@@ -33,7 +33,7 @@ namespace KaraPati
         public void Refresh()
         {
             if (!tower || GM == null) return;
-            var guests = GM.BestFriendsToday(MaxVisitors);
+            var guests = GM.TowerFriendsOn ? GM.BestFriendsToday(MaxVisitors) : new List<CustomerDef>();   // visits can be turned off in the decor sheet
             int open = Mathf.Max(1, GM.TowerFloorsOpen);
             string key = DailyRewards.Today + "|" + open;
             foreach (var c in guests) key += "|" + c.id;

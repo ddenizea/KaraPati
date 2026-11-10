@@ -14,6 +14,7 @@ namespace KaraPati
         RectTransform panel, grid, detail;
         Text count, dName, dStage, dBody;
         Image dPortrait;
+        Button dGift;   // with tower visits off: today's visitor gives its gift here
 
         static readonly Color Ink = new Color(0.32f, 0.2f, 0.12f);
         static readonly Color Paper = new Color(1f, 0.96f, 0.88f);
@@ -83,6 +84,9 @@ namespace KaraPati
             dStage = UIKit.Txt("Stage", detail, "", 30, new Color(0.62f, 0.28f, 0.42f), TextAnchor.MiddleCenter, false);
             dStage.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -364f), new Vector2(880f, 44f));
 
+            dGift = UIKit.Btn("Gift", detail, L.T("Hediyeni Al"), UIKit.Green, TakeGift, 30);
+            ((RectTransform)dGift.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(0f, -10f), new Vector2(250f, 80f));
+
             var page = UIKit.Img("Page", detail, ProcArt.Rounded, Paper, true);
             page.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -420f), new Vector2(900f, 1230f));
             page.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -93,8 +97,20 @@ namespace KaraPati
             detail.gameObject.SetActive(false);
         }
 
+        CustomerDef shown;
+
+        void TakeGift()
+        {
+            if (shown == null || !GM.FriendGiftReady(shown)) return;
+            string what = GM.TakeFriendGift(shown);
+            dGift.gameObject.SetActive(false);
+            GM.ShowDialog(shown.name, Customers.GiftLine(shown.id) + "\n\n" + L.F("Hediye: {0}", what));
+        }
+
         void ShowDetail(CustomerDef c)
         {
+            shown = c;
+            dGift.gameObject.SetActive(!GM.TowerFriendsOn && GM.IsVisitorToday(c) && GM.FriendGiftReady(c));
             int st = GM.FriendStage(c);
             grid.gameObject.SetActive(false);
             count.gameObject.SetActive(false);
@@ -112,7 +128,11 @@ namespace KaraPati
                 else sb.Append("<color=#A08A78><b>").Append(stageName).Append("</b>\n").Append(L.T("Dostluğunuz ilerledikçe açılır.")).Append("</color>");
                 sb.Append("\n\n");
             }
-            if (st >= c.MaxStage) sb.Append("<color=#B0457A>").Append(L.T("Can Dostun! Siparişleri +1 Pati Mührü verir, kulede seni ziyaret edip her gün hediye bırakır.")).Append("</color>");
+            if (st >= c.MaxStage)
+            {
+                sb.Append("<color=#B0457A>").Append(L.T("Can Dostun! Siparişleri +1 Pati Mührü verir, kulede seni ziyaret edip her gün hediye bırakır.")).Append("</color>");
+                if (!GM.TowerFriendsOn) sb.Append("\n<color=#7A5A48>").Append(L.T("Kule ziyaretleri kapalı: bugün uğrayan can dostlarının hediyesini buradan alırsın.")).Append("</color>");
+            }
             else
             {
                 int have = GM.FriendPoints(c) - c.PointsFor(st), need = c.steps[st];

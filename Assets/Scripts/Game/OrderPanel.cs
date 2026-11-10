@@ -113,12 +113,37 @@ namespace KaraPati
 
         float makeTick;
 
+        /// <summary>The first visible "Hazırla"/"Yaptır" button (for the star Mini Apprentice hint), or null.</summary>
+        public RectTransform FirstMakeButton()
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (cards[i] != null && cards[i].make && cards[i].make.gameObject.activeInHierarchy) return (RectTransform)cards[i].make.transform;
+            return null;
+        }
+
+        bool countessIntro;   // the Countess introduced herself (checked until she first comes)
+
+        /// <summary>The first night the Countess is among the orders, she introduces herself.</summary>
+        void CountessIntro()
+        {
+            if (countessIntro || GM == null || !GM.OnBoard || GM.ModalOpen) return;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (orders[i] == null || orders[i].cust != Customers.NightOwl) continue;
+                countessIntro = true;
+                if (!GM.FirstTime("intro_kontes")) return;
+                var c = Customers.Get(Customers.NightOwl);
+                GM.ShowDialog(c.name, L.T("İyi geceler, genç simyacı... Ben Yarasa Kontes. Yalnızca geceleri, 20:00 ile 06:00 arasında uğrarım. Siparişlerim zordur ama karşılığında 1,5 kat altın ve fazladan Pati Mührü öderim."));
+                return;
+            }
+        }
+
         void Update()
         {
             float t = Time.time;
             // the Mini Apprentice comes, goes and gets busy without the board changing: check now and then
             makeTick -= Time.unscaledDeltaTime;
-            if (makeTick <= 0f) { makeTick = 0.5f; for (int i = 0; i < SlotCount; i++) RefreshMake(i); }
+            if (makeTick <= 0f) { makeTick = 0.5f; for (int i = 0; i < SlotCount; i++) RefreshMake(i); CountessIntro(); }
             for (int i = 0; i < SlotCount; i++)
             {
                 var g = cards[i]?.ghost;

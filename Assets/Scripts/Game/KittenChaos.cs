@@ -971,11 +971,19 @@ namespace KaraPati
             Tween.Pop(mini.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
             Say(mini, L.T("Artık Minik Çıraksın!"), UIKit.Orange);
-            if (GM.FirstTime("mini_toy"))
+            bool starIntro = star && GM.FirstTime("intro_starmini");
+            if (starIntro)
+            {
+                // the paw slides from the star Mini Apprentice to an order's "Hazırla" button
+                var btn = GM.Orders.FirstMakeButton();
+                if (btn) GM.Tut?.CatHint(mini, btn, L.T("Bir siparişte 'Hazırla'ya bas, Yıldızlı Minik Çırak işe koyulsun!"), () => !mini || MiniBusy);
+            }
+            else if (GM.FirstTime("mini_toy"))
                 GM.Tut?.CatHint(mini, B.ToyBall.rectTransform, L.T("Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle."), () => mini && mini.parked);
             if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
             Sfx.Play("levelup", 1.3f);
-            if (star) GM.ShowDialog(L.T("Yıldızlı Minik Çırak"), L.T("Yıldızlı yavru artık Yıldızlı Minik Çırak! Hem iksir malzemelerini taşır hem de çok yakında müşterilerin siparişlerini kendisi hazırlayabilecek."));
+            if (starIntro) GM.ShowDialog(L.T("Yıldızlı Minik Çırak"), L.T("Yıldızlı yavru artık Yıldızlı Minik Çırak! Siparişlerde 'Hazırla'ya bas: siparişi iksiriyle birlikte baştan sona kendisi hazırlar."));
+            else if (star) GM.Toast(L.T("Yıldızlı Minik Çırak hazır! Siparişlerde 'Hazırla'ya bas."), UIKit.Orange, 6f);
             else GM.Toast(L.F("{0} Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", KittenColors.Name(col)), UIKit.Orange, 6f);
             GM.OnBoardChanged();
         }

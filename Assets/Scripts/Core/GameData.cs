@@ -249,6 +249,7 @@ namespace KaraPati
         public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order)
         public List<int> friendSeen = new List<int>();   // friendship stage whose story the player already read in the Friendship Book
         public int friendGiftDay;                     // day the list below belongs to (DailyRewards.Today)
+        public bool towerFriendsOff;            // the player turned off best friends visiting the tower (gifts then come from the Friendship Book)
         public List<string> friendGifts = new List<string>();   // best friends whose gift in the tower was taken today // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int cluesSeen;                   // clues already looked at in the witch's case file (the red badge shows the rest)
