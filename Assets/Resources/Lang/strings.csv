@@ -334,6 +334,17 @@ Annem dağlarda. Ben burada senin iksirlerini seviyorum.,"My mom lives in the mo
 "Bak, uçabiliyorum! ...Üç saniye kadar.","Look, I can fly! ...For about three seconds."
 Kazanının altını ben yakabilirim. Bedava!,I can light the fire under your cauldron. For free!
 Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*,When I grow up I'll carry you on my back. Dragon's promise! *hic*
+"Tacımı parlatırken bunları buldum. Al, senin olsun!","I found these while polishing my crown. Here, they're yours!"
+Pamuk'la birlikte sana enerji topladık. Boo!,Cotton and I gathered some energy for you. Boo!
+"Bu haftanın uğuru: bir Pati Mührü, efendim.","This week's good luck: one Paw Seal, my dear."
+Şalı örerken artan ipek yumağı. Senin için!,Silk yarn left over from knitting the shawl. For you!
+Hazine sandığımdan bir avuç altın. Yo-ho!,A handful of gold from my treasure chest. Yo-ho!
+"Deniz feneri yağı: enerjin hiç sönmesin, tayfa!","Lighthouse oil: may your energy never run out, matey!"
+Acil teslimat! Dağlardan taze malzemeler.,Urgent delivery! Fresh ingredients from the mountains.
+Kütüphaneden iki eski mühür buldum. Hu-hu.,I found two old seals in the library. Hoo-hoo.
+Bugünkü ders: cömertlik. İki Pati Mührü senin.,Today's lesson: generosity. Two Paw Seals are yours.
+"*hık* Kazanını ateşledim, enerjin doldu!","*hic* I lit your cauldron, your energy is up!"
+"Bugün de uğradım, al bakalım!","I dropped by again today, here you go!"
 Sör Tıkırtı,Sir Rattle
 "Oh, teşekkürler! Artık rahat uyuyabilirim...","Oh, thank you! Now I can finally rest..."
 Muhteşem! Kedin de çok tatlı bu arada.,"Wonderful! Your cat is adorable, by the way."
@@ -417,6 +428,15 @@ Usta'yı Keşfe Gönder,Send the Master Exploring
 Getirir: {0},Brings: {0}
 Gönder,Send
 Bu keşif için {0} enerji gerekiyor.,This trip needs {0} energy.
+Dostluk Defteri,Friendship Book
+< Defter,< Book
+Dostluğunuz ilerledikçe açılır.,Unlocks as your friendship grows.
+"Can Dostun! Siparişleri +1 Pati Mührü verir, kulede seni ziyaret edip her gün hediye bırakır.","Your best friend! Their orders give +1 Paw Seal, and they visit you in the tower with a gift every day."
+Sonraki seviye: {0}/{1} sipariş puanı. İksir 2 sayar.,Next stage: {0}/{1} order points. A potion counts as 2.
+{0}/{1} müşteriyle tanıştın  ·  {2} Can Dostu,Met {0}/{1} customers  ·  Best friends: {2}
+{0}. seviyede gelir,Arrives at level {0}
+Can Dostu!,Best Friend!
+{0}/{1} puan,{0}/{1} points
 {0}g {1}sa,{0}d {1}h
 {0}sa {1}dk,{0}h {1}m
 {0}dk {1}sn,{0}m {1}s
@@ -543,21 +563,26 @@ Bu oyun <color=#FFD24D>{0} enerji</color> (sende {1} var),This play costs <color
 Başla,Start
 Fıçılardan fareler çıkıyor: {0} saniyede yakalayabildiğin kadar yakala!\n<color=#FFD24D>Altın fare</color> 3 puan. Hayalet müşteriyi korkutursan 2 puan gider.,Mice are popping out of the barrels: catch as many as you can in {0} seconds!\nA <color=#FFD24D>golden mouse</color> is worth 3 points. Scare a ghost customer and you lose 2.
 "Usta ve Çırak sırayla zıplar. Kedi tepedeyken, halka parladığında ekrana dokun: yumak ona uçar!\nTam tepede <color=#FFD24D>Mükemmel</color> 2 puan. {0} kaçırışta oyun biter. Ücretsiz oyunda {1} seri yakalarsan hediye sandığı!","The Master and the Apprentice take turns jumping. Tap when the cat is at the top and its ring glows: the yarn flies to it!\nRight at the top is <color=#FFD24D>Perfect</color>, 2 points. {0} misses and the game is over. Catch {1} in a row in a free play to win a gift chest!"
+"Kartları ikişer ikişer çevir, aynı malzemeleri bul! {0} saniyen var; masayı bitirince daha büyüğü gelir.\nArka arkaya bulursan +1, masayı temizlersen +3. <color=#FFD24D>Altın kum saati</color> +{1} saniye!","Flip the cards two at a time and find matching ingredients! You have {0} seconds; clear the table and a bigger one appears.\nMatches in a row give +1, a cleared table +3. The <color=#FFD24D>golden hourglass</color> adds {1} seconds!"
 Ödül: altın,Reward: gold
 Ödül: enerji,Reward: energy
 Ödül: altın (sandık sadece ücretsiz oyunda),Reward: gold (the chest is for free plays only)
 Ödül: altın + hediye sandığı şansı,Reward: gold + a chance at a gift chest
+"Ödül: malzeme (her 4 puana 1, en fazla 4)","Reward: ingredients (1 per 4 points, up to 4)"
 Ödül: <color=#FFD24D>+{0} altın</color>,Reward: <color=#FFD24D>+{0} gold</color>
 Ödül: <color=#FFD24D>+{0} enerji</color>,Reward: <color=#FFD24D>+{0} energy</color>
 "Bu sefer fareler kaçtı, ödül yok.","The mice got away this time, no reward."
 "Yumak hep yere düştü, bu sefer ödül yok.","The yarn kept hitting the floor, no reward this time."
 <color=#9BF28C>Hediye sandığı!</color>,<color=#9BF28C>Gift chest!</color>
+"Hiç çift bulamadın, bu sefer ödül yok.","No pairs found, no reward this time."
+Ödül: <color=#FFD24D>{0} malzeme</color>,Reward: <color=#FFD24D>{0} ingredients</color>
+"4 puana ulaşamadın, bu sefer ödül yok.","You didn't reach 4 points, no reward this time."
 Skor: <size=48><b>{0}</b></size>,Score: <size=48><b>{0}</b></size>
 <color=#9BF28C>Yeni rekor!</color>,<color=#9BF28C>New record!</color>
 Tekrar (ücretsiz),Again (free)
 Tekrar ({0} enerji),Again ({0} energy)
-Süre doldu!,Time's up!
 Oyun bitti!,Game over!
+Süre doldu!,Time's up!
 Odaya Dön,Back to Room
 Önce örümcek ağları. Sonra mama. Sonra yine mama.,Spider webs first. Then food. Then more food.
 Bu mahzen çok soğuk... patilerim dondu.,This cellar is so cold... my paws are frozen.
@@ -711,6 +736,12 @@ Kara Pati'ye selamlar!,Say hi to Kara Pati for me!
 Mis gibi kokuyor. Sağ ol!,It smells lovely. Thanks!
 "Bunu bulmak ne zordu, iyi ki varsın.","That was so hard to find, I'm glad you're here."
 Ver  +{0},Give  +{0}
+"İki kart çevir, aynılarını bul!","Flip two cards, find the pairs!"
++{0} sn,+{0} s
+Seri x{0}! +1,Streak x{0}! +1
+Masa temiz! +3,Table clear! +3
+Başla!,Go!
+Ezberle!,Memorize!
 Tarif Defteri,Recipe Book
 {0}/{1} tarif açık.,{0}/{1} recipes unlocked.
 Minik Çırak'a 'Yaptır' de!,Tell the Little Apprentice to 'Make' it!
@@ -720,6 +751,8 @@ Süre: {0},Time: {0}
 Depo,Storage
 Eşyayı masadan depo kutusunun üstüne sürükle. Geri almak için dokun.,Drag an item from the table onto the storage box. Tap to take it back.
 Depo  {0}/{1},Storage  {0}/{1}
+"{0}: ""Yarın yine uğrarım!""","{0}: ""I'll drop by again tomorrow!"""
+Hediye: {0},Gift: {0}
 Cadı Kulesi,Witch's Tower
 Süsle,Decorate
 {0}. Kat: {1},Floor {0}: {1}

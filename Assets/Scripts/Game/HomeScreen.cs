@@ -42,7 +42,7 @@ namespace KaraPati
 
         RectTransform taskList;
         Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge, ustaBadge, ustaIcon;
-        Image gameBadge, gameIcon, gameLock;
+        Image gameBadge, gameIcon, gameLock, friendBadge;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -130,6 +130,12 @@ namespace KaraPati
             RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
             // settings: music and effects as two separate switches, and the language
             RoundButton(sceneArea, "Settings", ProcArt.Gear, new Vector2(1f, 1f), new Vector2(-66f, -190f), ToggleSettings);
+            // Friendship Book: every customer, how good friends you are, the story lines they told you
+            var book = RoundButton(sceneArea, "FriendBook", ProcArt.Heart, new Vector2(1f, 1f), new Vector2(-66f, -320f), () => GM.OpenFriendBook());
+            friendBadge = UIKit.Img("Badge", book.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            friendBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var fbt = UIKit.Txt("!", friendBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(fbt.rectTransform);
             BuildSettings();
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
@@ -690,6 +696,7 @@ namespace KaraPati
             gameIcon.color = room ? Color.white : new Color(1f, 1f, 1f, 0.4f);
             gameLock.gameObject.SetActive(!room);
             gameBadge.gameObject.SetActive(GM.AnyMiniFree);
+            friendBadge.gameObject.SetActive(GM.AnyFriendNew);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);

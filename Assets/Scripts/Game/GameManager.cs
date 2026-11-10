@@ -64,6 +64,10 @@ namespace KaraPati
         readonly HashSet<string> stickers = new HashSet<string>();
         readonly HashSet<string> claimedSets = new HashSet<string>();
         readonly List<int> friends = new List<int>();   // friendship points per customer (Customers.All order)
+        readonly List<int> friendSeen = new List<int>();
+        int friendGiftDay;
+        readonly List<string> friendGifts = new List<string>();
+        FriendBookPanel friendBook;
         readonly HashSet<string> clues = new HashSet<string>();
 
         public RectTransform Root { get; private set; }
@@ -74,7 +78,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (gameRoom && gameRoom.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (gameRoom && gameRoom.IsOpen) || (friendBook && friendBook.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -357,6 +361,10 @@ namespace KaraPati
             var colorRt = UIKit.Rect("UstaColorPanel", canvasRt);
             ustaColorPanel = colorRt.gameObject.AddComponent<UstaColorPanel>();
             ustaColorPanel.Build();
+
+            var bookRt = UIKit.Rect("FriendBook", canvasRt);
+            friendBook = bookRt.gameObject.AddComponent<FriendBookPanel>();
+            friendBook.Build();
 
             var roomRt = UIKit.Rect("GameRoom", canvasRt);
             gameRoom = roomRt.gameObject.AddComponent<GameRoomPanel>();
@@ -994,13 +1002,20 @@ namespace KaraPati
             return true;
         }
 
-        /// <summary>Gift chest from a mini game: 3 ingredients (level 2-3) on the table, else in the storage box, else sold.</summary>
-        public string GiveMiniChest()
+        /// <summary>Mini game prize: `count` ingredients (level 2-3) on the table, else in the storage box, else sold.</summary>
+        public string GiveMiniChest(int count = 3)
+        {
+            var items = new List<ItemData>();
+            for (int i = 0; i < count; i++) items.Add(new ItemData(Chains.RandomIngredient(), Random.Range(2, 4)));
+            return GiveItems(items);
+        }
+
+        /// <summary>Items given away from another screen: on the table, else in the storage box, else sold. Says where they went.</summary>
+        public string GiveItems(List<ItemData> items)
         {
             int onBoard = 0, stored = 0, sold = 0;
-            for (int i = 0; i < 3; i++)
+            foreach (var item in items)
             {
-                var item = new ItemData(Chains.RandomIngredient(), Random.Range(2, 4));
                 if (Board.NearestEmpty(new Vector2Int(3, 5), out var e)) { Board.Set(e, item, true); onBoard++; }
                 else if (Storage.Count < StorageSlots) { Storage.Add(item); Discover(item.chain, item.level); stored++; }
                 else { AddGold(Chains.Value(item.level)); sold++; }
@@ -1012,6 +1027,84 @@ namespace KaraPati
             if (stored > 0) parts.Add(L.F("{0} malzeme depoya", stored));
             if (sold > 0) parts.Add(L.F("{0} malzeme yer olmadığı için altına", sold));
             return L.F("{0} gitti.", string.Join(", ", parts));
+        }
+
+        // ------------------------------------------------------------------ friendship book and best friends in the tower
+        public void OpenFriendBook() => friendBook.Open();
+
+        public void OnFriendBookClosed()
+        {
+            if (!OnBoard && !OnTower) home.Refresh(false);
+            Save();
+        }
+
+        public int FriendSeen(CustomerDef c)
+        {
+            int i = Customers.IndexOf(c.id);
+            return i >= 0 && i < friendSeen.Count ? friendSeen[i] : 0;
+        }
+
+        /// <summary>The player read this customer's story up to its current stage.</summary>
+        public void MarkFriendSeen(CustomerDef c)
+        {
+            int i = Customers.IndexOf(c.id);
+            if (i < 0) return;
+            while (friendSeen.Count <= i) friendSeen.Add(0);
+            friendSeen[i] = FriendStage(c);
+            MarkDirty();
+        }
+
+        public bool FriendHasNew(CustomerDef c) => FriendStage(c) > FriendSeen(c);
+        public bool AnyFriendNew { get { foreach (var c in Customers.All) if (FriendHasNew(c)) return true; return false; } }
+
+        /// <summary>Best friends visiting the tower today: at most `max`, a different mix every day.</summary>
+        public List<CustomerDef> BestFriendsToday(int max)
+        {
+            var list = new List<CustomerDef>();
+            foreach (var c in Customers.All) if (IsBestFriend(c)) list.Add(c);
+            var rng = new System.Random(DailyRewards.Today);
+            for (int i = list.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); (list[i], list[j]) = (list[j], list[i]); }
+            if (list.Count > max) list.RemoveRange(max, list.Count - max);
+            return list;
+        }
+
+        void RollFriendGiftDay()
+        {
+            if (friendGiftDay == DailyRewards.Today) return;
+            friendGiftDay = DailyRewards.Today;
+            friendGifts.Clear();
+        }
+
+        public bool FriendGiftReady(CustomerDef c)
+        {
+            RollFriendGiftDay();
+            return IsBestFriend(c) && !friendGifts.Contains(c.id);
+        }
+
+        /// <summary>Take today's gift from a best friend; returns what it was. Each friend gives something in character.</summary>
+        public string TakeFriendGift(CustomerDef c)
+        {
+            if (!FriendGiftReady(c)) return "";
+            friendGifts.Add(c.id);
+            string what;
+            switch (c.id)
+            {
+                case "kurbaga": AddGold(15); what = L.F("+{0} altın", 15); break;
+                case "boo": AddEnergy(5); what = L.F("+{0} enerji", 5); break;
+                case "bocek": AddStamps(1); what = L.F("+{0} Pati Mührü", 1); break;
+                case "sis": what = GiveItems(new List<ItemData> { new ItemData(Chains.Ag, 3) }); break;
+                case "tirtil": AddGold(25); what = L.F("+{0} altın", 25); break;
+                case "pus": AddEnergy(8); what = L.F("+{0} enerji", 8); break;
+                case "kartal": what = GiveMiniChest(2); break;
+                case "baykus": AddStamps(2); what = L.F("+{0} Pati Mührü", 2); break;
+                case "ugultu": AddStamps(2); what = L.F("+{0} Pati Mührü", 2); break;
+                case "ejderha": AddEnergy(15); what = L.F("+{0} enerji", 15); break;
+                default: AddGold(10); what = L.F("+{0} altın", 10); break;
+            }
+            Sfx.Play("gift");
+            RefreshHud();
+            MarkDirty();
+            return what;
         }
 
         public void AddEnergy(int amount)
@@ -1921,6 +2014,9 @@ namespace KaraPati
             clues.Clear();
             CluesSeen = 0;
             friends.Clear();
+            friendSeen.Clear();
+            friendGifts.Clear();
+            friendGiftDay = 0;
             UstaName = "";
             hintsSeen.Clear();
             UstaNew = false;
@@ -1996,7 +2092,10 @@ namespace KaraPati
                 dailyIndex = DailyIndex,
                 lastDailyDay = lastDailyDay,
                 claimedSets = new List<string>(claimedSets),
-                friends = new List<int>(friends)
+                friends = new List<int>(friends),
+                friendSeen = new List<int>(friendSeen),
+                friendGiftDay = friendGiftDay,
+                friendGifts = new List<string>(friendGifts)
             };
             Board.WriteSave(s.cells);
             // a real game always has machines on the table; an empty board means the game state was wiped
@@ -2088,6 +2187,11 @@ namespace KaraPati
                 if (s.claimedSets != null) foreach (var id in s.claimedSets) claimedSets.Add(id);
                 friends.Clear();
                 if (s.friends != null) friends.AddRange(s.friends);
+                friendSeen.Clear();
+                if (s.friendSeen != null) friendSeen.AddRange(s.friendSeen);
+                friendGiftDay = s.friendGiftDay;
+                friendGifts.Clear();
+                if (s.friendGifts != null) friendGifts.AddRange(s.friendGifts);
 
                 eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
                 Pumpkins = s.pumpkins;

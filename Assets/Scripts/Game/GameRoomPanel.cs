@@ -54,7 +54,7 @@ namespace KaraPati
         public bool IsOpen => gameObject.activeSelf;
 
         static Sprite Icon(int g) =>
-            g == MiniGames.Fare ? ProcArt.Mouse(false) : g == MiniGames.Yumak ? ProcArt.YarnBall : ProcArt.Item(Chains.Kristal, 2);
+            g == MiniGames.Fare ? ProcArt.Mouse(false) : g == MiniGames.Yumak ? ProcArt.YarnBall : ProcArt.Item(Chains.Iksir, 2);
 
         public void Build()
         {
@@ -81,6 +81,10 @@ namespace KaraPati
             games[MiniGames.Yumak] = yumak.gameObject.AddComponent<YarnToss>();
             games[MiniGames.Yumak].Build(yumak);
             yumak.gameObject.SetActive(false);
+            var hafiza = UIKit.Fill(playArea, "IksirHafizasi");
+            games[MiniGames.Hafiza] = hafiza.gameObject.AddComponent<PotionMemory>();
+            games[MiniGames.Hafiza].Build(hafiza);
+            hafiza.gameObject.SetActive(false);
             playArea.gameObject.SetActive(false);
 
             BuildPopup();
@@ -267,6 +271,9 @@ namespace KaraPati
                 case MiniGames.Yumak:
                     return L.F("Usta ve Çırak sırayla zıplar. Kedi tepedeyken, halka parladığında ekrana dokun: yumak ona uçar!\nTam tepede <color=#FFD24D>Mükemmel</color> 2 puan. {0} kaçırışta oyun biter. Ücretsiz oyunda {1} seri yakalarsan hediye sandığı!",
                         MiniGames.YarnLives, MiniGames.YarnChestStreak);
+                case MiniGames.Hafiza:
+                    return L.F("Kartları ikişer ikişer çevir, aynı malzemeleri bul! {0} saniyen var; masayı bitirince daha büyüğü gelir.\nArka arkaya bulursan +1, masayı temizlersen +3. <color=#FFD24D>Altın kum saati</color> +{1} saniye!",
+                        (int)MiniGames.MemorySeconds, (int)MiniGames.HourglassBonus);
                 default: return MiniGames.Blurbs[g];
             }
         }
@@ -275,6 +282,7 @@ namespace KaraPati
         {
             if (g == MiniGames.Fare) return paid ? L.T("Ödül: altın") : L.T("Ödül: enerji");
             if (g == MiniGames.Yumak) return paid ? L.T("Ödül: altın (sandık sadece ücretsiz oyunda)") : L.T("Ödül: altın + hediye sandığı şansı");
+            if (g == MiniGames.Hafiza) return paid ? L.T("Ödül: altın") : L.T("Ödül: malzeme (her 4 puana 1, en fazla 4)");
             return L.T("Ödül: altın");
         }
 
@@ -310,7 +318,21 @@ namespace KaraPati
                 if (!paid && games[g].BonusEarned)
                     rewardText += "\n" + L.T("<color=#9BF28C>Hediye sandığı!</color>") + " " + GM.GiveMiniChest();
             }
-            else rewardText = "";
+            else
+            {
+                if (paid)
+                {
+                    reward = MiniGames.MemoryGoldPaid(score);
+                    GM.AddGold(reward);
+                    rewardText = reward > 0 ? L.F("Ödül: <color=#FFD24D>+{0} altın</color>", reward) : L.T("Hiç çift bulamadın, bu sefer ödül yok.");
+                }
+                else
+                {
+                    reward = MiniGames.MemoryItems(score);
+                    rewardText = reward > 0 ? L.F("Ödül: <color=#FFD24D>{0} malzeme</color>", reward) + "\n" + GM.GiveMiniChest(reward)
+                                            : L.T("4 puana ulaşamadın, bu sefer ödül yok.");
+                }
+            }
             bool record = GM.MiniRecord(g, score);
             Sfx.Play(record && score > 0 ? "levelup" : reward > 0 ? "gift" : "pop");
 
@@ -318,7 +340,7 @@ namespace KaraPati
                           (record && score > 0 ? L.T("<color=#9BF28C>Yeni rekor!</color>") : L.F("En iyi skor: {0}", GM.MiniBest(g))) + "\n\n" + rewardText;
             int left = GM.MiniFreeLeft(g);
             string again = left > 0 ? L.T("Tekrar (ücretsiz)") : L.F("Tekrar ({0} enerji)", MiniGames.EnergyCost);
-            ShowPopup(g, g == MiniGames.Fare ? L.T("Süre doldu!") : L.T("Oyun bitti!"), body, again, () => ShowIntro(g), L.T("Odaya Dön"), ShowHub, true);
+            ShowPopup(g, g == MiniGames.Yumak ? L.T("Oyun bitti!") : L.T("Süre doldu!"), body, again, () => ShowIntro(g), L.T("Odaya Dön"), ShowHub, true);
         }
 
         void Update()

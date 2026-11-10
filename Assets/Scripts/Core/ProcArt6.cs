@@ -61,6 +61,22 @@ namespace KaraPati
             p.FillOutlined(q => S.Sub(S.U(S.Poly(q, teeth), S.Circle(q, Vector2.zero, 0.7f)), S.Circle(q, Vector2.zero, 0.26f)), new Color(1f, 0.93f, 0.8f), 0.06f);
         });
 
+        /// <summary>Golden hourglass: the bonus card in İksir Hafızası (+5 seconds).</summary>
+        public static Sprite Hourglass => Make("mg_hourglass", Size, p =>
+        {
+            var gold = new Color(1f, 0.78f, 0.28f);
+            var glass = new Color(0.85f, 0.93f, 1f, 0.85f);
+            var sand = new Color(1f, 0.86f, 0.45f);
+            p.Glow(Vector2.zero, 1f, new Color(1f, 0.85f, 0.4f, 0.35f));
+            var top = new[] { new Vector2(-0.45f, 0.62f), new Vector2(0.45f, 0.62f), new Vector2(0.06f, 0.02f), new Vector2(-0.06f, 0.02f) };
+            var bot = new[] { new Vector2(-0.06f, -0.02f), new Vector2(0.06f, -0.02f), new Vector2(0.45f, -0.62f), new Vector2(-0.45f, -0.62f) };
+            p.FillOutlined(q => S.U(S.Poly(q, top), S.Poly(q, bot)), glass, 0.05f);
+            p.Fill(q => S.I(S.Poly(q, top), q.y - 0.3f), sand);                                // a little sand left above the neck
+            p.Fill(q => S.I(S.Poly(q, bot), q.y + 0.3f), sand);                                // a pile at the bottom
+            p.Fill(q => S.Seg(q, new Vector2(0f, -0.02f), new Vector2(0f, -0.3f), 0.025f), sand);   // the falling stream
+            p.FillOutlined(q => S.U(S.Box(q, new Vector2(0f, 0.7f), new Vector2(0.6f, 0.09f), 0.04f), S.Box(q, new Vector2(0f, -0.7f), new Vector2(0.6f, 0.09f), 0.04f)), gold, 0.05f);
+        });
+
         /// <summary>Pink yarn ball thrown in Yumak Atma.</summary>
         public static Sprite YarnBall => Make("mg_yarn", Size, p => Yarn(p, 0.95f, new Color(0.95f, 0.5f, 0.62f)));
 

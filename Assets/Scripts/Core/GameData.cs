@@ -243,7 +243,10 @@ namespace KaraPati
         public List<string> hints = new List<string>();   // one-off guide hints already shown
         public bool ustaNew;                    // a new Master is waiting to be named ("!" on the Usta Kedim button)
         public long ustaPlayAt;                 // UTC ticks when the Master and Kara Pati can play with the yarn again
-        public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order) // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
+        public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order)
+        public List<int> friendSeen = new List<int>();   // friendship stage whose story the player already read in the Friendship Book
+        public int friendGiftDay;                     // day the list below belongs to (DailyRewards.Today)
+        public List<string> friendGifts = new List<string>();   // best friends whose gift in the tower was taken today // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int cluesSeen;                   // clues already looked at in the witch's case file (the red badge shows the rest)
         public int miniDay;                     // day the mini game plays below were counted on (DailyRewards.Today)
@@ -748,7 +751,7 @@ namespace KaraPati
             L.N("Kartları çevir, aynı malzemeleri eşleştir.")
         );
         /// <summary>Games that are built so far; the others show "Yakında".</summary>
-        public static bool Ready(int g) => g == Fare || g == Yumak;
+        public static bool Ready(int g) => g >= 0 && g < Count;
 
         // Free play of Fare Avı gives energy. A paid play (energy in) gives gold instead, so energy can never
         // turn into more energy. It stays under 20 gold: 10 energy costs 20 gold in the shop, so gold -> energy -> gold
@@ -761,6 +764,12 @@ namespace KaraPati
         public const int YarnChestStreak = 15, YarnLives = 3;
         public static int YarnGold(int score) => score <= 0 ? 0 : Mathf.Min(30, 3 + score);
         public static int YarnGoldPaid(int score) => score <= 0 ? 0 : Mathf.Min(18, 2 + score / 2);
+
+        // İksir Hafızası: a free play gives ingredients (one per 4 points, up to 4), a paid one gold (under 20, as above)
+        public const float MemorySeconds = 60f, HourglassBonus = 5f;
+        public static readonly int[] MemoryPairs = { 6, 8, 10 };   // boards get bigger; after the last one it stays at 10
+        public static int MemoryItems(int score) => Mathf.Clamp(score / 4, 0, 4);
+        public static int MemoryGoldPaid(int score) => score <= 0 ? 0 : Mathf.Min(18, 2 + score);
     }
 
     public static class Levels
@@ -1011,6 +1020,25 @@ namespace KaraPati
 
         public static string StageName(CustomerDef c, int stage) =>
             stage >= c.MaxStage ? BestFriend : StageNames[Mathf.Clamp(stage, 0, StageNames.Length - 1)];
+
+        /// <summary>What a best friend says in the tower when it hands over its daily gift.</summary>
+        public static string GiftLine(string id)
+        {
+            switch (id)
+            {
+                case "kurbaga": return L.T("Tacımı parlatırken bunları buldum. Al, senin olsun!");
+                case "boo": return L.T("Pamuk'la birlikte sana enerji topladık. Boo!");
+                case "bocek": return L.T("Bu haftanın uğuru: bir Pati Mührü, efendim.");
+                case "sis": return L.T("Şalı örerken artan ipek yumağı. Senin için!");
+                case "tirtil": return L.T("Hazine sandığımdan bir avuç altın. Yo-ho!");
+                case "pus": return L.T("Deniz feneri yağı: enerjin hiç sönmesin, tayfa!");
+                case "kartal": return L.T("Acil teslimat! Dağlardan taze malzemeler.");
+                case "baykus": return L.T("Kütüphaneden iki eski mühür buldum. Hu-hu.");
+                case "ugultu": return L.T("Bugünkü ders: cömertlik. İki Pati Mührü senin.");
+                case "ejderha": return L.T("*hık* Kazanını ateşledim, enerjin doldu!");
+                default: return L.T("Bugün de uğradım, al bakalım!");
+            }
+        }
 
         /// <summary>Reward for reaching `stage`: a bit of energy, stamps, more at the top.</summary>
         public static int StageEnergy(int stage) => 5 + 2 * stage;

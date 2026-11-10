@@ -25,6 +25,8 @@ namespace KaraPati
 
         // free-placement decoration
         readonly RectTransform[] decorLayers = new RectTransform[Tower.Floors];
+        readonly RectTransform[] friendLayers = new RectTransform[Tower.Floors];   // best friends visiting (TowerFriends)
+        TowerFriends friendsVisit;
         readonly Dictionary<PlacedSave, DecorPiece> pieces = new Dictionary<PlacedSave, DecorPiece>();
         DecorPiece selected;
         RectTransform toolbar;
@@ -37,6 +39,7 @@ namespace KaraPati
         float careTick, catIdle;
 
         public RectTransform Floor(int i) => i >= 0 && i < floors.Length ? floors[i] : null;
+        public RectTransform FriendLayer(int i) => i >= 0 && i < friendLayers.Length ? friendLayers[i] : null;
 
         // ------------------------------------------------------------------ build
         public void Build(RectTransform root)
@@ -79,6 +82,8 @@ namespace KaraPati
             BuildRoof();
             BuildCatRoom(floors[0]);
             BuildToolbar();
+            friendsVisit = gameObject.AddComponent<TowerFriends>();
+            friendsVisit.Init(this);
 
             // L.T("Süsle") button: opens the ornament shop / inventory for the floor in view
             var btn = UIKit.Img("Decorate", root, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f, 0.9f));
@@ -134,6 +139,7 @@ namespace KaraPati
             FloorFurniture(f, i);
             // ornaments the player places live here: above the furniture, below the locked cover (and below the cat)
             decorLayers[i] = UIKit.Rect("Decor", f).At(Vector2.zero, new Vector2(FloorW, FloorH));
+            friendLayers[i] = UIKit.Rect("Friends", f).At(Vector2.zero, new Vector2(FloorW, FloorH));
 
             // name plaque
             var plaque = P("Plaque", f, ProcArt.Rounded, new Color(0.15f, 0.1f, 0.2f, 0.85f), new Vector2(i % 2 == 0 ? -300f : 300f, FloorH / 2f - 80f), new Vector2(360f, 64f), true);
@@ -446,6 +452,7 @@ namespace KaraPati
             }
             RefreshCare();
             RefreshUsta();
+            if (friendsVisit) friendsVisit.Refresh();
         }
 
         void OnUnlock(int i)
