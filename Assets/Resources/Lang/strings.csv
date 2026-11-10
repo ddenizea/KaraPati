@@ -542,16 +542,22 @@ Bu oyun <color=#FFD24D>{0} enerji</color> (sende {1} var),This play costs <color
 "<color=#FF9A8A>Enerjin yetmiyor.</color> Bir oyun {0} enerji, sende {1} var.\nBiraz bekle, enerji kendiliğinden dolar.","<color=#FF9A8A>Not enough energy.</color> A play costs {0} energy, you have {1}.\nWait a little, energy refills by itself."
 Başla,Start
 Fıçılardan fareler çıkıyor: {0} saniyede yakalayabildiğin kadar yakala!\n<color=#FFD24D>Altın fare</color> 3 puan. Hayalet müşteriyi korkutursan 2 puan gider.,Mice are popping out of the barrels: catch as many as you can in {0} seconds!\nA <color=#FFD24D>golden mouse</color> is worth 3 points. Scare a ghost customer and you lose 2.
+"Usta ve Çırak sırayla zıplar. Kedi tepedeyken, halka parladığında ekrana dokun: yumak ona uçar!\nTam tepede <color=#FFD24D>Mükemmel</color> 2 puan. {0} kaçırışta oyun biter. Ücretsiz oyunda {1} seri yakalarsan hediye sandığı!","The Master and the Apprentice take turns jumping. Tap when the cat is at the top and its ring glows: the yarn flies to it!\nRight at the top is <color=#FFD24D>Perfect</color>, 2 points. {0} misses and the game is over. Catch {1} in a row in a free play to win a gift chest!"
 Ödül: altın,Reward: gold
 Ödül: enerji,Reward: energy
+Ödül: altın (sandık sadece ücretsiz oyunda),Reward: gold (the chest is for free plays only)
+Ödül: altın + hediye sandığı şansı,Reward: gold + a chance at a gift chest
 Ödül: <color=#FFD24D>+{0} altın</color>,Reward: <color=#FFD24D>+{0} gold</color>
 Ödül: <color=#FFD24D>+{0} enerji</color>,Reward: <color=#FFD24D>+{0} energy</color>
 "Bu sefer fareler kaçtı, ödül yok.","The mice got away this time, no reward."
+"Yumak hep yere düştü, bu sefer ödül yok.","The yarn kept hitting the floor, no reward this time."
+<color=#9BF28C>Hediye sandığı!</color>,<color=#9BF28C>Gift chest!</color>
 Skor: <size=48><b>{0}</b></size>,Score: <size=48><b>{0}</b></size>
 <color=#9BF28C>Yeni rekor!</color>,<color=#9BF28C>New record!</color>
 Tekrar (ücretsiz),Again (free)
 Tekrar ({0} enerji),Again ({0} energy)
 Süre doldu!,Time's up!
+Oyun bitti!,Game over!
 Odaya Dön,Back to Room
 Önce örümcek ağları. Sonra mama. Sonra yine mama.,Spider webs first. Then food. Then more food.
 Bu mahzen çok soğuk... patilerim dondu.,This cellar is so cold... my paws are frozen.
@@ -757,3 +763,11 @@ Bir Çırak'ı Usta yapınca burada seni bekleyecek.,Make an Apprentice a Master
 {0} keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.,{0} is back from exploring!\nIt's waiting at the Cat House with a chest.
 {0} keşifte.\nDönüşüne {1} var.,{0} is exploring.\nBack in {1}.
 {0} dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.,{0} is working in the shop.\nIn the evenings it sleeps on its cushion in the tower.
+Halka parlayınca ekrana dokun!,Tap when the ring glows!
+Seri: {0},Streak: {0}
+Hadi!,Go!
+Çok bekledin!,Too slow!
+Mükemmel!,Perfect!
+Yakaladı!,Caught!
+Hediye sandığı!,Gift chest!
+Kaçtı!,Missed!

@@ -748,7 +748,7 @@ namespace KaraPati
             L.N("Kartları çevir, aynı malzemeleri eşleştir.")
         );
         /// <summary>Games that are built so far; the others show "Yakında".</summary>
-        public static bool Ready(int g) => g == Fare;   // Yumak Atma: in progress
+        public static bool Ready(int g) => g == Fare || g == Yumak;
 
         // Free play of Fare Avı gives energy. A paid play (energy in) gives gold instead, so energy can never
         // turn into more energy. It stays under 20 gold: 10 energy costs 20 gold in the shop, so gold -> energy -> gold

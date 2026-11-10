@@ -120,15 +120,9 @@ namespace KaraPati
             hit.raycastTarget = true;
             UIKit.Stretch(hit.rectTransform);
             int hi = i;
-            hit.gameObject.AddComponent<Tap>().onDown = () => OnTap(hi);
+            hit.gameObject.AddComponent<TapDown>().onDown = () => OnTap(hi);
 
             return new Hole { critter = critter, img = img, paw = paw, pawImg = pawImg, phase = Phase.Hidden, kind = -1 };
-        }
-
-        class Tap : MonoBehaviour, IPointerDownHandler
-        {
-            public Action onDown;
-            public void OnPointerDown(PointerEventData e) => onDown?.Invoke();
         }
 
         // ------------------------------------------------------------------ round

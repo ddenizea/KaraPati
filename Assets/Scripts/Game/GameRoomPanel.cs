@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace KaraPati
@@ -12,6 +13,17 @@ namespace KaraPati
         public abstract void Play(Action<int> done);
         /// <summary>Stop at once without reporting (the room was closed).</summary>
         public abstract void Stop();
+        /// <summary>This round was paid with energy (some bonuses are for free plays only).</summary>
+        public bool Paid { get; set; }
+        /// <summary>The round earned the game's extra prize (e.g. Yumak Atma's gift chest).</summary>
+        public virtual bool BonusEarned => false;
+    }
+
+    /// <summary>Reacts the moment a finger touches (not on release), so fast taps in mini games count at once.</summary>
+    public class TapDown : MonoBehaviour, IPointerDownHandler
+    {
+        public Action onDown;
+        public void OnPointerDown(PointerEventData e) => onDown?.Invoke();
     }
 
     /// <summary>
@@ -42,7 +54,7 @@ namespace KaraPati
         public bool IsOpen => gameObject.activeSelf;
 
         static Sprite Icon(int g) =>
-            g == MiniGames.Fare ? ProcArt.Mouse(false) : g == MiniGames.Yumak ? ProcArt.Item(Chains.Ag, 3) : ProcArt.Item(Chains.Kristal, 2);
+            g == MiniGames.Fare ? ProcArt.Mouse(false) : g == MiniGames.Yumak ? ProcArt.YarnBall : ProcArt.Item(Chains.Kristal, 2);
 
         public void Build()
         {
@@ -65,6 +77,10 @@ namespace KaraPati
             games[MiniGames.Fare] = fare.gameObject.AddComponent<MouseHunt>();
             games[MiniGames.Fare].Build(fare);
             fare.gameObject.SetActive(false);
+            var yumak = UIKit.Fill(playArea, "YumakAtma");
+            games[MiniGames.Yumak] = yumak.gameObject.AddComponent<YarnToss>();
+            games[MiniGames.Yumak].Build(yumak);
+            yumak.gameObject.SetActive(false);
             playArea.gameObject.SetActive(false);
 
             BuildPopup();
@@ -160,7 +176,7 @@ namespace KaraPati
 
             var card = UIKit.Img("Card", popup, ProcArt.Rounded, new Color(0.24f, 0.17f, 0.36f, 0.99f), true);
             popCard = card.rectTransform;
-            popCard.At(new Vector2(0f, 40f), new Vector2(880f, 720f));
+            popCard.At(new Vector2(0f, 40f), new Vector2(880f, 820f));
 
             var disc = UIKit.Img("Disc", popCard, ProcArt.Circle, new Color(1f, 0.93f, 0.8f));
             disc.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, -40f), new Vector2(220f, 220f));
@@ -170,7 +186,7 @@ namespace KaraPati
             popTitle = UIKit.Txt("Title", popCard, "", 54, UIKit.Orange);
             popTitle.fontStyle = FontStyle.Bold;
             popTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -160f), new Vector2(800f, 80f));
-            popBody = UIKit.Txt("Body", popCard, "", 34, UIKit.Cream, TextAnchor.UpperCenter, false);
+            popBody = UIKit.Txt("Body", popCard, "", 32, UIKit.Cream, TextAnchor.UpperCenter, false);
             popBody.lineSpacing = 1.15f;
             popBody.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -250f), new Vector2(780f, 360f));
 
@@ -248,6 +264,9 @@ namespace KaraPati
             {
                 case MiniGames.Fare:
                     return L.F("Fıçılardan fareler çıkıyor: {0} saniyede yakalayabildiğin kadar yakala!\n<color=#FFD24D>Altın fare</color> 3 puan. Hayalet müşteriyi korkutursan 2 puan gider.", (int)MiniGames.FareSeconds);
+                case MiniGames.Yumak:
+                    return L.F("Usta ve Çırak sırayla zıplar. Kedi tepedeyken, halka parladığında ekrana dokun: yumak ona uçar!\nTam tepede <color=#FFD24D>Mükemmel</color> 2 puan. {0} kaçırışta oyun biter. Ücretsiz oyunda {1} seri yakalarsan hediye sandığı!",
+                        MiniGames.YarnLives, MiniGames.YarnChestStreak);
                 default: return MiniGames.Blurbs[g];
             }
         }
@@ -255,6 +274,7 @@ namespace KaraPati
         static string RewardLine(int g, bool paid)
         {
             if (g == MiniGames.Fare) return paid ? L.T("Ödül: altın") : L.T("Ödül: enerji");
+            if (g == MiniGames.Yumak) return paid ? L.T("Ödül: altın (sandık sadece ücretsiz oyunda)") : L.T("Ödül: altın + hediye sandığı şansı");
             return L.T("Ödül: altın");
         }
 
@@ -265,6 +285,7 @@ namespace KaraPati
             hub.gameObject.SetActive(false);
             playArea.gameObject.SetActive(true);
             games[g].gameObject.SetActive(true);
+            games[g].Paid = paid;
             playing = true;
             Sfx.Play("whoosh");
             games[g].Play(score => OnRoundOver(g, score));
@@ -281,6 +302,14 @@ namespace KaraPati
                 if (paid) GM.AddGold(reward); else GM.AddEnergy(reward);
                 rewardText = reward > 0 ? (paid ? L.F("Ödül: <color=#FFD24D>+{0} altın</color>", reward) : L.F("Ödül: <color=#FFD24D>+{0} enerji</color>", reward)) : L.T("Bu sefer fareler kaçtı, ödül yok.");
             }
+            else if (g == MiniGames.Yumak)
+            {
+                reward = paid ? MiniGames.YarnGoldPaid(score) : MiniGames.YarnGold(score);
+                GM.AddGold(reward);
+                rewardText = reward > 0 ? L.F("Ödül: <color=#FFD24D>+{0} altın</color>", reward) : L.T("Yumak hep yere düştü, bu sefer ödül yok.");
+                if (!paid && games[g].BonusEarned)
+                    rewardText += "\n" + L.T("<color=#9BF28C>Hediye sandığı!</color>") + " " + GM.GiveMiniChest();
+            }
             else rewardText = "";
             bool record = GM.MiniRecord(g, score);
             Sfx.Play(record && score > 0 ? "levelup" : reward > 0 ? "gift" : "pop");
@@ -289,7 +318,7 @@ namespace KaraPati
                           (record && score > 0 ? L.T("<color=#9BF28C>Yeni rekor!</color>") : L.F("En iyi skor: {0}", GM.MiniBest(g))) + "\n\n" + rewardText;
             int left = GM.MiniFreeLeft(g);
             string again = left > 0 ? L.T("Tekrar (ücretsiz)") : L.F("Tekrar ({0} enerji)", MiniGames.EnergyCost);
-            ShowPopup(g, L.T("Süre doldu!"), body, again, () => ShowIntro(g), L.T("Odaya Dön"), ShowHub, true);
+            ShowPopup(g, g == MiniGames.Fare ? L.T("Süre doldu!") : L.T("Oyun bitti!"), body, again, () => ShowIntro(g), L.T("Odaya Dön"), ShowHub, true);
         }
 
         void Update()
