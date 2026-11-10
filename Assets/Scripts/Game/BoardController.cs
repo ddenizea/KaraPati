@@ -505,6 +505,41 @@ namespace KaraPati
             GM.Tut?.Notify("spawn");
         }
 
+        /// <summary>The star Mini Apprentice set the item it carried onto its twin at `to`: they merge there.</summary>
+        public bool MergeCarriedInto(Vector2Int to, ItemData carried)
+        {
+            var t = Get(to);
+            if (carried == null || t == null || t.Locked || t.nap || t.bubble || t.chain != carried.chain || t.level != carried.level) return false;
+            if (t.level >= Chains.MaxLevel(t.chain)) return false;
+            var tv = views[to.x, to.y];
+            data[to.x, to.y] = null; views[to.x, to.y] = null;
+            if (tv) Destroy(tv.gameObject);
+            var nd = new ItemData(carried.chain, carried.level + 1);
+            Set(to, nd, true);
+            Sfx.Play("pop", 0.85f + 0.1f * nd.level);
+            FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
+            GM.OnBoardChanged();
+            return true;
+        }
+
+        /// <summary>The star Mini Apprentice taps a cauldron or chest (costs the player's energy). False if it can't.</summary>
+        public bool BotUseGenerator(Vector2Int c)
+        {
+            var gen = Get(c);
+            if (gen == null || !Chains.IsGenerator(gen.chain) || !NearestEmpty(c, out _) || GM.Energy < 1) return false;
+            UseGenerator(c);
+            return true;
+        }
+
+        /// <summary>The star Mini Apprentice takes a finished potion out of the pot. False if there is no room.</summary>
+        public bool BotCollectPotion(Vector2Int c)
+        {
+            var pot = Get(c);
+            if (pot == null || !Chains.IsStation(pot.chain) || !pot.BrewReady || !NearestEmpty(c, out _)) return false;
+            CollectPotion(c);
+            return true;
+        }
+
         void Merge(Vector2Int from, Vector2Int to)
         {
             var a = data[from.x, from.y];

@@ -178,6 +178,20 @@ namespace KaraPati.EditorTools
             else Debug.LogWarning("KaraPati: çevirisi olmayan " + L.Missing.Count + " metin:\n" + string.Join("\n", L.Missing));
         }
 
+        [MenuItem("KaraPati/Test/Minik Çırağın Süresini Bitir (Play modunda)")]
+        static void MiniExpireTest()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugMiniExpire();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
+        [MenuItem("KaraPati/Test/Yıldızlı Yavru Çağır (Play modunda)")]
+        static void StarKittenTest()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugStarKitten();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Oyun Odası (kilitsiz, haklar yenilenir) (Play modunda)")]
         static void GameRoomTest()
         {

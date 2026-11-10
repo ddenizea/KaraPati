@@ -138,6 +138,7 @@ namespace KaraPati
                 case "sis": GhostSis(p, full); break;
                 case "pus": GhostPus(p, full); break;
                 case "ugultu": GhostUgultu(p, full); break;
+                case "kontes": BatCountess(p, full); break;
             }
         }
 
@@ -349,6 +350,38 @@ namespace KaraPati
             p.FillOutlined(q => S.U(S.Circle(q, V(0.45f, -0.02f), 0.1f), S.U(S.Circle(q, V(0.62f, 0.06f), 0.08f), S.Circle(q, V(0.76f, 0.16f), 0.055f))), new Color(1f, 0.55f, 0.2f), 0.025f);
             p.Fill(q => S.U(S.Circle(q, V(0.45f, -0.02f), 0.055f), S.Circle(q, V(0.62f, 0.06f), 0.04f)), new Color(1f, 0.88f, 0.35f));
             p.FillOutlined(q => S.U(S.Poly(q, new[] { V(-0.08f, 0.58f), V(0f, 0.72f), V(0.08f, 0.58f) }), S.Poly(q, new[] { V(-0.06f, 0.48f), V(0f, 0.6f), V(0.06f, 0.48f) })), wing, 0.02f);
+        }
+
+        // ---------------------------------------------------------------- Yarasa Kontes
+        static void BatCountess(Painter p, bool full)
+        {
+            var fur = new Color(0.36f, 0.27f, 0.48f);
+            var wing = new Color(0.25f, 0.18f, 0.35f);
+            var inner = new Color(1f, 0.62f, 0.72f);
+            var crimson = new Color(0.72f, 0.12f, 0.24f);
+            // wings with a scalloped lower edge
+            p.FillOutlined(q => S.U(
+                S.Poly(q, new[] { V(-0.2f, 0.05f), V(-0.95f, 0.42f), V(-0.88f, -0.02f), V(-0.72f, -0.24f), V(-0.58f, -0.08f), V(-0.42f, -0.3f), V(-0.24f, -0.18f) }),
+                S.Poly(q, new[] { V(0.2f, 0.05f), V(0.95f, 0.42f), V(0.88f, -0.02f), V(0.72f, -0.24f), V(0.58f, -0.08f), V(0.42f, -0.3f), V(0.24f, -0.18f) })), wing, 0.035f);
+            if (full)   // a high crimson collar behind the head
+                p.FillOutlined(q => S.Poly(q, new[] { V(-0.42f, 0.02f), V(-0.5f, 0.56f), V(-0.2f, 0.3f), V(0f, 0.14f), V(0.2f, 0.3f), V(0.5f, 0.56f), V(0.42f, 0.02f) }), crimson, 0.035f);
+            p.FillOutlined(q => S.Ellipse(q, V(0f, -0.3f), V(0.3f, 0.4f)), fur, 0.04f);
+            p.FillOutlined(q => S.U(S.Ellipse(q, V(-0.12f, -0.74f), V(0.08f, 0.05f)), S.Ellipse(q, V(0.12f, -0.74f), V(0.08f, 0.05f))), wing, 0.025f);
+            p.FillOutlined(q => S.U(S.Poly(q, new[] { V(-0.26f, 0.3f), V(-0.34f, 0.74f), V(-0.06f, 0.44f) }), S.Poly(q, new[] { V(0.26f, 0.3f), V(0.34f, 0.74f), V(0.06f, 0.44f) })), fur, 0.035f);
+            p.Fill(q => S.U(S.Poly(q, new[] { V(-0.24f, 0.38f), V(-0.29f, 0.64f), V(-0.12f, 0.45f) }), S.Poly(q, new[] { V(0.24f, 0.38f), V(0.29f, 0.64f), V(0.12f, 0.45f) })), inner);
+            p.FillOutlined(q => S.Circle(q, V(0f, 0.2f), 0.3f), fur, 0.04f);
+            DrawEye(p, V(-0.11f, 0.24f), 0.085f);
+            DrawEye(p, V(0.11f, 0.24f), 0.085f);
+            p.Fill(q => S.Ellipse(q, V(0f, 0.12f), V(0.04f, 0.025f)), inner);
+            Smile(p, V(0f, 0.08f), 0.07f, 0.015f, Dark);
+            // two tiny fangs
+            p.Fill(q => S.U(S.Poly(q, new[] { V(-0.05f, 0.05f), V(-0.02f, 0.05f), V(-0.035f, -0.01f) }), S.Poly(q, new[] { V(0.02f, 0.05f), V(0.05f, 0.05f), V(0.035f, -0.01f) })), Color.white);
+            Cheeks(p, V(-0.2f, 0.1f), V(0.2f, 0.1f), 0.05f);
+            if (!full) return;
+            // a little golden crown and a ruby brooch
+            p.FillOutlined(q => S.Poly(q, new[] { V(-0.14f, 0.46f), V(-0.16f, 0.6f), V(-0.08f, 0.53f), V(0f, 0.64f), V(0.08f, 0.53f), V(0.16f, 0.6f), V(0.14f, 0.46f) }), Gold, 0.025f);
+            p.FillOutlined(q => S.Circle(q, V(0f, -0.06f), 0.06f), crimson, 0.02f);
+            p.Fill(q => S.Circle(q, V(-0.015f, -0.045f), 0.018f), new Color(1f, 0.7f, 0.75f));
         }
 
         // ---------------------------------------------------------------- ghost customers

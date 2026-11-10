@@ -107,9 +107,11 @@ namespace KaraPati
                 if (GM.Cats != null && GM.Cats.HasMini)
                 {
                     var rr = r;
-                    var make = UIKit.Btn("Make", rt, L.T("Yaptır"), GM.Cats.MiniBusy ? UIKit.Disabled : UIKit.Green, () =>
+                    bool busy = GM.Cats.BrewBusy;
+                    var make = UIKit.Btn("Make", rt, busy ? L.T("Meşgul") : L.T("Yaptır"), busy ? UIKit.Disabled : UIKit.Green, () =>
                     {
-                        Close();
+                        Close();   // the toast shows on the table, behind this window
+                        if (GM.Cats.BrewBusy) { GM.Toast(GM.Cats.BrewBusyReason()); Sfx.Play("error"); return; }
                         GM.Cats.MiniBrew(rr);
                     }, 30);
                     ((RectTransform)make.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 34f), new Vector2(190f, 70f));

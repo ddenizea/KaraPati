@@ -102,6 +102,7 @@ namespace KaraPati
             dPortrait.sprite = ProcArt.Customer(c.id, st >= c.FullLookStage);
             dName.text = c.name;
             dStage.text = Customers.StageName(c, st) + "  ·  " + c.difficulty;
+            if (c.id == Customers.NightOwl) dStage.text += "  ·  " + L.T("Sadece geceleri gelir (20:00-06:00)");
 
             var sb = new System.Text.StringBuilder();
             for (int i = 0; i < c.MaxStage; i++)
@@ -209,6 +210,13 @@ namespace KaraPati
                 string next = bf ? "<color=#B0457A>" + L.T("Can Dostu!") + "</color>"
                                  : L.F("{0}/{1} puan", GM.FriendPoints(c) - c.PointsFor(st), c.steps[st]);
                 info.text = Customers.StageName(c, st) + "\n" + hearts + "\n" + next;
+            }
+
+            if (c.id == Customers.NightOwl)
+            {
+                var moon = UIKit.Img("Night", rt, ProcArt.Moon, Color.white);
+                moon.raycastTarget = false;
+                moon.rectTransform.Anchor(new Vector2(1f, 0f), new Vector2(0.5f, 0.5f)).At(new Vector2(-30f, 30f), new Vector2(44f, 44f));
             }
 
             if (here && GM.FriendHasNew(c))

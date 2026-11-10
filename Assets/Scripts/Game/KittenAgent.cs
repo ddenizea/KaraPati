@@ -22,7 +22,10 @@ namespace KaraPati
         public bool homed;                                      // Master Cat: it has its cushion on the counter and works from there
         /// <summary>Where an apprentice stands to stir: on the counter, just right of the pot.</summary>
         public static readonly Vector2 StirOffset = new Vector2(92f, -8f);
-        public bool parked;                                     // Mini Apprentice: sits at its toy ball on the counter
+        public bool parked;                                     // Mini Apprentice / star kitten: sits at the toy ball on the counter
+        public bool star;                                       // rare star kitten (and the star Mini Apprentice it grows into)
+        public long starUntil;                                  // star kitten: leaves at this UTC tick unless the Master trains it
+        Image starFx;
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
         public float age;             // seconds on the table (new kittens get a grace period)
@@ -52,6 +55,17 @@ namespace KaraPati
         public bool Training => trainUntil > 0;
         public bool AtHome => (Pos - sys.CushionPos).sqrMagnitude < 30f * 30f;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
+
+        /// <summary>A rare star kitten: a golden sparkle twinkles on its back.</summary>
+        public void MakeStar(long until)
+        {
+            star = true;
+            starUntil = until;
+            if (starFx) return;
+            starFx = UIKit.Img("Star", rt, ProcArt.Sparkle, new Color(1f, 0.85f, 0.3f));
+            starFx.raycastTarget = false;
+            starFx.rectTransform.At(new Vector2(30f, 44f), new Vector2(50f, 50f));
+        }
 
         /// <summary>New fur colour (the Master's colour can be picked by the player).</summary>
         public void SetColor(int col)
@@ -291,9 +305,10 @@ namespace KaraPati
                         }
                         else if (parked)
                         {
-                            // the Mini Apprentice stays with its toy ball
-                            if ((Pos - sys.ToySeat).sqrMagnitude > 30f * 30f) WalkTo(sys.ToySeat);
-                            else { Face(-1); idleTimer = 2f; }
+                            // the Mini Apprentice (right of the ball) or a star kitten (left of it) stays with the toy
+                            var seat = IsWild ? sys.StarSeat : sys.ToySeat;
+                            if ((Pos - seat).sqrMagnitude > 30f * 30f) WalkTo(seat);
+                            else { Face(IsWild ? 1 : -1); idleTimer = 2f; }
                         }
                         else WalkTo(sys.RandomPoint());
                     }
@@ -331,7 +346,14 @@ namespace KaraPati
                     break;
             }
 
-            if (IsWild && CanAct && onArrive == null && !IsHeld && !jumping && sys.Selected != this)
+            if (starFx)
+            {
+                float tw = Mathf.Abs(Mathf.Sin(Time.time * 2.6f));
+                starFx.rectTransform.localScale = Vector3.one * (0.7f + 0.45f * tw);
+                starFx.rectTransform.localEulerAngles = new Vector3(0f, 0f, Time.time * 40f);
+            }
+
+            if (IsWild && !parked && CanAct && onArrive == null && !IsHeld && !jumping && sys.Selected != this)
             {
                 mischiefTimer -= dt;
                 if (mischiefTimer <= 0f)

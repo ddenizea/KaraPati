@@ -19,6 +19,7 @@ namespace KaraPati
             public CustomerDef c;
             public RectTransform rt, gift;
             public float x, dir, speed, phase, h;
+            public bool hangs;   // the Countess hangs from the ceiling instead of walking
         }
 
         GameManager GM => GameManager.I;
@@ -52,7 +53,8 @@ namespace KaraPati
             for (int k = 0; k < guests.Count; k++)
             {
                 var c = guests[k];
-                var layer = tower.FriendLayer(rng.Next(open));
+                int floor = rng.Next(open);
+                var layer = tower.FriendLayer(floor);
                 if (!layer) continue;
                 float h = Mathf.Lerp(150f, 300f, Mathf.InverseLerp(0.4f, 1.4f, c.size));   // the tower keeps everyone's real size
                 var img = UIKit.Img("Friend_" + c.id, layer, ProcArt.Customer(c.id, true), Color.white);
@@ -68,7 +70,9 @@ namespace KaraPati
                     dir = rng.Next(2) == 0 ? -1f : 1f,
                     speed = 25f + (float)rng.NextDouble() * 25f,
                     phase = (float)rng.NextDouble() * 6f,
+                    hangs = c.id == Customers.NightOwl,
                 };
+                if (v.hangs) v.x = floor % 2 == 0 ? 250f : -250f;   // away from the floor's name plaque
                 var giftImg = UIKit.Img("Gift", rt, ProcArt.Item(Chains.Sandik, 1), Color.white);
                 giftImg.raycastTarget = false;
                 v.gift = giftImg.rectTransform;
@@ -101,6 +105,15 @@ namespace KaraPati
             foreach (var v in visitors)
             {
                 if (!v.rt) continue;
+                if (v.hangs)
+                {
+                    // upside down from the ceiling, swaying a little; the gift box stays the right way up
+                    v.rt.anchoredPosition = new Vector2(v.x, TowerScreen.FloorH / 2f - 40f);
+                    v.rt.localScale = new Vector3(1f, -1f, 1f);
+                    v.rt.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(t * 1.2f + v.phase) * 7f);
+                    v.gift.localScale = new Vector3(1f, -1f, 1f) * (1f + Mathf.Sin(t * 4f + v.phase) * 0.08f);
+                    continue;
+                }
                 // drift along the floor, turn around at the walls, float a little (ghosts float more)
                 v.x += v.dir * v.speed * dt;
                 if (v.x > MaxX) { v.x = MaxX; v.dir = -1f; }

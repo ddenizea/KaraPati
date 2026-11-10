@@ -211,6 +211,8 @@ namespace KaraPati
         public string carryChain;  // Mini Apprentice: ingredient it was carrying to the pot
         public int carryLevel;
         public int homeState;      // Master: 0 = save from before the cushion, 1 = not on its cushion yet, 2 = on its cushion
+        public bool star;          // a rare star kitten (or the star Mini Apprentice it became)
+        public long starUntil;     // star kitten: leaves at this UTC tick unless the Master trains it
     }
 
     [Serializable]
@@ -240,6 +242,7 @@ namespace KaraPati
         public long ustaTripUntil;              // UTC ticks when the Master comes back
         public int ustaTripColor;               // colour + 1 of the Master who is away
         public string ustaName;                 // name the player gave the Master Cat ("" = none)
+        public int ustaXp;                      // the Master's experience (UstaLevels)
         public List<string> hints = new List<string>();   // one-off guide hints already shown
         public bool ustaNew;                    // a new Master is waiting to be named ("!" on the Usta Kedim button)
         public long ustaPlayAt;                 // UTC ticks when the Master and Kara Pati can play with the yarn again
@@ -735,6 +738,43 @@ namespace KaraPati
     /// <summary>
     /// Game Room mini games. Each game has a few free plays a day; after that a play costs energy.
     /// </summary>
+    /// <summary>
+    /// The Master Cat grows with its work: ingredients brought, kittens trained, trips. Each level adds a small perk.
+    /// </summary>
+    public static class UstaLevels
+    {
+        public const int Max = 5;
+        static readonly int[] need = { 0, 30, 80, 160, 300 };   // total experience for level 1..5
+        public const int XpIngredient = 1, XpTraining = 5;
+        public static readonly int[] XpTrip = { 5, 10, 20 };    // per expedition kind
+
+        public static int LevelOf(int xp)
+        {
+            int lv = 1;
+            while (lv < Max && xp >= need[lv]) lv++;
+            return lv;
+        }
+        public static int XpFor(int level) => need[Mathf.Clamp(level - 1, 0, Max - 1)];
+
+        public static float Interval(int level) => level >= 5 ? 35f : level >= 2 ? 40f : 45f;    // seconds between ingredients
+        public static float Level3Chance(int level) => level >= 3 ? 0.25f : 0f;                  // a level 3 ingredient now and then
+        public static int TripBonus(int level) => level >= 4 ? 2 : 0;                             // extra ingredients from trips
+        public static float TrainMinutes(int level) => level >= 5 ? 2f : 3f;
+
+        /// <summary>The perk a level brings (shown when it is reached and as the next goal).</summary>
+        public static string Perk(int level)
+        {
+            switch (level)
+            {
+                case 2: return L.T("Daha sık malzeme getirir (40 sn).");
+                case 3: return L.T("Bazen 3. seviye malzeme getirir.");
+                case 4: return L.T("Keşiften 2 malzeme fazla döner.");
+                case 5: return L.T("35 sn'de bir malzeme, eğitim 2 dakika.");
+                default: return "";
+            }
+        }
+    }
+
     public static class MiniGames
     {
         public const int Fare = 0, Yumak = 1, Hafiza = 2, Count = 3;
@@ -946,6 +986,11 @@ namespace KaraPati
         public static readonly TrList StageNames = new TrList(L.N("Yabancı"), L.N("Tanıdık"), L.N("Arkadaş"), L.N("Dost"), L.N("Yakın Dost"), L.N("Sırdaş"));
         public static string BestFriend => L.T("Can Dostu");
 
+        /// <summary>Yarasa Kontes only visits at night (the phone's clock): 20:00 - 06:00.</summary>
+        public const string NightOwl = "kontes";
+        public static bool IsNight { get { int h = System.DateTime.Now.Hour; return h >= 20 || h < 6; } }
+        public static bool Visits(CustomerDef c, int level) => c.unlockLevel <= level && (c.id != NightOwl || IsNight);
+
         public static readonly CustomerDef[] All =
         {
             new CustomerDef { id = "kurbaga", name = L.N("Kurbağa Prens"), difficulty = L.N("Kolay"), unlockLevel = 1, size = 0.5f, steps = new[] { 2, 3, 4 }, lines = new TrList(
@@ -1002,6 +1047,13 @@ namespace KaraPati
                 L.N("Bak, uçabiliyorum! ...Üç saniye kadar."),
                 L.N("Kazanının altını ben yakabilirim. Bedava!"),
                 L.N("Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*") ) },
+            new CustomerDef { id = "kontes", name = L.N("Yarasa Kontes"), difficulty = L.N("En zor"), unlockLevel = 9, size = 0.6f, steps = new[] { 5, 7, 9, 12, 14, 18 }, lines = new TrList(
+                L.N("İyi geceler, sevgili dükkâncı. Ben Yarasa Kontes. Güneş mi? Ah, o kaba ışık..."),
+                L.N("İksirlerin karanlıkta parlıyor. Tıpkı şatomun eski avizeleri gibi."),
+                L.N("Bu sis... yüz yıl önce de gelmişti. O zaman da birinin kalbi kırılmıştı."),
+                L.N("Pelerinimin altında bir sır saklarım: sis, gözyaşı gibi kokar."),
+                L.N("Gölge'yi tanırım. Geceleri kuleme konardı, ikimiz de yalnızdık."),
+                L.N("Şatomun kapıları artık sana açık, sevgili dostum. Gecenin kraliçesi senin yanında.") ) },
         };
 
         public static int IndexOf(string id)
@@ -1036,6 +1088,7 @@ namespace KaraPati
                 case "baykus": return L.T("Kütüphaneden iki eski mühür buldum. Hu-hu.");
                 case "ugultu": return L.T("Bugünkü ders: cömertlik. İki Pati Mührü senin.");
                 case "ejderha": return L.T("*hık* Kazanını ateşledim, enerjin doldu!");
+                case "kontes": return L.T("Gece yarısı mühürleri: üç tane, sadece sana.");
                 default: return L.T("Bugün de uğradım, al bakalım!");
             }
         }

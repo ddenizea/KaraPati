@@ -39,7 +39,7 @@ namespace KaraPati
             bg.raycastTarget = true;
             bg.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;   // taps on the panel don't close it
             panel = bg.rectTransform;
-            panel.At(Vector2.zero, new Vector2(940f, 1240f));
+            panel.At(Vector2.zero, new Vector2(940f, 1330f));
 
             var head = UIKit.Img("Header", panel, ProcArt.Rounded, new Color(0.42f, 0.28f, 0.6f), true);
             head.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -66,18 +66,18 @@ namespace KaraPati
             ((RectTransform)nameField.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(390f, -240f), new Vector2(500f, 84f));
             nameField.onEndEdit.AddListener(v => GM.SetUstaName(v));
 
-            status = UIKit.Txt("Status", panel, "", 28, new Color(0.4f, 0.28f, 0.2f), TextAnchor.UpperLeft, false);
-            status.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(390f, -300f), new Vector2(510f, 150f));
+            status = UIKit.Txt("Status", panel, "", 26, new Color(0.4f, 0.28f, 0.2f), TextAnchor.UpperLeft, false);
+            status.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(390f, -300f), new Vector2(520f, 250f));
             status.rectTransform.pivot = new Vector2(0f, 1f);
             status.rectTransform.anchoredPosition = new Vector2(390f, -300f);
 
             var colLbl = UIKit.Txt("ColLbl", panel, L.T("Rengi  <size=24>(istediğin zaman ücretsiz değiştirebilirsin)</size>"), 30, new Color(0.45f, 0.32f, 0.22f), TextAnchor.MiddleLeft, false);
-            colLbl.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(40f, -480f), new Vector2(860f, 46f));
+            colLbl.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(40f, -575f), new Vector2(860f, 46f));
 
             grid = UIKit.Rect("Grid", panel);
-            grid.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -520f), new Vector2(880f, 690f));
+            grid.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -615f), new Vector2(880f, 690f));
             grid.pivot = new Vector2(0.5f, 1f);
-            grid.anchoredPosition = new Vector2(0f, -520f);
+            grid.anchoredPosition = new Vector2(0f, -615f);
             gameObject.SetActive(false);
         }
 
@@ -133,17 +133,22 @@ namespace KaraPati
             var cats = GM.Cats;
             int col = cats.MasterColor;
             string who = GM.UstaDisplayName(col);
+            int lv = GM.UstaLevel;
+            string stars = "<color=#E8A33A>" + new string('★', lv) + "</color><color=#C9B8A8>" + new string('★', UstaLevels.Max - lv) + "</color>";
+            string levelLine = L.F("Seviye {0}  {1}", lv, stars) + "\n" + (lv < UstaLevels.Max
+                ? L.F("Deneyim {0}/{1} · Sonraki: {2}", GM.UstaXp - UstaLevels.XpFor(lv), UstaLevels.XpFor(lv + 1) - UstaLevels.XpFor(lv), UstaLevels.Perk(lv + 1))
+                : L.T("En üst seviye! Usta'n her şeyi biliyor."));
             if (cats.UstaAway)
             {
-                if (cats.TripReady) status.text = L.F("{0} keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.", who);
+                if (cats.TripReady) status.text = levelLine + "\n\n" + L.F("{0} keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.", who);
                 else
                 {
                     var left = TimeSpan.FromTicks(Math.Max(0L, cats.TripUntil - DateTime.UtcNow.Ticks));
                     string t = left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds);
-                    status.text = L.F("{0} keşifte.\nDönüşüne {1} var.", who, t);
+                    status.text = levelLine + "\n\n" + L.F("{0} keşifte.\nDönüşüne {1} var.", who, t);
                 }
             }
-            else status.text = L.F("{0} dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.", who);
+            else status.text = levelLine + "\n\n" + L.F("{0} dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.", who);
         }
 
         void Fill()

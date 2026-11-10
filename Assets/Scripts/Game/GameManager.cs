@@ -94,6 +94,8 @@ namespace KaraPati
         readonly int[] miniUsed = new int[MiniGames.Count];
         readonly int[] miniBest = new int[MiniGames.Count];
         public string UstaName { get; private set; } = "";
+        public int UstaXp { get; private set; }
+        public int UstaLevel => UstaLevels.LevelOf(UstaXp);
         readonly HashSet<string> hintsSeen = new HashSet<string>();
 
         /// <summary>True only the first time it is asked for this id (one-off guide hints).</summary>
@@ -1099,6 +1101,7 @@ namespace KaraPati
                 case "baykus": AddStamps(2); what = L.F("+{0} Pati Mührü", 2); break;
                 case "ugultu": AddStamps(2); what = L.F("+{0} Pati Mührü", 2); break;
                 case "ejderha": AddEnergy(15); what = L.F("+{0} enerji", 15); break;
+                case "kontes": AddStamps(3); what = L.F("+{0} Pati Mührü", 3); break;
                 default: AddGold(10); what = L.F("+{0} altın", 10); break;
             }
             Sfx.Play("gift");
@@ -1146,6 +1149,21 @@ namespace KaraPati
             long boost = TimeSpan.FromHours(Tower.BowlHours * 0.05f).Ticks, now = DateTime.UtcNow.Ticks;
             if (lastFed > 0) lastFed = Math.Min(now, lastFed + boost);
             if (lastWatered > 0) lastWatered = Math.Min(now, lastWatered + boost);
+            MarkDirty();
+        }
+
+        /// <summary>The Master did some work. A new level brings a toast with its perk.</summary>
+        public void AddUstaXp(int amount)
+        {
+            if (amount <= 0) return;
+            int before = UstaLevel;
+            UstaXp += amount;
+            int after = UstaLevel;
+            if (after > before)
+            {
+                Toast(L.F("{0} {1}. seviyeye çıktı! {2}", UstaDisplayName(Cats != null ? Cats.MasterColor : KittenColors.Gece), after, UstaLevels.Perk(after)), UIKit.Orange, 5f);
+                Sfx.Play("levelup", 1.2f);
+            }
             MarkDirty();
         }
 
@@ -1618,6 +1636,14 @@ namespace KaraPati
                         infoDesc.text = L.F("Usta'dan ders alıyor. {0} dk {1} sn sonra Minik Çırak olacak.", tl.Minutes, tl.Seconds);
                         break;
                     }
+                    if (a.star)
+                    {
+                        var sl = TimeSpan.FromTicks(Math.Max(0L, a.starUntil - DateTime.UtcNow.Ticks));
+                        infoTitle.text = "<color=#FFD24D>" + L.T("Yıldızlı Yavru") + "</color>  <size=24>(" + colName + ")</size>";
+                        infoDesc.text = L.T("Usta'nın üstüne bırak: Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın.")
+                            + "\n" + L.F("{0} sonra gidecek.", sl.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)sl.TotalHours, sl.Minutes) : L.F("{0} dk {1} sn", sl.Minutes, sl.Seconds));
+                        break;   // no "Sahiplendir": a star kitten is never given away by mistake
+                    }
                     infoTitle.text = L.T("Yaramaz Yavru") + "  <size=24>(" + colName + ")</size>";
                     if (a.state == KittenAgent.State.Napping) infoDesc.text = L.T("Mışıl mışıl uyuyor. Dokun, kalksın.");
                     else if (Cats.TrainBlock() == null) infoDesc.text = L.T("Usta'nın üstüne bırak: Minik Çırak olur. Kedi Evi'nde de güvende kalır.");
@@ -1644,9 +1670,11 @@ namespace KaraPati
                 }
                 case 4:
                 {
-                    infoTitle.text = L.F("{0} Minik Çırak", colName);
+                    infoTitle.text = a.star ? "<color=#FFD24D>" + L.T("Yıldızlı Minik Çırak") + "</color>  <size=24>(" + colName + ")</size>" : L.F("{0} Minik Çırak", colName);
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
-                    infoDesc.text = (Cats.MiniBusy ? L.T("Malzemeleri kazana taşıyor...") : L.T("Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın."))
+                    infoDesc.text = (Cats.MiniBusy ? Cats.MiniStatus
+                        : a.star ? L.T("Siparişlerde 'Hazırla'ya bas: iksiri ve malzemeleriyle siparişi baştan sona kendisi hazırlar.")
+                        : L.T("Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın."))
                         + "\n" + L.F("Kalan: {0}", left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds));
                     actionBtn.gameObject.SetActive(true);
                     // while it runs for a recipe: L.T("Vazgeç") drops the job and frees the locked items
@@ -2021,6 +2049,7 @@ namespace KaraPati
             hintsSeen.Clear();
             UstaNew = false;
             UstaPlayAt = 0;
+            UstaXp = 0;
             miniDay = 0;
             System.Array.Clear(miniUsed, 0, miniUsed.Length);
             System.Array.Clear(miniBest, 0, miniBest.Length);
@@ -2108,6 +2137,7 @@ namespace KaraPati
             s.ustaTripUntil = Cats.TripUntil;
             s.ustaTripColor = Cats.TripColor + 1;
             s.ustaName = UstaName;
+            s.ustaXp = UstaXp;
             s.hints = new List<string>(hintsSeen);
             s.ustaNew = UstaNew;
             s.ustaPlayAt = UstaPlayAt;
@@ -2219,6 +2249,7 @@ namespace KaraPati
                 Cats.ReadSave(s.kittens);
                 Cats.SetTrip(s.ustaTrip - 1, s.ustaTripUntil, s.ustaTripColor > 0 ? s.ustaTripColor - 1 : KittenColors.Gece);
                 UstaName = s.ustaName ?? "";
+                UstaXp = s.ustaXp;
                 hintsSeen.Clear();
                 if (s.hints != null) foreach (var h in s.hints) hintsSeen.Add(h);
                 UstaNew = s.ustaNew;

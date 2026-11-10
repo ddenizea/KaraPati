@@ -240,6 +240,10 @@ Fener,Lantern
 +{0} enerji,+{0} energy
 +{0} Pati Mührü,+{0} Paw Seals
 bir etiket,a sticker
+Daha sık malzeme getirir (40 sn).,Brings ingredients more often (40 s).
+Bazen 3. seviye malzeme getirir.,Sometimes brings a level 3 ingredient.
+Keşiften 2 malzeme fazla döner.,Comes back from trips with 2 extra ingredients.
+"35 sn'de bir malzeme, eğitim 2 dakika.","An ingredient every 35 s, training takes 2 minutes."
 Fare Avı,Mouse Hunt
 Yumak Atma,Yarn Toss
 İksir Hafızası,Potion Memory
@@ -334,6 +338,13 @@ Annem dağlarda. Ben burada senin iksirlerini seviyorum.,"My mom lives in the mo
 "Bak, uçabiliyorum! ...Üç saniye kadar.","Look, I can fly! ...For about three seconds."
 Kazanının altını ben yakabilirim. Bedava!,I can light the fire under your cauldron. For free!
 Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*,When I grow up I'll carry you on my back. Dragon's promise! *hic*
+Yarasa Kontes,Bat Countess
+"İyi geceler, sevgili dükkâncı. Ben Yarasa Kontes. Güneş mi? Ah, o kaba ışık...","Good evening, dear shopkeeper. I am the Bat Countess. The sun? Ah, that rude light..."
+İksirlerin karanlıkta parlıyor. Tıpkı şatomun eski avizeleri gibi.,Your potions glow in the dark. Just like the old chandeliers of my castle.
+Bu sis... yüz yıl önce de gelmişti. O zaman da birinin kalbi kırılmıştı.,"This fog... it came a hundred years ago too. Back then, someone's heart had been broken as well."
+"Pelerinimin altında bir sır saklarım: sis, gözyaşı gibi kokar.",I keep a secret under my cape: the fog smells like tears.
+"Gölge'yi tanırım. Geceleri kuleme konardı, ikimiz de yalnızdık.",I know Shadow. He used to perch on my tower at night; we were both lonely.
+"Şatomun kapıları artık sana açık, sevgili dostum. Gecenin kraliçesi senin yanında.","My castle's doors are open to you now, dear friend. The queen of the night is on your side."
 "Tacımı parlatırken bunları buldum. Al, senin olsun!","I found these while polishing my crown. Here, they're yours!"
 Pamuk'la birlikte sana enerji topladık. Boo!,Cotton and I gathered some energy for you. Boo!
 "Bu haftanın uğuru: bir Pati Mührü, efendim.","This week's good luck: one Paw Seal, my dear."
@@ -344,6 +355,7 @@ Acil teslimat! Dağlardan taze malzemeler.,Urgent delivery! Fresh ingredients fr
 Kütüphaneden iki eski mühür buldum. Hu-hu.,I found two old seals in the library. Hoo-hoo.
 Bugünkü ders: cömertlik. İki Pati Mührü senin.,Today's lesson: generosity. Two Paw Seals are yours.
 "*hık* Kazanını ateşledim, enerjin doldu!","*hic* I lit your cauldron, your energy is up!"
+"Gece yarısı mühürleri: üç tane, sadece sana.","Midnight seals: three of them, just for you."
 "Bugün de uğradım, al bakalım!","I dropped by again today, here you go!"
 Sör Tıkırtı,Sir Rattle
 "Oh, teşekkürler! Artık rahat uyuyabilirim...","Oh, thank you! Now I can finally rest..."
@@ -430,6 +442,7 @@ Gönder,Send
 Bu keşif için {0} enerji gerekiyor.,This trip needs {0} energy.
 Dostluk Defteri,Friendship Book
 < Defter,< Book
+Sadece geceleri gelir (20:00-06:00),Only visits at night (20:00-06:00)
 Dostluğunuz ilerledikçe açılır.,Unlocks as your friendship grows.
 "Can Dostun! Siparişleri +1 Pati Mührü verir, kulede seni ziyaret edip her gün hediye bırakır.","Your best friend! Their orders give +1 Paw Seal, and they visit you in the tower with a gift every day."
 Sonraki seviye: {0}/{1} sipariş puanı. İksir 2 sayar.,Next stage: {0}/{1} order points. A potion counts as 2.
@@ -513,20 +526,24 @@ En üst seviye! Hayaletler buna bayılır.,Top level! Ghosts love this.
 Kaynak: {0}  (i: seviye listesi),Source: {0}  (i: level list)
 Eğitimdeki Yavru,Kitten in Training
 Usta'dan ders alıyor. {0} dk {1} sn sonra Minik Çırak olacak.,Learning from the Master. Becomes a Little Apprentice in {0}m {1}s.
+Yıldızlı Yavru,Star Kitten
+"Usta'nın üstüne bırak: Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın.","Drop it on the Master: it becomes a Star Little Apprentice. While it waits, drag it next to the ball to play."
+{0} sonra gidecek.,Leaves in {0}.
+{0} sa {1} dk,{0}h {1}m
+{0} dk {1} sn,{0}m {1}s
 "Mışıl mışıl uyuyor. Dokun, kalksın.",Sound asleep. Tap to wake it up.
 Usta'nın üstüne bırak: Minik Çırak olur. Kedi Evi'nde de güvende kalır.,Drop it on the Master: it becomes a Little Apprentice. It's also safe in the Cat House.
 "Kedi Evi'ne sürükle: orada kovalanmaz, iki yavru Çırak olur.","Drag it into the Cat House: no one chases it there, and two kittens become an Apprentice."
 Başka bir yavrunun üstüne sürükle: Çırak Kedi olurlar.,Drag it onto another kitten: they become an Apprentice Cat.
 Sahiplendir +3,Adopt +3
 {0} Çırak,{0} Apprentice
-{0} sa {1} dk,{0}h {1}m
-{0} dk {1} sn,{0}m {1}s
 "Kazanı karıştırıyor, iksir hızlı pişiyor.","Stirring the pot, the potion brews fast."
 Kazanın başında iksir bekliyor.,Waiting by the pot for a potion.
 Kalan: {0},Left: {0}
 Usta Yap\n{0} altın,Make Master\n{0} gold
+Yıldızlı Minik Çırak,Star Little Apprentice
 {0} Minik Çırak,{0} Little Apprentice
-Malzemeleri kazana taşıyor...,Carrying ingredients to the pot...
+Siparişlerde 'Hazırla'ya bas: iksiri ve malzemeleriyle siparişi baştan sona kendisi hazırlar.,"Press 'Prepare' on an order: it prepares the whole order by itself, potion and ingredients."
 "Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın.",Tap 'Make' in the Recipe Book and it carries the ingredients to the pot.
 Vazgeç,Cancel
 Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.,"Teaching a kitten. When training ends, it brings ingredients again."
@@ -647,6 +664,7 @@ Hazır!,Ready!
 Miyav! Bir yavru pencereden masaya zıpladı.,Meow! A kitten jumped through the window onto the table.
 Kapı gıcırdadı... bir yavru masaya hopladı!,The door creaked... a kitten hopped onto the table!
 "Bacadan minik bir yavru düştü, pıt diye masaya!","A tiny kitten fell down the chimney, plop onto the table!"
+Parıl parıl bir yavru geldi! {0} saat kalacak. Usta'nın üstüne bırakırsan Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükleyebilirsin.,"A sparkling kitten has arrived! It will stay {0} hours. Drop it on the Master and it becomes a Star Little Apprentice. While it waits, you can drag it next to the ball."
 Onu tezgahtaki Kedi Evi'ne sürükle: iki yavru toplanınca Çırak Kedi olurlar!,Drag it into the Cat House on the counter: two kittens together become an Apprentice Cat!
 Kovalanmasın diye onu Kedi Evi'ne sürükle!,Drag it into the Cat House so it doesn't get chased!
 Hop! Yavru patisiyle itti: {0},Hop! The kitten pushed it with its paw: {0}
@@ -662,6 +680,10 @@ Masa dolu! Çırak malzemeyi koyacak yer bulamadı.,The table is full! The Appre
 Usta Kedi yastığından her {0} saniyede bir malzeme getirir.,The Master Cat brings an ingredient from its cushion every {0} seconds.
 "Usta'yı tezgahın sağındaki mor yastığa sürükle, oradan çalışsın.",Drag the Master to the purple cushion right of the counter so it can work from there.
 Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!,There's already an Apprentice in the shop. It chases the kittens!
+Top!,Ball!
+Ben Usta'yı bekliyorum!,I'm waiting for the Master!
+Hoşça kal!,Goodbye!
+Yıldızlı yavru el salladı ve gitti. Belki bir gün yine gelir...,The star kitten waved goodbye and left. Maybe it will come back one day...
 "Minik Çırak topuyla oynuyor, masada gezmez. 'Yaptır' dersen yine koşar.",The Little Apprentice is playing with its ball and won't wander the table. Say 'Make' and it runs again.
 Burası benim!,This spot is mine!
 "{0} yastığına kuruldu! Buradan malzeme getirir, yavrulara tıslar, yavru eğitir.","{0} settled on its cushion! From here it brings ingredients, hisses at kittens and trains them."
@@ -686,18 +708,9 @@ Bak ve öğren!,Watch and learn!
 "Usta, {0} yavruyu eğitiyor. {1} dakika sonra Minik Çırak olacak!",The Master is training the {0} kitten. In {1} minutes it becomes a Little Apprentice!
 Artık Minik Çıraksın!,You're a Little Apprentice now!
 Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle.,"If you don't want the Little Apprentice wandering the table, drag it to its ball on the counter."
+Yıldızlı yavru artık Yıldızlı Minik Çırak! Hem iksir malzemelerini taşır hem de çok yakında müşterilerin siparişlerini kendisi hazırlayabilecek.,"The star kitten is now a Star Little Apprentice! It carries potion ingredients, and very soon it will be able to prepare customers' orders by itself."
 "{0} Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.",The {0} Little Apprentice is ready! Tap 'Make' on a potion in the Recipe Book and it carries the ingredients to the pot.
-Hoşça kal!,Goodbye!
 "Minik Çırak'ın süresi doldu, el salladı. Usta yeni bir yavru eğitebilir.",The Little Apprentice's time is up and it waved goodbye. The Master can train a new kitten.
-"Minik Çırak işi bıraktı, malzemeler serbest.","The Little Apprentice stopped the job, the ingredients are free."
-Önce Usta bir yavruyu Minik Çırak olarak eğitmeli.,First the Master has to train a kitten into a Little Apprentice.
-Minik Çırak şu an başka bir tarif için koşturuyor.,The Little Apprentice is busy with another recipe right now.
-Kazanda hazır iksir var. Önce onu al.,There's a finished potion in the pot. Collect it first.
-"Kazan şu an kaynıyor, bitmesini bekle.","The pot is brewing right now, wait for it to finish."
-Kazanda bu tarife uymayan bir malzeme var. Kazanı seçip 'Geri Al'a bas.,There's an ingredient in the pot that doesn't fit this recipe. Select the pot and press 'Take Back'.
-Masada eksik: {0},Missing on the table: {0}
-Minik Çırak {0} bulamadı.,The Little Apprentice couldn't find {0}.
-"Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı.","The pot isn't taking ingredients right now, so the Little Apprentice left it on the table."
 {0} Çırak doğdu!,A {0} Apprentice is born!
 Kışt!,Shoo!
 "Çırak Kedi yavruyu kovaladı! Sonra kazanının başına döner, iksiri hızlı karıştırır.",The Apprentice Cat chased the kitten away! Then it goes back to its pot and stirs the potion fast.
@@ -718,6 +731,31 @@ Masa doluydu: {0} gitti.,The table was full: {0}.
 {0} tanesi depoya,{0} went to storage
 {0} tanesi altına,{0} turned into gold
 "{0} bitti, miyav! Getirdiklerim: {1}.","The {0} is over, meow! I brought: {1}."
+Yıldızlı Minik Çırak şu an bir sipariş hazırlıyor.,The Star Little Apprentice is preparing an order right now.
+Minik Çırak şu an başka bir tarif için koşturuyor.,The Little Apprentice is busy with another recipe right now.
+Kazanda hazır iksir var. Önce onu al.,There's a finished potion in the pot. Collect it first.
+"Kazan şu an kaynıyor, bitmesini bekle.","The pot is brewing right now, wait for it to finish."
+Siparişi hazırlıyor...,Preparing the order...
+Malzemeleri kazana taşıyor...,Carrying ingredients to the pot...
+Önce Usta bir yavruyu Minik Çırak olarak eğitmeli.,First the Master has to train a kitten into a Little Apprentice.
+Hemen!,Right away!
+Hazırlıyorum!,On it!
+Kazanda bu tarife uymayan bir malzeme var. Kazanı seçip 'Geri Al'a bas.,There's an ingredient in the pot that doesn't fit this recipe. Select the pot and press 'Take Back'.
+Masada eksik: {0},Missing on the table: {0}
+"Minik Çırak işi bıraktı, malzemeler serbest.","The Little Apprentice stopped the job, the ingredients are free."
+Peki!,Okay!
+Malzemeler hazır! İksir kaynayınca Yıldızlı Minik Çırak onu da masaya çıkaracak.,"The ingredients are ready! When the potion is done, the Star Little Apprentice will bring it to the table too."
+Yıldızlı Minik Çırak siparişi hazırladı! Şimdi 'Ver'e bas.,The Star Little Apprentice prepared the order! Now press 'Give'.
+Tamam!,Done!
+Minik Çırak {0} bulamadı.,The Little Apprentice couldn't find {0}.
+Yıldızlı Minik Çırak üretecek bir kazan ya da sandık bulamadı.,The Star Little Apprentice couldn't find a cauldron or chest to make things with.
+"Enerjin bitti, Yıldızlı Minik Çırak durdu.","You're out of energy, so the Star Little Apprentice stopped."
+"Masa dolu, Yıldızlı Minik Çırak yeni malzeme çıkaramıyor. Biraz yer aç, sonra yine 'Hazırla'ya bas.","The table is full, so the Star Little Apprentice can't make new ingredients. Make some room, then press 'Prepare' again."
+Yıldızlı Minik Çırak devam edemedi: masa dolu ya da enerji bitti.,The Star Little Apprentice had to stop: the table is full or you're out of energy.
+"Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı.","The pot isn't taking ingredients right now, so the Little Apprentice left it on the table."
+İksir hazır!,Potion's ready!
+Kaynamasını bekliyorum...,Waiting for it to brew...
+İksir hazır ama masada yer yok. Yer açıp kazana dokun.,The potion is ready but there's no room on the table. Make room and tap the pot.
 Bitir,Finish
 Pati hazır! Fareler kaçmasın!,Paws ready! Don't let the mice get away!
 Bitti!,Done!
@@ -725,7 +763,7 @@ Yakala!,Catch!
 Yaptır,Make
 Ver,Give
 Meşgul,Busy
-Minik Çırak şu an başka bir iksir için malzeme taşıyor.,The Little Apprentice is carrying ingredients for another potion right now.
+Hazırla,Prepare
 Sisin içindeki yabancı,The stranger in the fog
 {0} artık {1}! Siparişleri +1 Pati Mührü verir.,{0} is now your {1}! Their orders give +1 Paw Seal.
 {0} olmak için {1} sipariş puanı daha. İksir 2 sayar.,{1} more order points to become {0}. A potion counts as 2.
@@ -793,6 +831,9 @@ Adı,Name
 Rengi  <size=24>(istediğin zaman ücretsiz değiştirebilirsin)</size>,Color  <size=24>(change it for free any time)</size>
 Bir isim yaz...,Type a name...
 Bir Çırak'ı Usta yapınca burada seni bekleyecek.,Make an Apprentice a Master and it will be waiting for you here.
+Seviye {0}  {1},Level {0}  {1}
+Deneyim {0}/{1} · Sonraki: {2},XP {0}/{1} · Next: {2}
+En üst seviye! Usta'n her şeyi biliyor.,Top level! Your Master knows it all.
 {0} keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.,{0} is back from exploring!\nIt's waiting at the Cat House with a chest.
 {0} keşifte.\nDönüşüne {1} var.,{0} is exploring.\nBack in {1}.
 {0} dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.,{0} is working in the shop.\nIn the evenings it sleeps on its cushion in the tower.

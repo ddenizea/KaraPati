@@ -146,22 +146,41 @@ namespace KaraPati
             var card = cards[i];
             if (card == null || card.make == null || GM == null || GM.Cats == null) return;
             var r = WantedPotion(i);
-            // only for a potion that is not on the table yet, and only while a Mini Apprentice is around
-            bool show = r != null && !ready[i] && GM.Cats.HasMini && card.checks[0] && !card.checks[0].gameObject.activeSelf;
+            // star Mini Apprentice: "Hazırla" does the whole order (potion and ingredients);
+            // a plain one: "Yaptır" only brings a missing potion's ingredients to the pot
+            bool potionMissing = r != null && Missing(i, true);
+            bool star = GM.Cats.HasStarMini;
+            bool ingredientMissing = Missing(i, false);
+            bool show = !ready[i] && (star ? potionMissing || ingredientMissing : potionMissing && GM.Cats.HasMini);
             if (card.make.gameObject.activeSelf != show) card.make.gameObject.SetActive(show);
             if (!show) return;
-            bool busy = GM.Cats.MiniBusy;
+            // busy: the Mini is working, or the pot is in use and there is nothing else to prepare meanwhile
+            bool busy = GM.Cats.MiniBusy || (potionMissing && GM.Cats.PotBusy && !(star && ingredientMissing));
             card.makeImg.color = busy ? UIKit.Disabled : UIKit.Green;
-            card.makeText.text = busy ? L.T("Meşgul") : L.T("Yaptır");
+            card.makeText.text = busy ? L.T("Meşgul") : star ? L.T("Hazırla") : L.T("Yaptır");
+        }
+
+        /// <summary>Is a potion (potion = true) or an ingredient (false) of this order still missing from the table?</summary>
+        bool Missing(int slot, bool potion)
+        {
+            var o = orders[slot];
+            var card = cards[slot];
+            if (o == null || card == null) return false;
+            for (int k = 0; k < o.reqs.Count && k < card.checks.Length; k++)
+            {
+                if (Chains.IsPotion(o.reqs[k].chain) != potion) continue;
+                if (card.checks[k] && !card.checks[k].gameObject.activeSelf) return true;
+            }
+            return false;
         }
 
         void MakePotion(int slot)
         {
             var r = WantedPotion(slot);
-            if (r == null) return;
-            if (GM.Cats.MiniBusy) { GM.Toast(L.T("Minik Çırak şu an başka bir iksir için malzeme taşıyor.")); Sfx.Play("error"); return; }
+            var potion = r != null && Missing(slot, true) ? r : null;   // brew only when it is not on the table yet
             Tween.Punch(cards[slot].make.transform, 0.1f, 0.2f);
-            GM.Cats.MiniBrew(r);
+            if (GM.Cats.HasStarMini) GM.Cats.MiniOrder(orders[slot], potion);
+            else if (potion != null) GM.Cats.MiniBrew(potion);
             RefreshMake(slot);
         }
 
@@ -216,9 +235,12 @@ namespace KaraPati
             var used = new HashSet<string>();
             foreach (var o in orders) if (o != null && o.cust != null) used.Add(o.cust);
             var pool = new List<CustomerDef>();
-            foreach (var c in Customers.All) if (c.unlockLevel <= GM.Level && !used.Contains(c.id)) pool.Add(c);
-            if (pool.Count == 0) foreach (var c in Customers.All) if (c.unlockLevel <= GM.Level) pool.Add(c);
+            foreach (var c in Customers.All) if (Customers.Visits(c, GM.Level) && !used.Contains(c.id)) pool.Add(c);
+            if (pool.Count == 0) foreach (var c in Customers.All) if (Customers.Visits(c, GM.Level)) pool.Add(c);
             var cust = pool[Random.Range(0, pool.Count)];
+            // at night the Countess drops in more often than the others
+            var countess = pool.Find(c => c.id == Customers.NightOwl);
+            if (countess != null && Random.value < 0.3f) cust = countess;
 
             var order = new OrderSave
             {
@@ -227,8 +249,20 @@ namespace KaraPati
                 tint = 0,
                 line = Random.Range(0, ThankLines.Length)
             };
-            // sometimes a ghost wants a potion instead (only recipes the player has unlocked)
+            // the Countess always wants a potion and a fine ingredient (and pays for it, see Reward)
             int unlocked = Recipes.UnlockedCount(GM.TasksDone);
+            if (cust.id == Customers.NightOwl)
+            {
+                if (unlocked > 0)
+                {
+                    var open = new List<int>();
+                    foreach (var r in Recipes.All) if (Recipes.Unlocked(r, GM.TasksDone)) open.Add(r.id);
+                    order.reqs.Add(new ReqSave { chain = Chains.Iksir, level = open[Random.Range(0, open.Count)] });
+                }
+                order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(4, 6) });
+                return order;
+            }
+            // sometimes a ghost wants a potion instead (only recipes the player has unlocked)
             if (served >= 4 && unlocked > 0 && Random.value < 0.25f)
             {
                 var open = new List<int>();
@@ -277,6 +311,7 @@ namespace KaraPati
             var gm = GameManager.I;
             if (gm != null && gm.CatHappy) r = Mathf.RoundToInt(r * (1f + Tower.HappyBonus));
             if (o.reqs.Count > 1) r += 5;
+            if (o.cust == Customers.NightOwl) r = Mathf.RoundToInt(r * 1.5f);   // the Countess pays half as much again
             return r;
         }
 
@@ -286,6 +321,7 @@ namespace KaraPati
             int r = 0;
             foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 4 ? 2 : 1;
             if (IsBestFriend(o)) r += 1;   // a best friend tips one extra stamp
+            if (o.cust == Customers.NightOwl) r += 2;
             return r;
         }
 
