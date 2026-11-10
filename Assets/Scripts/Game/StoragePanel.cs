@@ -30,10 +30,10 @@ namespace KaraPati
 
             var icon = UIKit.Img("Icon", panel, ProcArt.Crate, Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -20f), new Vector2(90f, 90f));
-            title = UIKit.Txt("Title", panel, "Depo", 46, UIKit.Cream, TextAnchor.MiddleLeft);
+            title = UIKit.Txt("Title", panel, L.T("Depo"), 46, UIKit.Cream, TextAnchor.MiddleLeft);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(135f, -32f), new Vector2(600f, 64f));
-            var hint = UIKit.Txt("Hint", panel, "Eşyayı masadan depo kutusunun üstüne sürükle. Geri almak için dokun.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft);
+            var hint = UIKit.Txt("Hint", panel, L.T("Eşyayı masadan depo kutusunun üstüne sürükle. Geri almak için dokun."), 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft);
             hint.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(137f, -88f), new Vector2(800f, 36f));
 
             var close = UIKit.Btn("Close", panel, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
@@ -59,7 +59,7 @@ namespace KaraPati
         {
             for (int i = grid.childCount - 1; i >= 0; i--) Destroy(grid.GetChild(i).gameObject);
             int slots = GM.StorageSlots;
-            title.text = "Depo  " + GM.Storage.Count + "/" + slots;
+            title.text = L.F("Depo  {0}/{1}", GM.Storage.Count, slots);
             for (int i = 0; i < Levels.MaxStorage; i++)
             {
                 int idx = i;
@@ -71,7 +71,7 @@ namespace KaraPati
                     var lk = UIKit.Img("Lock", cell.transform, ProcArt.Lock, new Color(1f, 1f, 1f, 0.5f));
                     lk.rectTransform.At(new Vector2(0f, 16f), new Vector2(64f, 64f));
                     int needLevel = i - 2; // slots = 3 + level
-                    var t = UIKit.Txt("Lv", cell.transform, "Sv. " + needLevel, 24, new Color(1f, 1f, 1f, 0.5f));
+                    var t = UIKit.Txt("Lv", cell.transform, L.F("Sv. {0}", needLevel), 24, new Color(1f, 1f, 1f, 0.5f));
                     t.rectTransform.At(new Vector2(0f, -50f), new Vector2(140f, 34f));
                     continue;
                 }

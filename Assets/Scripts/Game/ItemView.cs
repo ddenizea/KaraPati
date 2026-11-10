@@ -233,13 +233,13 @@ namespace KaraPati
                 {
                     float left = (float)System.TimeSpan.FromTicks(data.brewUntil - System.DateTime.UtcNow.Ticks).TotalSeconds;
                     int sec = Mathf.CeilToInt(left);
-                    potTimer.text = sec >= 60 ? (sec / 60) + ":" + (sec % 60).ToString("00") : sec + " sn";
+                    potTimer.text = sec >= 60 ? (sec / 60) + ":" + (sec % 60).ToString("00") : L.F("{0} sn", sec);
                     icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
                 }
                 else
                 {
                     if (cooldown.gameObject.activeSelf) Refresh();
-                    potTimer.text = "Hazır!";
+                    potTimer.text = L.T("Hazır!");
                     potExtra.rectTransform.anchoredPosition = new Vector2(0f, 46f + Mathf.Sin(t * 3f) * 6f);
                     icon.rectTransform.localScale = Vector3.one;
                 }

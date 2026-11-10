@@ -44,7 +44,7 @@ namespace KaraPati
             var header = UIKit.Section(root, "TowerHeader", 140f, 110f);
             var back = UIKit.Btn("Back", header, "<", UIKit.PanelDark, () => GM.LeaveTower(), 54);
             ((RectTransform)back.transform).Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(96f, 96f));
-            var title = UIKit.Txt("Title", header, "Cadı Kulesi", 50, UIKit.Orange);
+            var title = UIKit.Txt("Title", header, L.T("Cadı Kulesi"), 50, UIKit.Orange);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)).At(Vector2.zero, new Vector2(700f, 70f));
 
@@ -80,7 +80,7 @@ namespace KaraPati
             BuildCatRoom(floors[0]);
             BuildToolbar();
 
-            // "Süsle" button: opens the ornament shop / inventory for the floor in view
+            // L.T("Süsle") button: opens the ornament shop / inventory for the floor in view
             var btn = UIKit.Img("Decorate", root, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f, 0.9f));
             btn.raycastTarget = true;
             btn.rectTransform.Anchor(new Vector2(0f, 0f), new Vector2(0.5f, 0.5f)).At(new Vector2(110f, 120f), new Vector2(170f, 170f));
@@ -89,7 +89,7 @@ namespace KaraPati
             ring.transform.SetAsFirstSibling();
             var ic = UIKit.Img("Icon", btn.transform, ProcArt.Brush, Color.white);
             ic.rectTransform.At(new Vector2(0f, 14f), new Vector2(100f, 100f));
-            var lbl = UIKit.Txt("Label", btn.transform, "Süsle", 30, UIKit.Cream);
+            var lbl = UIKit.Txt("Label", btn.transform, L.T("Süsle"), 30, UIKit.Cream);
             lbl.rectTransform.At(new Vector2(0f, -54f), new Vector2(170f, 40f));
             var b = btn.gameObject.AddComponent<Button>();
             b.onClick.AddListener(() => { Sfx.Play("click"); Deselect(); GM.OpenTowerDecor(FloorInView()); });
@@ -137,7 +137,7 @@ namespace KaraPati
 
             // name plaque
             var plaque = P("Plaque", f, ProcArt.Rounded, new Color(0.15f, 0.1f, 0.2f, 0.85f), new Vector2(i % 2 == 0 ? -300f : 300f, FloorH / 2f - 80f), new Vector2(360f, 64f), true);
-            var name = UIKit.Txt("Name", plaque.transform, (i + 1) + ". Kat  •  " + Tower.FloorNames[i], 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            var name = UIKit.Txt("Name", plaque.transform, L.F("{0}. Kat  •  {1}", i + 1, Tower.FloorNames[i]), 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(name.rectTransform);
 
             // locked cover
@@ -147,7 +147,7 @@ namespace KaraPati
             P("Web", cover, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.35f), new Vector2(-420f, 300f), new Vector2(170f, 170f));
             P("Web", cover, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(420f, 300f), new Vector2(150f, 150f));
             P("Lock", cover, ProcArt.Lock, Color.white, new Vector2(0f, 120f), new Vector2(120f, 120f));
-            var lt = UIKit.Txt("Name", cover, (i + 1) + ". Kat: " + Tower.FloorNames[i], 40, UIKit.Cream);
+            var lt = UIKit.Txt("Name", cover, L.F("{0}. Kat: {1}", i + 1, Tower.FloorNames[i]), 40, UIKit.Cream);
             lt.fontStyle = FontStyle.Bold;
             lt.rectTransform.At(new Vector2(0f, 20f), new Vector2(900f, 60f));
             lockTexts[i] = UIKit.Txt("Hint", cover, "", 28, new Color(1f, 1f, 1f, 0.7f));
@@ -282,7 +282,7 @@ namespace KaraPati
             ustaImg.sprite = ProcArt.SideCat(3, 5, col);
             ustaImg.rectTransform.anchoredPosition = ustaHome + new Vector2(0f, 62f);
             ustaImg.rectTransform.localScale = Vector3.one;
-            ustaLabel.text = away ? GM.UstaDisplayName(col) + " keşifte" : GM.UstaDisplayName(col);
+            ustaLabel.text = away ? L.F("{0} keşifte", GM.UstaDisplayName(col)) : GM.UstaDisplayName(col);
         }
 
         void TapUsta()
@@ -295,7 +295,7 @@ namespace KaraPati
                 var left = System.TimeSpan.FromTicks(GM.UstaPlayAt - now);
                 Tween.Punch(ustaImg.transform, 0.08f, 0.3f);
                 Sfx.Play("paw", 0.8f);
-                GM.Toast(who + " esniyor: \"Biraz sonra oynarız...\" (" + (left.Minutes > 0 ? left.Minutes + " dk " : "") + left.Seconds + " sn)");
+                GM.Toast(L.F("{0} esniyor: \"Biraz sonra oynarız...\" ({1})", who, left.Minutes > 0 ? L.F("{0} dk {1} sn", left.Minutes, left.Seconds) : L.F("{0} sn", left.Seconds)));
                 return;
             }
             StartCoroutine(PlayYarn(who));
@@ -345,7 +345,7 @@ namespace KaraPati
                 Tween.Run(1.1f, e => { if (!hr) return; hr.anchoredPosition = hf + new Vector2(0f, e * 120f); h.color = new Color(1f, 1f, 1f, 1f - e); }, () => { if (hr) Destroy(hr.gameObject); });
             }
             GM.UstaPlayed(PlayHours);
-            GM.Toast(who + " ve Kara Pati yumakla oynadı! Mutluluk arttı.", UIKit.Orange, 4f);
+            GM.Toast(L.F("{0} ve Kara Pati yumakla oynadı! Mutluluk arttı.", who), UIKit.Orange, 4f);
             Sfx.Play("gift", 1.1f);
             RefreshCare();
             yield return new WaitForSeconds(0.6f);
@@ -420,8 +420,8 @@ namespace KaraPati
                     h.color = new Color(1f, 1f, 1f, 1f - k);
                 }, () => { if (hr) Destroy(hr.gameObject); });
             }
-            GM.Toast(GM.CatHappy ? "Kara Pati mırlıyor: \"Karnım tok, keyfim yerinde!\""
-                                 : "Kara Pati: \"Miyav... kaplarım boş. Biraz mama ve su?\"");
+            GM.Toast(GM.CatHappy ? L.T("Kara Pati mırlıyor: \"Karnım tok, keyfim yerinde!\"")
+                                 : L.T("Kara Pati: \"Miyav... kaplarım boş. Biraz mama ve su?\""));
         }
 
         // ------------------------------------------------------------------ state
@@ -437,10 +437,10 @@ namespace KaraPati
                 int price = Tower.FloorPrice[i];
                 bool armed = armedFloor == i && Time.unscaledTime < armedUntil;
                 unlockBtns[i].gameObject.SetActive(next);
-                lockTexts[i].text = next ? "Bu katı tamir edip açmak için altın gerekiyor." : "Önce alttaki katı aç.";
+                lockTexts[i].text = next ? L.T("Bu katı tamir edip açmak için altın gerekiyor.") : L.T("Önce alttaki katı aç.");
                 if (next)
                 {
-                    unlockBtns[i].Label().text = armed ? "Emin misin?" : "Aç: " + price + " altın";
+                    unlockBtns[i].Label().text = armed ? L.T("Emin misin?") : L.F("Aç: {0} altın", price);
                     unlockBtns[i].GetComponent<Image>().color = armed ? UIKit.Orange : GM.Gold >= price ? UIKit.Green : UIKit.Disabled;
                 }
             }
@@ -462,7 +462,7 @@ namespace KaraPati
                 Refresh();
                 return;
             }
-            if (GM.Gold < Tower.FloorPrice[i]) { GM.Toast(Tower.FloorPrice[i] + " altın gerekiyor."); Sfx.Play("error"); return; }
+            if (GM.Gold < Tower.FloorPrice[i]) { GM.Toast(L.F("{0} altın gerekiyor.", Tower.FloorPrice[i])); Sfx.Play("error"); return; }
             armedFloor = i;
             armedUntil = Time.unscaledTime + 3f;
             Refresh();
@@ -476,15 +476,15 @@ namespace KaraPati
             foodBowlFill.gameObject.SetActive(food > 0.02f);
             waterBowlFill.rectTransform.localScale = new Vector3(Mathf.Lerp(0.6f, 1f, water), Mathf.Max(0.3f, water), 1f);
             waterBowlFill.gameObject.SetActive(water > 0.02f);
-            foodText.text = food <= 0.02f ? "Mama bitti!" : "Mama %" + Mathf.RoundToInt(food * 100f);
-            waterText.text = water <= 0.02f ? "Su bitti!" : "Su %" + Mathf.RoundToInt(water * 100f);
+            foodText.text = food <= 0.02f ? L.T("Mama bitti!") : L.F("Mama %{0}", Mathf.RoundToInt(food * 100f));
+            waterText.text = water <= 0.02f ? L.T("Su bitti!") : L.F("Su %{0}", Mathf.RoundToInt(water * 100f));
             foodText.color = food < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream;
             waterText.color = water < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream;
 
             float mood = (food + water) / 2f;
             moodFill.rectTransform.sizeDelta = new Vector2(Mathf.Max(24f, 300f * mood), 30f);
             bool happy = GM.CatHappy;
-            moodText.text = happy ? "Mutlu! Siparişlerden +%" + Mathf.RoundToInt(Tower.HappyBonus * 100f) + " altın" : "Aç ya da susuz: bonus yok";
+            moodText.text = happy ? L.F("Mutlu! Siparişlerden +%{0} altın", Mathf.RoundToInt(Tower.HappyBonus * 100f)) : L.T("Aç ya da susuz: bonus yok");
             needBubble.gameObject.SetActive(!happy);
             cat.color = happy ? Color.white : new Color(0.75f, 0.75f, 0.85f);
         }
@@ -565,7 +565,7 @@ namespace KaraPati
             FX.Burst(decorLayers[floor], pos, UIKit.Orange, 12);
             Sfx.Play("pop", 1.2f);
             Select(piece);
-            GM.Toast("Süsü parmağınla sürükle. Üstündeki düğmelerle çevir, öne al ya da kaldır.");
+            GM.Toast(L.T("Süsü parmağınla sürükle. Üstündeki düğmelerle çevir, öne al ya da kaldır."));
         }
 
         void BuildToolbar()
@@ -574,7 +574,7 @@ namespace KaraPati
             toolbar.anchorMin = toolbar.anchorMax = new Vector2(0.5f, 0f);
             var bg = UIKit.Img("Bg", toolbar, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.92f), true);
             UIKit.Stretch(bg.rectTransform);
-            string[] labels = { "Çevir", "Öne", "Kaldır", "Tamam" };
+            string[] labels = { L.T("Çevir"), L.T("Öne"), L.T("Kaldır"), L.T("Tamam") };
             Color[] colors = { UIKit.PanelDark, UIKit.PanelDark, new Color(0.75f, 0.32f, 0.35f), UIKit.Green };
             for (int i = 0; i < labels.Length; i++)
             {
@@ -631,7 +631,7 @@ namespace KaraPati
                     pieces.Remove(p);
                     Destroy(selected.gameObject);
                     Deselect();
-                    GM.Toast(Decor.ItemName(p.id) + " envantere kaldırıldı.");
+                    GM.Toast(L.F("{0} envantere kaldırıldı.", Decor.ItemName(p.id)));
                     break;
                 default:
                     Deselect();

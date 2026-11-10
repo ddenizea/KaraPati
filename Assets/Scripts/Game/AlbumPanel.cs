@@ -45,7 +45,7 @@ namespace KaraPati
             var moon = UIKit.Img("Moon", panel, ProcArt.Moon, new Color(1f, 1f, 1f, 0.25f));
             moon.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-170f, -90f), new Vector2(170f, 170f));
 
-            var title = UIKit.Txt("Title", panel, "Etiket Albümü", 54, UIKit.Orange);
+            var title = UIKit.Txt("Title", panel, L.T("Etiket Albümü"), 54, UIKit.Orange);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -30f), new Vector2(700f, 74f));
 
@@ -67,7 +67,7 @@ namespace KaraPati
             var scroll = UIKit.Img("Scroll", overview, ProcArt.Rounded, new Color(0.95f, 0.9f, 0.78f), true);
             scroll.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -10f), new Vector2(900f, 440f));
             var ink = new Color(0.45f, 0.25f, 0.15f);
-            var head = UIKit.Txt("Head", scroll.transform, "Tüm setleri tamamla, büyük ödülü kap:", 34, ink, TextAnchor.MiddleCenter, false);
+            var head = UIKit.Txt("Head", scroll.transform, L.T("Tüm setleri tamamla, büyük ödülü kap:"), 34, ink, TextAnchor.MiddleCenter, false);
             head.fontStyle = FontStyle.Bold;
             head.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -24f), new Vector2(860f, 50f));
 
@@ -109,14 +109,14 @@ namespace KaraPati
             grandFill.sizeDelta = new Vector2(Mathf.Max(40f, GrandBarW * have / total), 38f);
             if (GM.IsGrandClaimed)
             {
-                grandClaim.Label().text = "Büyük ödül alındı";
+                grandClaim.Label().text = L.T("Büyük ödül alındı");
                 grandImg.color = UIKit.Disabled;
                 grandClaim.interactable = false;
             }
             else
             {
                 bool ok = have >= total;
-                grandClaim.Label().text = ok ? "Büyük Ödülü Al!" : "Bütün etiketleri topla";
+                grandClaim.Label().text = ok ? L.T("Büyük Ödülü Al!") : L.T("Bütün etiketleri topla");
                 grandImg.color = ok ? UIKit.Orange : UIKit.Disabled;
                 grandClaim.interactable = ok;
             }
@@ -175,7 +175,7 @@ namespace KaraPati
                 }
             }
 
-            var hint = UIKit.Txt("Hint", overview, "Etiketler siparişlerden, görevlerden ve kedilerden gelir. Bir sete dokun, içine bak.", 26,
+            var hint = UIKit.Txt("Hint", overview, L.T("Etiketler siparişlerden, görevlerden ve kedilerden gelir. Bir sete dokun, içine bak."), 26,
                 new Color(1f, 1f, 1f, 0.6f));
             hint.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -940f), new Vector2(880f, 80f));
         }
@@ -276,22 +276,22 @@ namespace KaraPati
 
             int have = GM.StickerCount(set);
             progress.text = have + "/" + set.ids.Length + " etiket";
-            string reward = Stickers.SetRewardGold + " altın + " + Stickers.SetRewardStamps + " mühür";
+            string reward = L.F("{0} altın + {1} mühür", Stickers.SetRewardGold, Stickers.SetRewardStamps);
             if (GM.IsSetClaimed(set))
             {
-                claim.Label().text = "Ödül alındı";
+                claim.Label().text = L.T("Ödül alındı");
                 claimImg.color = UIKit.Disabled;
                 claim.interactable = false;
             }
             else if (have >= set.ids.Length)
             {
-                claim.Label().text = "Ödülü Al: " + reward;
+                claim.Label().text = L.F("Ödülü Al: {0}", reward);
                 claimImg.color = UIKit.Orange;
                 claim.interactable = true;
             }
             else
             {
-                claim.Label().text = "Seti tamamla: " + reward;
+                claim.Label().text = L.F("Seti tamamla: {0}", reward);
                 claimImg.color = UIKit.Disabled;
                 claim.interactable = false;
             }

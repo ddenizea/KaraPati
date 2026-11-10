@@ -25,7 +25,7 @@ namespace KaraPati
             public Text stampText;
             public Image giveImg;
             public Text giveText;
-            public Button make;          // "Yaptır": a Mini Apprentice fetches the potion's ingredients
+            public Button make;          // L.T("Yaptır"): a Mini Apprentice fetches the potion's ingredients
             public Image makeImg;
             public Text makeText;
         }
@@ -95,13 +95,13 @@ namespace KaraPati
                 card.stampText = UIKit.Txt("N", stamp.transform, "1", 26, UIKit.Cream);
                 card.stampText.rectTransform.At(new Vector2(18f, -18f), new Vector2(40f, 34f));
 
-                card.make = UIKit.Btn("Make", card.root, "Yaptır", UIKit.Green, () => MakePotion(slot), 26);
+                card.make = UIKit.Btn("Make", card.root, L.T("Yaptır"), UIKit.Green, () => MakePotion(slot), 26);
                 ((RectTransform)card.make.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -250f), new Vector2(150f, 54f));
                 card.makeImg = card.make.GetComponent<Image>();
                 card.makeText = card.make.Label();
                 card.make.gameObject.SetActive(false);
 
-                card.give = UIKit.Btn("Give", card.root, "Ver", UIKit.Disabled, () => Deliver(slot), 34);
+                card.give = UIKit.Btn("Give", card.root, L.T("Ver"), UIKit.Disabled, () => Deliver(slot), 34);
                 card.giveImg = card.give.GetComponent<Image>();
                 card.giveText = card.give.Label();
                 ((RectTransform)card.give.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 14f), new Vector2(296f, 84f));
@@ -152,14 +152,14 @@ namespace KaraPati
             if (!show) return;
             bool busy = GM.Cats.MiniBusy;
             card.makeImg.color = busy ? UIKit.Disabled : UIKit.Green;
-            card.makeText.text = busy ? "Meşgul" : "Yaptır";
+            card.makeText.text = busy ? L.T("Meşgul") : L.T("Yaptır");
         }
 
         void MakePotion(int slot)
         {
             var r = WantedPotion(slot);
             if (r == null) return;
-            if (GM.Cats.MiniBusy) { GM.Toast("Minik Çırak şu an başka bir iksir için malzeme taşıyor."); Sfx.Play("error"); return; }
+            if (GM.Cats.MiniBusy) { GM.Toast(L.T("Minik Çırak şu an başka bir iksir için malzeme taşıyor.")); Sfx.Play("error"); return; }
             Tween.Punch(cards[slot].make.transform, 0.1f, 0.2f);
             GM.Cats.MiniBrew(r);
             RefreshMake(slot);
@@ -173,11 +173,11 @@ namespace KaraPati
             Tween.Punch(cards[slot].ghost.rectTransform, 0.1f, 0.25f);
             Sfx.Play("click");
             int st = GM.FriendStage(c), pts = GM.FriendPoints(c);
-            string who = st == 0 ? "Sisin içindeki yabancı" : c.name;
-            if (st >= c.MaxStage) { GM.Toast(who + " artık " + Customers.BestFriend + "! Siparişleri +1 Pati Mührü verir.", UIKit.Orange, 4f); return; }
+            string who = st == 0 ? L.T("Sisin içindeki yabancı") : c.name;
+            if (st >= c.MaxStage) { GM.Toast(L.F("{0} artık {1}! Siparişleri +1 Pati Mührü verir.", who, Customers.BestFriend), UIKit.Orange, 4f); return; }
             int need = c.PointsFor(st + 1) - pts;
             GM.Toast(who + " · " + Customers.StageName(c, st) + " (" + st + "/" + c.MaxStage + ", " + c.difficulty + ")\n"
-                + Customers.StageName(c, st + 1) + " olmak için " + need + " sipariş puanı daha. İksir 2 sayar.", UIKit.Cream, 4f);
+                + L.F("{0} olmak için {1} sipariş puanı daha. İksir 2 sayar.", Customers.StageName(c, st + 1), need), UIKit.Cream, 4f);
         }
 
         void ShowReqInfo(int slot, int k)
@@ -241,15 +241,15 @@ namespace KaraPati
             return order;
         }
 
-        static readonly string[] ThankLines =
-        {
-            "Tam aradığım şey! Teşekkürler!",
-            "Bu dükkânı çok seviyorum.",
-            "Kara Pati'ye selamlar!",
-            "Harika, yine geleceğim!",
-            "Mis gibi kokuyor. Sağ ol!",
-            "Bunu bulmak ne zordu, iyi ki varsın.",
-        };
+        static readonly TrList ThankLines = new TrList
+        (
+            L.N("Tam aradığım şey! Teşekkürler!"),
+            L.N("Bu dükkânı çok seviyorum."),
+            L.N("Kara Pati'ye selamlar!"),
+            L.N("Harika, yine geleceğim!"),
+            L.N("Mis gibi kokuyor. Sağ ol!"),
+            L.N("Bunu bulmak ne zordu, iyi ki varsın.")
+        );
 
         /// <summary>Friendship points for an order: one per item, a potion counts double.</summary>
         static int FriendPointsOf(OrderSave o)
@@ -334,7 +334,7 @@ namespace KaraPati
                 card.heart.color = Color.white;
                 card.heartText.text = st.ToString();
                 card.glow.gameObject.SetActive(best);
-                card.giveText.text = "Ver  +" + Reward(o);
+                card.giveText.text = L.F("Ver  +{0}", Reward(o));
                 card.stampText.text = StampReward(o).ToString();
             }
         }

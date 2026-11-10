@@ -45,7 +45,7 @@ namespace KaraPati
             var close = UIKit.Btn("Close", panel, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
             ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-24f, -24f), new Vector2(90f, 90f));
 
-            var info = UIKit.Txt("Info", panel, "Siparişler ve dükkân görevleri balkabağı verir. Topla, yoldaki ödülleri aç!", 26, new Color(1f, 1f, 1f, 0.75f));
+            var info = UIKit.Txt("Info", panel, L.T("Siparişler ve dükkân görevleri balkabağı verir. Topla, yoldaki ödülleri aç!"), 26, new Color(1f, 1f, 1f, 0.75f));
             info.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -170f), new Vector2(900f, 40f));
 
             var barBg = UIKit.Img("Bar", panel, ProcArt.Rounded, new Color(0.18f, 0.1f, 0.22f), true);
@@ -79,7 +79,7 @@ namespace KaraPati
             refresh -= Time.unscaledDeltaTime;
             if (refresh > 0f) return;
             refresh = 1f;
-            timer.text = GM.EventActive ? "Bitmesine: " + GM.EventTimeLeftText : "Etkinlik sona erdi. Toplanan ödüller senin!";
+            timer.text = GM.EventActive ? L.F("Bitmesine: {0}", GM.EventTimeLeftText) : L.T("Etkinlik sona erdi. Toplanan ödüller senin!");
         }
 
         void Fill()
@@ -120,7 +120,7 @@ namespace KaraPati
                 icon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(116f, 0f), new Vector2(92f, 92f));
                 var rtext = UIKit.Txt("Text", rt, PumpkinEvent.RewardText(m), 32, claimed ? new Color(1f, 1f, 1f, 0.5f) : UIKit.Cream, TextAnchor.MiddleLeft);
                 rtext.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(226f, 14f), new Vector2(380f, 44f));
-                var need = UIKit.Txt("Need", rt, m.need + " balkabağı", 24, new Color(1f, 0.8f, 0.5f, claimed ? 0.5f : 0.9f), TextAnchor.MiddleLeft);
+                var need = UIKit.Txt("Need", rt, L.F("{0} balkabağı", m.need), 24, new Color(1f, 0.8f, 0.5f, claimed ? 0.5f : 0.9f), TextAnchor.MiddleLeft);
                 need.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(228f, -26f), new Vector2(380f, 34f));
 
                 if (claimed)
@@ -130,7 +130,7 @@ namespace KaraPati
                 }
                 else if (claimable)
                 {
-                    var b = UIKit.Btn("Claim", rt, "Al!", UIKit.Green, () => { if (GM.ClaimEventStep(idx)) Fill(); }, 38);
+                    var b = UIKit.Btn("Claim", rt, L.T("Al!"), UIKit.Green, () => { if (GM.ClaimEventStep(idx)) Fill(); }, 38);
                     ((RectTransform)b.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-16f, 0f), new Vector2(180f, 88f));
                     Tween.Punch(b.transform, 0.1f, 0.4f);
                 }

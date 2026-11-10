@@ -53,9 +53,9 @@ namespace KaraPati
             get
             {
                 var left = TimeSpan.FromTicks(Math.Max(0L, EventEnd - DateTime.UtcNow.Ticks));
-                if (left.TotalDays >= 1) return (int)left.TotalDays + "g " + left.Hours + "sa";
-                if (left.TotalHours >= 1) return (int)left.TotalHours + "sa " + left.Minutes + "dk";
-                return left.Minutes + "dk " + left.Seconds + "sn";
+                if (left.TotalDays >= 1) return L.F("{0}g {1}sa", (int)left.TotalDays, left.Hours);
+                if (left.TotalHours >= 1) return L.F("{0}sa {1}dk", (int)left.TotalHours, left.Minutes);
+                return L.F("{0}dk {1}sn", left.Minutes, left.Seconds);
             }
         }
         public int TasksDone { get; private set; }
@@ -74,7 +74,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (gameRoom && gameRoom.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -85,6 +85,10 @@ namespace KaraPati
         ExpeditionPanel expeditionPanel;
         HousePanel housePanel;
         UstaColorPanel ustaColorPanel;
+        GameRoomPanel gameRoom;
+        int miniDay;
+        readonly int[] miniUsed = new int[MiniGames.Count];
+        readonly int[] miniBest = new int[MiniGames.Count];
         public string UstaName { get; private set; } = "";
         readonly HashSet<string> hintsSeen = new HashSet<string>();
 
@@ -150,15 +154,15 @@ namespace KaraPati
         CanvasGroup stickerPopCg;
         Coroutine stickerCo;
 
-        static readonly string[] tips =
-        {
-            "Aynı iki eşyayı üst üste sürükle, birleşsinler.",
-            "Kazana ve sandığa dokunarak malzeme üret (1 enerji).",
-            "Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas.",
-            "Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!",
-            "İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!",
-            "Siparişler Pati Mührü verir; mühürlerle dükkânı onarırsın."
-        };
+        static readonly TrList tips = new TrList
+        (
+            L.N("Aynı iki eşyayı üst üste sürükle, birleşsinler."),
+            L.N("Kazana ve sandığa dokunarak malzeme üret (1 enerji)."),
+            L.N("Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas."),
+            L.N("Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!"),
+            L.N("İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!"),
+            L.N("Siparişler Pati Mührü verir; mühürlerle dükkânı onarırsın.")
+        );
 
         // ------------------------------------------------------------------ lifecycle
         void Awake()
@@ -192,12 +196,12 @@ namespace KaraPati
                     RefreshHud();
                     MarkDirty();
                 }
-                energyTimerText.text = Energy < MaxEnergy ? Mathf.CeilToInt(EnergyRegenSec - energyTimer) + " sn" : "dolu";
+                energyTimerText.text = Energy < MaxEnergy ? L.F("{0} sn", Mathf.CeilToInt(EnergyRegenSec - energyTimer)) : L.T("dolu");
             }
             else
             {
                 energyTimer = 0f;
-                energyTimerText.text = "dolu";
+                energyTimerText.text = L.T("dolu");
             }
 
 
@@ -354,6 +358,10 @@ namespace KaraPati
             ustaColorPanel = colorRt.gameObject.AddComponent<UstaColorPanel>();
             ustaColorPanel.Build();
 
+            var roomRt = UIKit.Rect("GameRoom", canvasRt);
+            gameRoom = roomRt.gameObject.AddComponent<GameRoomPanel>();
+            gameRoom.Build();
+
             var tripRt = UIKit.Rect("ExpeditionPanel", canvasRt);
             expeditionPanel = tripRt.gameObject.AddComponent<ExpeditionPanel>();
             expeditionPanel.Build();
@@ -406,7 +414,7 @@ namespace KaraPati
             lvBtn.onClick.AddListener(() =>
             {
                 Tween.Punch(levelBadge, 0.15f, 0.25f);
-                Toast("Seviye " + Level + ": " + Xp + "/" + Levels.XpToNext(Level) + " XP. XP hikâyeden gelir: görevler, bölüm sonları ve gizli ipuçları.");
+                Toast(L.F("Seviye {0}: {1}/{2} XP. XP hikâyeden gelir: görevler, bölüm sonları ve gizli ipuçları.", Level, Xp, Levels.XpToNext(Level)));
             });
 
             var gold = Pill(bar, "Gold", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(140f, 0f), 230f);
@@ -511,8 +519,8 @@ namespace KaraPati
             ((RectTransform)infoBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -8f), new Vector2(62f, 62f));
             infoBtn.Label().fontStyle = FontStyle.Bold;
             infoBtn.gameObject.SetActive(false);
-            // "Patlat": a ghost bubble can be popped right away to free its cell
-            popBtn = UIKit.Btn("Pop", panel.transform, "Patlat", new Color(0.85f, 0.3f, 0.35f), () => Board.PopBubble(Board.Selected), 24);
+            // L.T("Patlat"): a ghost bubble can be popped right away to free its cell
+            popBtn = UIKit.Btn("Pop", panel.transform, L.T("Patlat"), new Color(0.85f, 0.3f, 0.35f), () => Board.PopBubble(Board.Selected), 24);
             ((RectTransform)popBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-200f, -10f), new Vector2(110f, 48f));
             popBtn.Label().fontStyle = FontStyle.Bold;
             popBtn.gameObject.SetActive(false);
@@ -562,7 +570,7 @@ namespace KaraPati
             dialogText.rectTransform.pivot = new Vector2(0f, 1f);
             dialogName.rectTransform.pivot = new Vector2(0f, 1f);
 
-            var next = UIKit.Btn("Next", panel.transform, "Devam", UIKit.Orange, CloseDialog, 36);
+            var next = UIKit.Btn("Next", panel.transform, L.T("Devam"), UIKit.Orange, CloseDialog, 36);
             ((RectTransform)next.transform).Anchor(new Vector2(1f, 0f), new Vector2(1f, 0f)).At(new Vector2(-30f, 26f), new Vector2(230f, 86f));
             dialogRoot.SetActive(false);
         }
@@ -626,14 +634,14 @@ namespace KaraPati
             if (!TrySpendGold(Tower.FloorPrice[i])) return false;
             towerFloors++;
             Sfx.Play("levelup");
-            Toast((i + 1) + ". kat açıldı: " + Tower.FloorNames[i] + "! Burayı süsleyebilirsin.", UIKit.Orange, 4f);
+            Toast(L.F("{0}. kat açıldı: {1}! Burayı süsleyebilirsin.", i + 1, Tower.FloorNames[i]), UIKit.Orange, 4f);
             Save();
             return true;
         }
 
         public bool FillFood()
         {
-            if (FoodLevel > 0.95f) { Toast("Mama kabı zaten dolu."); return false; }
+            if (FoodLevel > 0.95f) { Toast(L.T("Mama kabı zaten dolu.")); return false; }
             bool wasHappy = CatHappy;
             lastFed = DateTime.UtcNow.Ticks;
             Sfx.Play("spawn", 0.9f);
@@ -644,7 +652,7 @@ namespace KaraPati
 
         public bool FillWater()
         {
-            if (WaterLevel > 0.95f) { Toast("Su kabı zaten dolu."); return false; }
+            if (WaterLevel > 0.95f) { Toast(L.T("Su kabı zaten dolu.")); return false; }
             bool wasHappy = CatHappy;
             lastWatered = DateTime.UtcNow.Ticks;
             Sfx.Play("bubble", 0.9f);
@@ -655,9 +663,9 @@ namespace KaraPati
 
         void AnnounceCare(bool wasHappy)
         {
-            if (!wasHappy && CatHappy) Toast("Kara Pati mutlu! Siparişlerden +%" + Mathf.RoundToInt(Tower.HappyBonus * 100f) + " altın kazanırsın.", UIKit.Orange, 4f);
-            else if (!CatHappy) Toast(FoodLevel <= Tower.HappyAbove ? "Şimdi biraz mama..." : "Şimdi biraz su...");
-            else Toast("Afiyet olsun Kara Pati!");
+            if (!wasHappy && CatHappy) Toast(L.F("Kara Pati mutlu! Siparişlerden +%{0} altın kazanırsın.", Mathf.RoundToInt(Tower.HappyBonus * 100f)), UIKit.Orange, 4f);
+            else if (!CatHappy) Toast(FoodLevel <= Tower.HappyAbove ? L.T("Şimdi biraz mama...") : L.T("Şimdi biraz su..."));
+            else Toast(L.T("Afiyet olsun Kara Pati!"));
             Save();
         }
 
@@ -696,7 +704,7 @@ namespace KaraPati
                     if (!GiveRandomMissingAny()) AddGold(50);
                     break;
             }
-            Toast("Günlük ödül: " + DailyRewards.Text(m), UIKit.Orange);
+            Toast(L.F("Günlük ödül: {0}", DailyRewards.Text(m)), UIKit.Orange);
             Sfx.Play("gift");
             lastDailyDay = DailyRewards.Today;
             DailyIndex = (DailyIndex + 1) % DailyRewards.Days.Length;
@@ -758,7 +766,7 @@ namespace KaraPati
             if (!TrySpendGold(Decor.TowerPrice(slot, variant))) return false;
             string id = Decor.ItemId(slot, variant);
             inventory[id] = InventoryCount(id) + 1;
-            Toast(Decor.ItemName(id) + " envantere eklendi!", UIKit.Orange);
+            Toast(L.F("{0} envantere eklendi!", Decor.ItemName(id)), UIKit.Orange);
             Save();
             return true;
         }
@@ -812,7 +820,7 @@ namespace KaraPati
                 inventory[id] = InventoryCount(id) + 1;
                 moved++;
             }
-            if (moved > 0) StartCoroutine(After(1.5f, () => Toast(moved + " eski süsün Cadı Kulesi envanterine taşındı. Kuleye gidip yerleştir!", UIKit.Orange, 5f)));
+            if (moved > 0) StartCoroutine(After(1.5f, () => Toast(L.F("{0} eski süsün Cadı Kulesi envanterine taşındı. Kuleye gidip yerleştir!", moved), UIKit.Orange, 5f)));
         }
 
         // ------------------------------------------------------------------ generator upgrades (gold sink)
@@ -821,12 +829,12 @@ namespace KaraPati
         public void UpgradeGenerator(string chain)
         {
             int lvl = GeneratorLevel(chain);
-            if (lvl >= Generators.MaxLevel) { Toast(Chains.Name(chain, 1) + " zaten en üst seviyede!"); return; }
+            if (lvl >= Generators.MaxLevel) { Toast(L.F("{0} zaten en üst seviyede!", Chains.Name(chain, 1))); return; }
             int price = Generators.UpgradeCost(lvl);
             if (!TrySpendGold(price)) return;
             if (chain == Chains.Kazan) kazanLevel++; else sandikLevel++;
             lvl++;
-            Toast(Chains.Name(chain, 1) + " " + lvl + ". seviyeye çıktı! " + Generators.ChanceText(lvl), UIKit.Orange, 4f);
+            Toast(L.F("{0} {1}. seviyeye çıktı! {2}", Chains.Name(chain, 1), lvl, Generators.ChanceText(lvl)), UIKit.Orange, 4f);
             Sfx.Play("levelup", 1.1f);
             foreach (var c in Board.AllCells())
             {
@@ -872,7 +880,7 @@ namespace KaraPati
             if (ChapterGifts.Energy(chapter, gift) > 0) { Energy += ChapterGifts.Energy(chapter, gift); RefreshHud(); }
             if (ChapterGifts.Stamps(chapter, gift) > 0) AddStamps(ChapterGifts.Stamps(chapter, gift));
             if (ChapterGifts.Sticker(chapter, gift) && !GiveRandomMissingAny()) AddGold(50);
-            Toast("Sandık açıldı: " + ChapterGifts.Text(chapter, gift), UIKit.Orange, 4f);
+            Toast(L.F("Sandık açıldı: {0}", ChapterGifts.Text(chapter, gift)), UIKit.Orange, 4f);
             Sfx.Play("gift");
             Save();
         }
@@ -896,9 +904,134 @@ namespace KaraPati
         public void OpenHouse(Vector2Int hc) => housePanel.Open(hc);
         public void OpenUstaPanel() => ustaColorPanel.Open();
 
-        /// <summary>The Master's name: the one the player gave, or "Usta Kedi" / "Gri Usta".</summary>
+        /// <summary>Switch the language: save, then build every screen again in the new language.</summary>
+        public void ChangeLanguage(string code)
+        {
+            if (code == L.Lang) return;
+            Save();
+            L.SetLanguage(code);
+            Sfx.Play("page");
+            I = null;
+            Destroy(gameObject);
+            // a fresh GameManager next frame, once this one (and its canvas) is gone
+            Tween.Run(0.05f, _ => { }, () => { if (I == null) new GameObject("KaraPati Game").AddComponent<GameManager>(); });
+        }
+
+        // ------------------------------------------------------------------ game room (mini games)
+        public bool GameRoomUnlocked => Level >= MiniGames.UnlockLevel;
+
+        public void OpenGameRoom()
+        {
+            if (!GameRoomUnlocked)
+            {
+                Toast(L.F("Oyun Odası {0}. seviyede açılır. Hikâyede ilerledikçe XP kazanırsın!", MiniGames.UnlockLevel));
+                Sfx.Play("error");
+                return;
+            }
+            gameRoom.Open();
+        }
+
+        public void OnGameRoomClosed()
+        {
+            if (!OnBoard && !OnTower) home.Refresh(false);
+            Save();
+        }
+
+        /// <summary>Free plays come back every day at midnight.</summary>
+        void RollMiniDay()
+        {
+            int today = DailyRewards.Today;
+            if (miniDay == today) return;
+            miniDay = today;
+            for (int i = 0; i < miniUsed.Length; i++) miniUsed[i] = 0;
+            MarkDirty();
+        }
+
+        public int MiniFreeLeft(int g)
+        {
+            RollMiniDay();
+            return Mathf.Max(0, MiniGames.FreePerDay - miniUsed[g]);
+        }
+
+        /// <summary>For the "!" on the home button: a free play is waiting in a game that exists.</summary>
+        public bool AnyMiniFree
+        {
+            get
+            {
+                if (!GameRoomUnlocked) return false;
+                for (int g = 0; g < MiniGames.Count; g++)
+                    if (MiniGames.Ready(g) && MiniFreeLeft(g) > 0) return true;
+                return false;
+            }
+        }
+
+        public int MiniBest(int g) => miniBest[g];
+
+        /// <summary>Pay for one play: a free one if any is left today, otherwise energy. paid = energy was spent.</summary>
+        public bool PayMini(int g, out bool paid)
+        {
+            paid = false;
+            if (MiniFreeLeft(g) > 0)
+            {
+                miniUsed[g]++;
+                MarkDirty();
+                return true;
+            }
+            if (Energy < MiniGames.EnergyCost) return false;
+            Energy -= MiniGames.EnergyCost;
+            paid = true;
+            RefreshHud();
+            MarkDirty();
+            return true;
+        }
+
+        /// <summary>Remember the score; true when it beats the best so far.</summary>
+        public bool MiniRecord(int g, int score)
+        {
+            if (score <= miniBest[g]) return false;
+            miniBest[g] = score;
+            MarkDirty();
+            return true;
+        }
+
+        /// <summary>Gift chest from a mini game: 3 ingredients (level 2-3) on the table, else in the storage box, else sold.</summary>
+        public string GiveMiniChest()
+        {
+            int onBoard = 0, stored = 0, sold = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                var item = new ItemData(Chains.RandomIngredient(), Random.Range(2, 4));
+                if (Board.NearestEmpty(new Vector2Int(3, 5), out var e)) { Board.Set(e, item, true); onBoard++; }
+                else if (Storage.Count < StorageSlots) { Storage.Add(item); Discover(item.chain, item.level); stored++; }
+                else { AddGold(Chains.Value(item.level)); sold++; }
+            }
+            OnBoardChanged();
+            RefreshHud();
+            var parts = new List<string>();
+            if (onBoard > 0) parts.Add(L.F("{0} malzeme masaya", onBoard));
+            if (stored > 0) parts.Add(L.F("{0} malzeme depoya", stored));
+            if (sold > 0) parts.Add(L.F("{0} malzeme yer olmadığı için altına", sold));
+            return L.F("{0} gitti.", string.Join(", ", parts));
+        }
+
+        public void AddEnergy(int amount)
+        {
+            if (amount <= 0) return;
+            Energy += amount;
+            RefreshHud();
+            MarkDirty();
+        }
+
+        public void DebugGameRoom()
+        {
+            for (int i = 0; i < miniUsed.Length; i++) miniUsed[i] = 0;
+            miniDay = DailyRewards.Today;
+            gameRoom.Open();
+        }
+
+        /// <summary>The Master's name: the one the player gave, or L.T("Usta Kedi") / "Gri Usta".</summary>
         public string UstaDisplayName(int col) =>
-            !string.IsNullOrEmpty(UstaName) ? UstaName : col == KittenColors.Gece ? "Usta Kedi" : UstaColorPanel.ColorName(col) + " Usta";
+            !string.IsNullOrEmpty(UstaName) ? UstaName : col == KittenColors.Gece ? L.T("Usta Kedi") : L.F("{0} Usta", UstaColorPanel.ColorName(col));
 
         public void SetUstaName(string n)
         {
@@ -967,7 +1100,7 @@ namespace KaraPati
             Save();
             ShowDialog(c.title, c.text, () =>
             {
-                Toast("İpucu Cadı Dosyası'na eklendi: +1 Pati Mührü, +" + Levels.ClueXp + " XP", UIKit.Orange);
+                Toast(L.F("İpucu Cadı Dosyası'na eklendi: +1 Pati Mührü, +{0} XP", Levels.ClueXp), UIKit.Orange);
                 home.Refresh(false);
             });
         }
@@ -1001,13 +1134,13 @@ namespace KaraPati
 
         static Sprite Portrait(string speaker)
         {
-            if (speaker == "Cadı Hanım") return ProcArt.Witch;
-            if (speaker == "Gölge") return ProcArt.SideCat(0, 4);
-            if (speaker == "Usta Kedi") return ProcArt.SideCat(3, 4);
+            if (speaker == L.T("Cadı Hanım")) return ProcArt.Witch;   // speakers arrive already translated
+            if (speaker == L.T("Gölge")) return ProcArt.SideCat(0, 4);
+            if (speaker == L.T("Usta Kedi")) return ProcArt.SideCat(3, 4);
             if (I != null && I.Cats != null && I.Cats.HasAnyMaster && speaker == I.UstaDisplayName(I.Cats.MasterColor)) return ProcArt.SideCat(3, 4, I.Cats.MasterColor);
             var cust = Customers.ByName(speaker);
             if (cust != null) return ProcArt.Customer(cust.id, I != null && I.FriendStage(cust) >= cust.FullLookStage);
-            int gi = Array.IndexOf(Ghosts.Names, speaker);
+            int gi = Ghosts.Names.IndexOf(speaker);
             return gi >= 0 ? ProcArt.Ghost(gi) : ProcArt.KaraPatiHead;
         }
 
@@ -1018,7 +1151,7 @@ namespace KaraPati
             var task = Story.TaskAt(idx);
             if (Stamps < task.cost)
             {
-                Toast(task.cost + " Pati Mührü gerekiyor. 'Dükkânı Aç'a bas, sipariş hazırla!", new Color(1f, 0.6f, 0.5f));
+                Toast(L.F("{0} Pati Mührü gerekiyor. 'Dükkânı Aç'a bas, sipariş hazırla!", task.cost), new Color(1f, 0.6f, 0.5f));
                 Tween.Punch(stampIcon, 0.3f, 0.3f);
                 return;
             }
@@ -1045,7 +1178,7 @@ namespace KaraPati
                         ShowDialog("Kara Pati", Story.Chapters[chapter].endLine, () =>
                         {
                             AddXp(Levels.ChapterXp);
-                            Toast(Story.Chapters[chapter].name + " bitti: +" + Levels.ChapterXp + " XP!", UIKit.Orange, 3.5f);
+                            Toast(L.F("{0} bitti: +{1} XP!", Story.Chapters[chapter].name, Levels.ChapterXp), UIKit.Orange, 3.5f);
                             if (chapter + 1 < Story.Chapters.Length)
                             {
                                 home.ShowChapter(chapter + 1);
@@ -1055,7 +1188,7 @@ namespace KaraPati
                         });
                     }
                     else if (Stamps < Story.TaskAt(TasksDone).cost && TasksDone <= 2) Toast(Story.FirstBoardHint, UIKit.Orange, 4.5f);
-                    else if (HasNewClue()) Toast("Göz düğmesine bas: yeni bir ipucu belirdi!", UIKit.Orange, 4f);
+                    else if (HasNewClue()) Toast(L.T("Göz düğmesine bas: yeni bir ipucu belirdi!"), UIKit.Orange, 4f);
                 });
             }));
         }
@@ -1072,7 +1205,7 @@ namespace KaraPati
             AddStamps(Story.FinaleStamps);
             Save();
             FX.Burst(Root, new Vector2(0f, 200f), UIKit.Orange, 30);
-            Toast("TEBRİKLER! Hikâyeyi bitirdin: +" + Story.FinaleGold + " altın, +" + Story.FinaleStamps + " Pati Mührü", UIKit.Orange, 6f);
+            Toast(L.F("TEBRİKLER! Hikâyeyi bitirdin: +{0} altın, +{1} Pati Mührü", Story.FinaleGold, Story.FinaleStamps), UIKit.Orange, 6f);
         }
 
         bool HasNewClue()
@@ -1120,7 +1253,7 @@ namespace KaraPati
             Gold += Stickers.GrandGold;
             Energy += Stickers.GrandEnergy;
             AddStamps(Stickers.GrandStamps);
-            Toast("Büyük ödül! +" + Stickers.GrandGold + " altın, +" + Stickers.GrandStamps + " mühür, +" + Stickers.GrandEnergy + " enerji", UIKit.Orange, 4.5f);
+            Toast(L.F("Büyük ödül! +{0} altın, +{1} mühür, +{2} enerji", Stickers.GrandGold, Stickers.GrandStamps, Stickers.GrandEnergy), UIKit.Orange, 4.5f);
             Save();
             Sfx.Play("gift");
             return true;
@@ -1141,7 +1274,7 @@ namespace KaraPati
                 if (duplicateGold)
                 {
                     AddGold(5);
-                    Toast("Kopya etiket (" + Stickers.Name(id) + "): +5 altın");
+                    Toast(L.F("Kopya etiket ({0}): +5 altın", Stickers.Name(id)));
                 }
                 return;
             }
@@ -1149,7 +1282,7 @@ namespace KaraPati
             ShowStickerPopup(id);
             var set = Stickers.SetOf(id);
             if (set != null && IsSetClaimable(set))
-                StartCoroutine(After(2.6f, () => Toast("\"" + set.name + "\" seti tamamlandı! Albümden ödülünü al.", UIKit.Orange, 4f)));
+                StartCoroutine(After(2.6f, () => Toast(L.F("\"{0}\" seti tamamlandı! Albümden ödülünü al.", set.name), UIKit.Orange, 4f)));
             MarkDirty();
         }
 
@@ -1186,9 +1319,9 @@ namespace KaraPati
                 Energy += en;
                 AddStamps(sp);
                 string title = Customers.StageName(c, st);
-                string extra = st >= c.MaxStage ? " Siparişleri artık +1 Pati Mührü verir!" : "";
+                string extra = st >= c.MaxStage ? " " + L.T("Siparişleri artık +1 Pati Mührü verir!") : "";
                 ShowDialog(c.name, c.lines[Mathf.Clamp(st - 1, 0, c.lines.Length - 1)]);
-                Toast(c.name + " ile " + title + " oldunuz! +" + en + " enerji, +" + sp + " mühür." + extra, UIKit.Orange, 5f);
+                Toast(L.F("{0} ile {1} oldunuz! +{2} enerji, +{3} mühür.", c.name, title, en, sp) + extra, UIKit.Orange, 5f);
                 Sfx.Play(st >= c.MaxStage ? "gift" : "levelup", 1.1f);
             }
             RefreshHud();
@@ -1213,7 +1346,7 @@ namespace KaraPati
             claimedSets.Add(s.id);
             AddGold(Stickers.SetRewardGold);
             AddStamps(Stickers.SetRewardStamps);
-            Toast("\"" + s.name + "\" ödülü: +" + Stickers.SetRewardGold + " altın, +" + Stickers.SetRewardStamps + " mühür!", UIKit.Orange);
+            Toast(L.F("\"{0}\" ödülü: +{1} altın, +{2} mühür!", s.name, Stickers.SetRewardGold, Stickers.SetRewardStamps), UIKit.Orange);
             Save();
             Sfx.Play("gift");
             return true;
@@ -1224,7 +1357,7 @@ namespace KaraPati
             Sfx.Play("ready", 1.25f, 0.7f);
             stickerPopIcon.sprite = ProcArt.StickerIcon(id);
             var set = Stickers.SetOf(id);
-            stickerPopText.text = "<b>Yeni etiket!</b>\n" + Stickers.Name(id) + (set != null ? "  <size=24>(" + set.name + ")</size>" : "");
+            stickerPopText.text = L.T("<b>Yeni etiket!</b>") + "\n" + Stickers.Name(id) + (set != null ? "  <size=24>(" + set.name + ")</size>" : "");
             stickerPop.SetAsLastSibling();
             if (stickerCo != null) StopCoroutine(stickerCo);
             stickerCo = StartCoroutine(StickerPopCo());
@@ -1249,20 +1382,20 @@ namespace KaraPati
             var btnImg = actionBtn.GetComponent<Image>();
             if (infoBtn) infoBtn.gameObject.SetActive(d != null && !d.bubble && !Chains.IsHouse(d.chain));
             if (popBtn) popBtn.gameObject.SetActive(d != null && d.bubble);
-            infoTitle.rectTransform.offsetMax = new Vector2(d != null && d.bubble ? -320f : -196f, -14f);   // room for "Patlat"
+            infoTitle.rectTransform.offsetMax = new Vector2(d != null && d.bubble ? -320f : -196f, -14f);   // room for L.T("Patlat")
 
             if (d == null)
             {
-                infoTitle.text = "İpucu";
+                infoTitle.text = L.T("İpucu");
                 infoDesc.text = tips[tipIndex % tips.Length];
                 actionBtn.gameObject.SetActive(false);   // nothing selected: just the tip, no button
                 return;
             }
 
-            infoTitle.text = d.Name + (Chains.IsSpecial(d.chain) ? "" : "  <size=26>(Sv. " + d.level + ")</size>");
+            infoTitle.text = d.Name + (Chains.IsSpecial(d.chain) ? "" : "  <size=26>(" + L.F("Sv. {0}", d.level) + ")</size>");
             if (d.reserved)
             {
-                infoDesc.text = "Minik Çırak bunu kazana taşıyacak. Vazgeçmek için Minik Çırak'a dokun.";
+                infoDesc.text = L.T("Minik Çırak bunu kazana taşıyacak. Vazgeçmek için Minik Çırak'a dokun.");
                 actionBtn.gameObject.SetActive(false);
                 return;
             }
@@ -1271,17 +1404,17 @@ namespace KaraPati
 
             if (d.nap)
             {
-                infoDesc.text = "Üstünde bir yavru uyuyor! Dokunup okşarsan kalkar.";
+                infoDesc.text = L.T("Üstünde bir yavru uyuyor! Dokunup okşarsan kalkar.");
                 return;
             }
             if (d.bubble)
             {
                 int left = Mathf.Max(0, Mathf.CeilToInt((float)TimeSpan.FromTicks(d.bubbleUntil - DateTime.UtcNow.Ticks).TotalSeconds));
                 infoTitle.text = d.Name + "  <size=26>(Baloncuk)</size>";
-                infoDesc.text = "Bedava kopya! " + left + " sn içinde açmazsan uçup gider.";
+                infoDesc.text = L.F("Bedava kopya! {0} sn içinde açmazsan uçup gider.", left);
                 int price = Bubbles.Price(d.level);
                 actionBtn.gameObject.SetActive(true);
-                actionBtn.Label().text = "Aç\n" + price + " altın";
+                actionBtn.Label().text = L.F("Aç\n{0} altın", price);
                 btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
                 return;
             }
@@ -1290,8 +1423,8 @@ namespace KaraPati
                 actionBtn.gameObject.SetActive(true);
                 if (d.BrewReady)
                 {
-                    infoDesc.text = Chains.Name(Chains.Iksir, d.brew) + " hazır! Kazana dokun ya da al.";
-                    actionBtn.Label().text = "Al!";
+                    infoDesc.text = L.F("{0} hazır! Kazana dokun ya da al.", Chains.Name(Chains.Iksir, d.brew));
+                    actionBtn.Label().text = L.T("Al!");
                     btnImg.color = UIKit.Green;
                 }
                 else if (d.Brewing)
@@ -1299,35 +1432,35 @@ namespace KaraPati
                     long left = d.brewUntil - DateTime.UtcNow.Ticks;
                     int sec = Mathf.CeilToInt((float)TimeSpan.FromTicks(left).TotalSeconds);
                     int price = Recipes.SkipPrice(left);
-                    infoDesc.text = Chains.Name(Chains.Iksir, d.brew) + " kaynıyor... " + sec + " sn kaldı.";
-                    actionBtn.Label().text = "Hızlandır\n" + price + " altın";
+                    infoDesc.text = L.F("{0} kaynıyor... {1} sn kaldı.", Chains.Name(Chains.Iksir, d.brew), sec);
+                    actionBtn.Label().text = L.F("Hızlandır\n{0} altın", price);
                     btnImg.color = Gold >= price ? UIKit.Orange : UIKit.Disabled;
                 }
                 else if (!string.IsNullOrEmpty(d.mix) && Recipes.ParseKey(d.mix, out var mc, out var ml))
                 {
-                    infoDesc.text = "İçinde: " + Chains.Name(mc, ml) + ". Eşini sürükle, iksir kaynasın!";
-                    actionBtn.Label().text = "Geri Al";
+                    infoDesc.text = L.F("İçinde: {0}. Eşini sürükle, iksir kaynasın!", Chains.Name(mc, ml));
+                    actionBtn.Label().text = L.T("Geri Al");
                 }
                 else
                 {
-                    infoDesc.text = "İki malzemeyi kazana sürükle, iksir kaynasın. " + Recipes.UnlockedCount(TasksDone) + "/" + Recipes.All.Length + " tarif açık.";
-                    actionBtn.Label().text = "Tarifler";
+                    infoDesc.text = L.F("İki malzemeyi kazana sürükle, iksir kaynasın. {0}/{1} tarif açık.", Recipes.UnlockedCount(TasksDone), Recipes.All.Length);
+                    actionBtn.Label().text = L.T("Tarifler");
                 }
                 var stirrer = Cats.StirrerAt(Board.Selected);
                 if (stirrer)
-                    infoDesc.text += "\n" + KittenColors.Name(stirrer.color) + " Çırak karıştırıyor: " + (stirrer.color == KittenColors.Gri ? "2,5" : "2") + " kat hızlı.";
+                    infoDesc.text += "\n" + L.F("{0} Çırak karıştırıyor: {1} kat hızlı.", KittenColors.Name(stirrer.color), stirrer.color == KittenColors.Gri ? L.T("2,5") : "2");
                 return;
             }
             if (Chains.IsHouse(d.chain))
             {
                 bool full = d.cats >= KittenChaos.HouseSlots;
                 infoDesc.text = full
-                    ? (Cats.HasApprentice ? "İki yavru içeride. Masadaki Çırak gidince yenisini çıkarabilirsin." : "İki yavru içeride! Dokun: Çırak Kedi çıksın.")
-                    : "İçeride " + d.cats + "/" + KittenChaos.HouseSlots + " yavru. Yavruyu üstüne sürükle: Usta ve Çırak onu kovalamaz.";
+                    ? (Cats.HasApprentice ? L.T("İki yavru içeride. Masadaki Çırak gidince yenisini çıkarabilirsin.") : L.T("İki yavru içeride! Dokun: Çırak Kedi çıksın."))
+                    : L.F("İçeride {0}/{1} yavru. Yavruyu üstüne sürükle: Usta ve Çırak onu kovalamaz.", d.cats, KittenChaos.HouseSlots);
                 if (full && !Cats.HasApprentice)
                 {
                     actionBtn.gameObject.SetActive(true);
-                    actionBtn.Label().text = "Çırak Yap";
+                    actionBtn.Label().text = L.T("Çırak Yap");
                     btnImg.color = UIKit.Green;
                 }
                 return;
@@ -1335,26 +1468,26 @@ namespace KaraPati
             if (Chains.IsPotion(d.chain))
             {
                 var r = Recipes.Get(d.level);
-                infoDesc.text = "Hayaletler bu iksiri sipariş eder: " + (r != null ? r.Gold : 0) + " altın + " + Recipes.PotionStamps + " mühür!";
+                infoDesc.text = L.F("Hayaletler bu iksiri sipariş eder: {0} altın + {1} mühür!", r != null ? r.Gold : 0, Recipes.PotionStamps);
                 actionBtn.gameObject.SetActive(true);
-                actionBtn.Label().text = "Sat  +" + BoardController.PotionSellPrice(d.level);
+                actionBtn.Label().text = L.F("Sat  +{0}", BoardController.PotionSellPrice(d.level));
                 return;
             }
             if (Chains.IsGenerator(d.chain))
             {
                 int gl = GeneratorLevel(d.chain);
-                infoTitle.text = d.Name + "  <size=26>(Sv. " + gl + "/" + Generators.MaxLevel + ")</size>";
-                infoDesc.text = (d.chain == Chains.Kazan ? "Ot ve mantar üretir." : "Kristal ve örümcek ağı üretir.") + " Dokun: 1 enerji.\n" + Generators.ChanceText(gl);
+                infoTitle.text = d.Name + "  <size=26>(" + L.F("Sv. {0}/{1}", gl, Generators.MaxLevel) + ")</size>";
+                infoDesc.text = (d.chain == Chains.Kazan ? L.T("Ot ve mantar üretir.") : L.T("Kristal ve örümcek ağı üretir.")) + " " + L.T("Dokun: 1 enerji.") + "\n" + Generators.ChanceText(gl);
                 actionBtn.gameObject.SetActive(true);
                 if (gl < Generators.MaxLevel)
                 {
                     int price = Generators.UpgradeCost(gl);
-                    actionBtn.Label().text = "Yükselt\n" + price + " altın";
+                    actionBtn.Label().text = L.F("Yükselt\n{0} altın", price);
                     btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
                 }
                 else
                 {
-                    actionBtn.Label().text = "En üst\nseviye";
+                    actionBtn.Label().text = L.T("En üst\nseviye");
                     btnImg.color = UIKit.Disabled;
                 }
                 return;
@@ -1362,10 +1495,10 @@ namespace KaraPati
             int max = Chains.MaxLevel(d.chain);
             string src = Chains.Name(Chains.SourceOf(d.chain), 1);
             infoDesc.text = (d.level < max
-                ? "İki tanesini birleştir: " + (IsDiscovered(d.chain, d.level + 1) ? Chains.Name(d.chain, d.level + 1) : "???")
-                : "En üst seviye! Hayaletler buna bayılır.") + "\nKaynak: " + src + "  (i: seviye listesi)";
+                ? L.F("İki tanesini birleştir: {0}", IsDiscovered(d.chain, d.level + 1) ? Chains.Name(d.chain, d.level + 1) : "???")
+                : L.T("En üst seviye! Hayaletler buna bayılır.")) + "\n" + L.F("Kaynak: {0}  (i: seviye listesi)", src);
             actionBtn.gameObject.SetActive(true);
-            actionBtn.Label().text = "Sat  +" + d.level;
+            actionBtn.Label().text = L.F("Sat  +{0}", d.level);
         }
 
         public void ShowKittenInfo(KittenAgent a)
@@ -1388,43 +1521,43 @@ namespace KaraPati
                     if (a.Training)
                     {
                         var tl = TimeSpan.FromTicks(Math.Max(0L, a.trainUntil - DateTime.UtcNow.Ticks));
-                        infoTitle.text = "Eğitimdeki Yavru  <size=24>(" + colName + ")</size>";
-                        infoDesc.text = "Usta'dan ders alıyor. " + tl.Minutes + " dk " + tl.Seconds + " sn sonra Minik Çırak olacak.";
+                        infoTitle.text = L.T("Eğitimdeki Yavru") + "  <size=24>(" + colName + ")</size>";
+                        infoDesc.text = L.F("Usta'dan ders alıyor. {0} dk {1} sn sonra Minik Çırak olacak.", tl.Minutes, tl.Seconds);
                         break;
                     }
-                    infoTitle.text = "Yaramaz Yavru  <size=24>(" + colName + ")</size>";
-                    if (a.state == KittenAgent.State.Napping) infoDesc.text = "Mışıl mışıl uyuyor. Dokun, kalksın.";
-                    else if (Cats.TrainBlock() == null) infoDesc.text = "Usta'nın üstüne bırak: Minik Çırak olur. Kedi Evi'nde de güvende kalır.";
-                    else if (Cats.FindHouse(out _)) infoDesc.text = "Kedi Evi'ne sürükle: orada kovalanmaz, iki yavru Çırak olur.";
-                    else infoDesc.text = "Başka bir yavrunun üstüne sürükle: Çırak Kedi olurlar.";
+                    infoTitle.text = L.T("Yaramaz Yavru") + "  <size=24>(" + colName + ")</size>";
+                    if (a.state == KittenAgent.State.Napping) infoDesc.text = L.T("Mışıl mışıl uyuyor. Dokun, kalksın.");
+                    else if (Cats.TrainBlock() == null) infoDesc.text = L.T("Usta'nın üstüne bırak: Minik Çırak olur. Kedi Evi'nde de güvende kalır.");
+                    else if (Cats.FindHouse(out _)) infoDesc.text = L.T("Kedi Evi'ne sürükle: orada kovalanmaz, iki yavru Çırak olur.");
+                    else infoDesc.text = L.T("Başka bir yavrunun üstüne sürükle: Çırak Kedi olurlar.");
                     actionBtn.gameObject.SetActive(true);
-                    actionBtn.Label().text = "Sahiplendir +3";
+                    actionBtn.Label().text = L.T("Sahiplendir +3");
                     break;
                 case 2:
                 {
-                    infoTitle.text = colName + " Çırak";
+                    infoTitle.text = L.F("{0} Çırak", colName);
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
-                    string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
+                    string time = left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds);
                     infoDesc.text = (a.Stirring
-                        ? (Cats.PotBrewing(a.stirCell) ? "Kazanı karıştırıyor, iksir hızlı pişiyor." : "Kazanın başında iksir bekliyor.")
-                        : KittenColors.Talents[Mathf.Clamp(a.color, 0, KittenColors.Count - 1)]) + "\nKalan: " + time;
+                        ? (Cats.PotBrewing(a.stirCell) ? L.T("Kazanı karıştırıyor, iksir hızlı pişiyor.") : L.T("Kazanın başında iksir bekliyor."))
+                        : KittenColors.Talents[Mathf.Clamp(a.color, 0, KittenColors.Count - 1)]) + "\n" + L.F("Kalan: {0}", time);
                     if (!Cats.HasMaster && !Cats.UstaAway)
                     {
                         actionBtn.gameObject.SetActive(true);
-                        actionBtn.Label().text = "Usta Yap\n" + KittenChaos.PromoteCost + " altın";
+                        actionBtn.Label().text = L.F("Usta Yap\n{0} altın", KittenChaos.PromoteCost);
                         btnImg.color = Gold >= KittenChaos.PromoteCost ? UIKit.Green : UIKit.Disabled;
                     }
                     break;
                 }
                 case 4:
                 {
-                    infoTitle.text = colName + " Minik Çırak";
+                    infoTitle.text = L.F("{0} Minik Çırak", colName);
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
-                    infoDesc.text = (Cats.MiniBusy ? "Malzemeleri kazana taşıyor..." : "Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın.")
-                        + "\nKalan: " + (left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn");
+                    infoDesc.text = (Cats.MiniBusy ? L.T("Malzemeleri kazana taşıyor...") : L.T("Tarif Defteri'nde 'Yaptır' de, malzemeleri kazana taşısın."))
+                        + "\n" + L.F("Kalan: {0}", left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds));
                     actionBtn.gameObject.SetActive(true);
-                    // while it runs for a recipe: "Vazgeç" drops the job and frees the locked items
-                    actionBtn.Label().text = Cats.MiniBusy ? "Vazgeç" : "Tarifler";
+                    // while it runs for a recipe: L.T("Vazgeç") drops the job and frees the locked items
+                    actionBtn.Label().text = Cats.MiniBusy ? L.T("Vazgeç") : L.T("Tarifler");
                     btnImg.color = Cats.MiniBusy ? new Color(0.85f, 0.3f, 0.3f) : UIKit.Green;
                     break;
                 }
@@ -1432,13 +1565,13 @@ namespace KaraPati
                     infoTitle.text = UstaDisplayName(a.color);
                     if (a.state == KittenAgent.State.Sitting)
                     {
-                        infoDesc.text = "Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.";
+                        infoDesc.text = L.T("Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.");
                         break;
                     }
-                    infoDesc.text = a.homed ? "Yastığından malzeme getirir, yavrulara tıslar. Yavru bırakırsan eğitir, keşfe de çıkar."
-                                            : "Onu tezgahın sağındaki mor yastığa sürükle: oradan malzeme getirir, yavrulara tıslar.";
+                    infoDesc.text = a.homed ? L.T("Yastığından malzeme getirir, yavrulara tıslar. Yavru bırakırsan eğitir, keşfe de çıkar.")
+                                            : L.T("Onu tezgahın sağındaki mor yastığa sürükle: oradan malzeme getirir, yavrulara tıslar.");
                     actionBtn.gameObject.SetActive(true);
-                    actionBtn.Label().text = "Keşfe\nGönder";
+                    actionBtn.Label().text = L.T("Keşfe\nGönder");
                     btnImg.color = UIKit.Green;
                     break;
             }
@@ -1478,9 +1611,9 @@ namespace KaraPati
                 Sfx.Play("levelup");
                 Stamps += 1;
                 Energy = Mathf.Max(Energy, MaxEnergy);
-                ShowDialog("Seviye " + Level + "!",
-                    "Tebrikler! Ödül: +" + g + " altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık " + MaxEnergy +
-                    ", depoda " + StorageSlots + " yer var.");
+                ShowDialog(L.F("Seviye {0}!", Level),
+                    L.F("Tebrikler! Ödül: +{0} altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık {1}, depoda {2} yer var.", g, MaxEnergy, StorageSlots) +
+                    (Level == MiniGames.UnlockLevel ? "\n\n" + L.T("Yeni: Oyun Odası açıldı! Ana ekrandaki yumak düğmesine dokun.") : ""));
             }
             RefreshHud();
             if (levelBadge) Tween.Punch(levelBadge, ups > 0 ? 0.35f : 0.12f, 0.3f);
@@ -1499,12 +1632,12 @@ namespace KaraPati
             if (d == null) return false;
             if (!Chains.IsIngredient(d.chain))
             {
-                Toast("Depoya sadece malzemeler girer.");
+                Toast(L.T("Depoya sadece malzemeler girer."));
                 return false;
             }
             if (Storage.Count >= StorageSlots)
             {
-                Toast("Depo dolu! (" + StorageSlots + " yer) Seviye atladıkça büyür.");
+                Toast(L.F("Depo dolu! ({0} yer) Seviye atladıkça büyür.", StorageSlots));
                 return false;
             }
             Storage.Add(new ItemData(d.chain, d.level));
@@ -1512,7 +1645,7 @@ namespace KaraPati
             Board.HideSelector();
             ShowInfo(null);
             Tween.Punch(storageBtn, 0.2f, 0.3f);
-            Toast(d.Name + " depoya kondu.");
+            Toast(L.F("{0} depoya kondu.", d.Name));
             RefreshHud();
             OnBoardChanged();
             return true;
@@ -1524,7 +1657,7 @@ namespace KaraPati
             var center = new Vector2Int(BoardController.Cols / 2, BoardController.Rows - 1);
             if (!Board.NearestEmpty(center, out var e))
             {
-                Toast("Masa dolu! Önce yer aç.");
+                Toast(L.T("Masa dolu! Önce yer aç."));
                 return false;
             }
             var d = Storage[index];
@@ -1539,7 +1672,7 @@ namespace KaraPati
         void RefreshEventButton()
         {
             if (!eventTimerText) return;
-            eventTimerText.text = EventActive ? EventTimeLeftText : "bitti";
+            eventTimerText.text = EventActive ? EventTimeLeftText : L.T("bitti");
             bool claimable = EventClaimed < PumpkinEvent.Path.Length && Pumpkins >= PumpkinEvent.Path[EventClaimed].need;
             eventBadge.SetActive(claimable);
         }
@@ -1589,7 +1722,7 @@ namespace KaraPati
                     break;
             }
             EventClaimed++;
-            Toast(PumpkinEvent.Name + " ödülü: " + PumpkinEvent.RewardText(m), UIKit.Orange);
+            Toast(L.F("{0} ödülü: {1}", PumpkinEvent.Name, PumpkinEvent.RewardText(m)), UIKit.Orange);
             RefreshEventButton();
             Save();
             Sfx.Play("gift");
@@ -1620,7 +1753,7 @@ namespace KaraPati
         {
             if (Gold < amount)
             {
-                Toast(amount + " altın gerekiyor.", new Color(1f, 0.6f, 0.5f));
+                Toast(L.F("{0} altın gerekiyor.", amount), new Color(1f, 0.6f, 0.5f));
                 Sfx.Play("error");
                 return false;
             }
@@ -1660,7 +1793,7 @@ namespace KaraPati
             }
             if (ready)
             {
-                tripText.text = "Döndü!";
+                tripText.text = L.T("Döndü!");
                 tripText.color = new Color(1f, 0.85f, 0.4f);
                 Tween.Punch(tripBtn, 0.06f, 0.25f);
             }
@@ -1676,7 +1809,7 @@ namespace KaraPati
         {
             if (Energy < amount)
             {
-                Toast("Enerjin bitti! Biraz bekle ya da altınla al (+).", new Color(1f, 0.6f, 0.5f));
+                Toast(L.T("Enerjin bitti! Biraz bekle ya da altınla al (+)."), new Color(1f, 0.6f, 0.5f));
                 Sfx.Play("error");
                 return false;
             }
@@ -1690,13 +1823,13 @@ namespace KaraPati
         {
             if (Gold < EnergyPackCost)
             {
-                Toast(EnergyPackAmount + " enerji için " + EnergyPackCost + " altın gerekiyor.", new Color(1f, 0.6f, 0.5f));
+                Toast(L.F("{0} enerji için {1} altın gerekiyor.", EnergyPackAmount, EnergyPackCost), new Color(1f, 0.6f, 0.5f));
                 return;
             }
             Gold -= EnergyPackCost;
             Energy += EnergyPackAmount;
             RefreshHud();
-            Toast("+" + EnergyPackAmount + " enerji! Kazan fokurduyor.");
+            Toast(L.F("+{0} enerji! Kazan fokurduyor.", EnergyPackAmount));
             MarkDirty();
         }
 
@@ -1792,6 +1925,9 @@ namespace KaraPati
             hintsSeen.Clear();
             UstaNew = false;
             UstaPlayAt = 0;
+            miniDay = 0;
+            System.Array.Clear(miniUsed, 0, miniUsed.Length);
+            System.Array.Clear(miniBest, 0, miniBest.Length);
 
             Cats.ClearAll();
             Board.ClearAll();
@@ -1876,6 +2012,9 @@ namespace KaraPati
             s.hints = new List<string>(hintsSeen);
             s.ustaNew = UstaNew;
             s.ustaPlayAt = UstaPlayAt;
+            s.miniDay = miniDay;
+            s.miniUsed = new List<int>(miniUsed);
+            s.miniBest = new List<int>(miniBest);
             PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(s));
             PlayerPrefs.Save();
         }
@@ -1980,6 +2119,12 @@ namespace KaraPati
                 if (s.hints != null) foreach (var h in s.hints) hintsSeen.Add(h);
                 UstaNew = s.ustaNew;
                 UstaPlayAt = s.ustaPlayAt;
+                miniDay = s.miniDay;
+                for (int i = 0; i < MiniGames.Count; i++)
+                {
+                    miniUsed[i] = s.miniUsed != null && i < s.miniUsed.Count ? s.miniUsed[i] : 0;
+                    miniBest[i] = s.miniBest != null && i < s.miniBest.Count ? s.miniBest[i] : 0;
+                }
                 Orders.ReadSave(s.orders);
                 RefreshHud();
                 ShowInfo(null);
@@ -1988,7 +2133,7 @@ namespace KaraPati
                 if (!introSeen) ShowIntro();
                 else
                 {
-                    Toast("Tekrar hoş geldin, Kara Pati!");
+                    Toast(L.T("Tekrar hoş geldin, Kara Pati!"));
                     MaybeShowDaily();
                 }
             }

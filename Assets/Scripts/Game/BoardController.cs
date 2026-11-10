@@ -431,7 +431,7 @@ namespace KaraPati
                 var tb = data[to.x, to.y];
                 if (tb != null && Chains.IsStation(tb.chain) && Chains.IsIngredient(a.chain) && !tb.nap) { DropIntoPot(from, to); return; }
                 Tween.Move(v.rt, CellPos(from), 0.15f);
-                if (tb == null) GM.Toast("Tezgaha eşya konmaz. Kazana malzeme atabilirsin.");
+                if (tb == null) GM.Toast(L.T("Tezgaha eşya konmaz. Kazana malzeme atabilirsin."));
                 return;
             }
 
@@ -456,13 +456,13 @@ namespace KaraPati
             if (b.Locked)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
-                GM.Toast(b.reserved ? "Minik Çırak bunu kazana taşıyacak." : b.bubble ? "Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)" : "Orada bir yavru uyuyor! Önce dokunup okşa.");
+                GM.Toast(b.reserved ? L.T("Minik Çırak bunu kazana taşıyacak.") : b.bubble ? L.T("Önce baloncuğu aç! (Seçip alttaki düğmeye bas.)") : L.T("Orada bir yavru uyuyor! Önce dokunup okşa."));
                 return;
             }
             if (a.chain == b.chain && a.level == b.level && Chains.IsIngredient(a.chain))
             {
                 if (a.level < Chains.MaxLevel(a.chain)) { Merge(from, to); return; }
-                GM.Toast(a.Name + " zaten en üst seviyede!");
+                GM.Toast(L.F("{0} zaten en üst seviyede!", a.Name));
             }
             Swap(from, to);
             Select(to);
@@ -489,7 +489,7 @@ namespace KaraPati
             var v = ViewAt(c);
             if (!NearestEmpty(c, out var e))
             {
-                GM.Toast("Masa dolu! Birleştir ya da sat.");
+                GM.Toast(L.T("Masa dolu! Birleştir ya da sat."));
                 if (v) Tween.Punch(v.rt, 0.08f, 0.2f);
                 return;
             }
@@ -519,7 +519,7 @@ namespace KaraPati
             Select(to);
             TrySpawnBubble(to, nd);
             if (nd.level == Chains.MaxLevel(nd.chain))
-                GM.Toast("Harika! " + nd.Name + " - en üst seviye!", UIKit.Orange);
+                GM.Toast(L.F("Harika! {0} - en üst seviye!", nd.Name), UIKit.Orange);
             GM.OnBoardChanged();
             GM.Tut?.Notify("merge");
         }
@@ -535,7 +535,7 @@ namespace KaraPati
             else return;
             GM.AddGold(price);
             Sfx.Play("coin", 0.9f, 0.6f);
-            GM.Toast(d.Name + " satıldı: +" + price + " altın");
+            GM.Toast(L.F("{0} satıldı: +{1} altın", d.Name, price));
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
             GM.OnBoardChanged();
@@ -565,7 +565,7 @@ namespace KaraPati
             if (pot.brew > 0)
             {
                 Tween.Move(v.rt, CellPos(from), 0.15f);
-                GM.Toast(pot.BrewReady ? "İksir hazır! Önce kazana dokunup al." : "Kazan kaynıyor, biraz bekle.");
+                GM.Toast(pot.BrewReady ? L.T("İksir hazır! Önce kazana dokunup al.") : L.T("Kazan kaynıyor, biraz bekle."));
                 return;
             }
             if (string.IsNullOrEmpty(pot.mix))
@@ -573,7 +573,7 @@ namespace KaraPati
                 if (!Recipes.AnyUses(a.chain, a.level, done))
                 {
                     Tween.Move(v.rt, CellPos(from), 0.15f);
-                    GM.Toast(a.Name + " hiçbir tarifte yok. Kazanı seçip 'Tarifler'e bak.");
+                    GM.Toast(L.F("{0} hiçbir tarifte yok. Kazanı seçip 'Tarifler'e bak.", a.Name));
                     return;
                 }
                 pot.mix = Recipes.Key(a.chain, a.level);
@@ -586,7 +586,7 @@ namespace KaraPati
                     bool isA = r.aChain == a.chain && r.aLevel == a.level;
                     names.Add(Chains.Name(isA ? r.bChain : r.aChain, isA ? r.bLevel : r.aLevel));
                 }
-                GM.Toast("Kazana " + a.Name + " girdi. Şimdi ekle: " + string.Join(" ya da ", names), new Color(0.85f, 0.7f, 1f), 4f);
+                GM.Toast(L.F("Kazana {0} girdi. Şimdi ekle: {1}", a.Name, string.Join(L.T(" ya da "), names)), new Color(0.85f, 0.7f, 1f), 4f);
             }
             else
             {
@@ -595,7 +595,7 @@ namespace KaraPati
                 if (r == null)
                 {
                     Tween.Move(v.rt, CellPos(from), 0.15f);
-                    GM.Toast("Bu ikisi karışmaz! " + Chains.Name(mc, ml) + " için başka bir eş lazım.");
+                    GM.Toast(L.F("Bu ikisi karışmaz! {0} için başka bir eş lazım.", Chains.Name(mc, ml)));
                     return;
                 }
                 pot.mix = "";
@@ -605,7 +605,7 @@ namespace KaraPati
                 Sfx.Play("brew");
                 ConsumeInto(from, potCell);
                 FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
-                GM.Toast(r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
+                GM.Toast(L.F("{0} kaynamaya başladı! ({1} sn)", r.Name, r.seconds), new Color(0.85f, 0.7f, 1f));
             }
             RefreshView(potCell);
             var pv = ViewAt(potCell);
@@ -641,7 +641,7 @@ namespace KaraPati
                 pot.readyNotified = false;
                 Sfx.Play("brew");
                 FX.Burst(fxLayer, CellPos(potCell), ProcArt.PotionColor(r.id), 12);
-                GM.Toast("Minik Çırak malzemeleri koydu: " + r.Name + " kaynamaya başladı! (" + r.seconds + " sn)", new Color(0.85f, 0.7f, 1f));
+                GM.Toast(L.F("Minik Çırak malzemeleri koydu: {0} kaynamaya başladı! ({1} sn)", r.Name, r.seconds), new Color(0.85f, 0.7f, 1f));
             }
             RefreshView(potCell);
             var pv = ViewAt(potCell);
@@ -656,13 +656,13 @@ namespace KaraPati
             var v = ViewAt(c);
             if (pot.BrewReady) { CollectPotion(c); return; }
             if (v) Tween.Punch(v.rt, 0.1f, 0.2f);
-            if (pot.brew == 0 && string.IsNullOrEmpty(pot.mix)) GM.Toast("Kazana iki malzeme sürükle, iksir kaynasın! Tarifler için kazanı seç.");
+            if (pot.brew == 0 && string.IsNullOrEmpty(pot.mix)) GM.Toast(L.T("Kazana iki malzeme sürükle, iksir kaynasın! Tarifler için kazanı seç."));
         }
 
         void CollectPotion(Vector2Int c)
         {
             var pot = data[c.x, c.y];
-            if (!NearestEmpty(c, out var e)) { GM.Toast("Masa dolu! İksire yer aç."); return; }
+            if (!NearestEmpty(c, out var e)) { GM.Toast(L.T("Masa dolu! İksire yer aç.")); return; }
             var r = Recipes.Get(pot.brew);
             pot.brew = 0;
             pot.brewUntil = 0;
@@ -694,7 +694,7 @@ namespace KaraPati
             if (!string.IsNullOrEmpty(pot.mix))
             {
                 // take the waiting ingredient back out
-                if (!NearestEmpty(c, out var e)) { GM.Toast("Masa dolu!"); return; }
+                if (!NearestEmpty(c, out var e)) { GM.Toast(L.T("Masa dolu!")); return; }
                 Recipes.ParseKey(pot.mix, out var mc, out var ml);
                 pot.mix = "";
                 SpawnFrom(c, e, new ItemData(mc, ml));
@@ -786,7 +786,7 @@ namespace KaraPati
             SpawnFromPos(CellPos(from), e, b);
             Sfx.Play("bubble");
             FX.Burst(fxLayer, CellPos(e), new Color(0.75f, 0.9f, 1f), 8);
-            GM.Toast("Bir hayalet baloncuk belirdi! İçindeki " + b.Name + " " + (int)Bubbles.Seconds + " sn boyunca senin olabilir.", new Color(0.7f, 0.9f, 1f), 4f);
+            GM.Toast(L.F("Bir hayalet baloncuk belirdi! İçindeki {0} {1} sn boyunca senin olabilir.", b.Name, (int)Bubbles.Seconds), new Color(0.7f, 0.9f, 1f), 4f);
         }
 
         /// <summary>Test helper: force a bubble next to the middle of the table.</summary>
@@ -817,7 +817,7 @@ namespace KaraPati
             var v = ViewAt(c);
             if (v) Tween.Pop(v.rt, 0.35f);
             FX.Burst(fxLayer, CellPos(c), new Color(0.75f, 0.9f, 1f), 12);
-            GM.Toast(d.Name + " baloncuktan çıktı!");
+            GM.Toast(L.F("{0} baloncuktan çıktı!", d.Name));
             Select(c);
             GM.OnBoardChanged();
         }
@@ -831,7 +831,7 @@ namespace KaraPati
             Sfx.Play("bubble", 0.7f);
             RemoveWithShrink(c);
             Select(new Vector2Int(-1, -1));
-            GM.Toast("Pof! Baloncuğu patlattın, yer açıldı.");
+            GM.Toast(L.T("Pof! Baloncuğu patlattın, yer açıldı."));
             GM.OnBoardChanged();
         }
 
@@ -852,7 +852,7 @@ namespace KaraPati
                     Sfx.Play("ready");
                     RefreshView(c);
                     FX.Burst(fxLayer, CellPos(c), ProcArt.PotionColor(pd.brew), 10);
-                    GM.Toast(Chains.Name(Chains.Iksir, pd.brew) + " hazır! Kazana dokun.", new Color(0.85f, 0.7f, 1f));
+                    GM.Toast(L.F("{0} hazır! Kazana dokun.", Chains.Name(Chains.Iksir, pd.brew)), new Color(0.85f, 0.7f, 1f));
                 }
             }
             foreach (var c in AllCells())
@@ -867,7 +867,7 @@ namespace KaraPati
             }
             if (changed)
             {
-                GM.Toast("Pof! Baloncuk uçup gitti.");
+                GM.Toast(L.T("Pof! Baloncuk uçup gitti."));
                 Sfx.Play("bubble", 0.7f);
                 GM.OnBoardChanged();
             }

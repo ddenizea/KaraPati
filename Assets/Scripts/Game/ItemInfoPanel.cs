@@ -205,7 +205,7 @@ namespace KaraPati
             if (Chains.IsIngredient(d.chain)) FillIngredient(d);
             else if (Chains.IsPotion(d.chain)) FillPotion(d);
             else if (Chains.IsGenerator(d.chain)) FillGenerator(d);
-            else Line("Dükkânın bir parçası.", 60f);
+            else Line(L.T("Dükkânın bir parçası."), 60f);
             // the window grows with its content (but never past the screen)
             panel.sizeDelta = new Vector2(960f, Mathf.Clamp(150f + y + 40f, 520f, 1900f));
         }
@@ -221,7 +221,7 @@ namespace KaraPati
             int rows = (max + columns - 1) / columns;
             float rowH = tile + 30f;
             var card = CardBox(100f + rows * rowH + 60f);
-            CardTitle(card, "Sv. " + d.level + " / " + max);
+            CardTitle(card, L.F("Sv. {0} / {1}", d.level, max));
 
             float rowW = columns * tile + (columns - 1) * Gap;
             float x0 = -rowW / 2f + tile / 2f;
@@ -234,7 +234,7 @@ namespace KaraPati
                 if (l < max) Arrow(card, pos + new Vector2(tile / 2f + Gap / 2f, 0f));
             }
             var hint = UIKit.Txt("Hint", card,
-                found < max ? "Birleştirdikçe gizli seviyeler açılır (" + found + "/" + max + ")." : "Bütün seviyeleri keşfettin!",
+                found < max ? L.F("Birleştirdikçe gizli seviyeler açılır ({0}/{1}).", found, max) : L.T("Bütün seviyeleri keşfettin!"),
                 26, Dim, TextAnchor.MiddleCenter, false);
             hint.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 32f), new Vector2(800f, 44f));
             y += 20f;
@@ -244,10 +244,10 @@ namespace KaraPati
             var srow = UIKit.Rect("Source", body);
             Top(srow, 170f);
             y += 170f;
-            var st = UIKit.Txt("Label", srow, "Nereden çıkar:", 40, Ink, TextAnchor.MiddleRight, false);
+            var st = UIKit.Txt("Label", srow, L.T("Nereden çıkar:"), 40, Ink, TextAnchor.MiddleRight, false);
             st.fontStyle = FontStyle.Bold;
             st.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, 18f), new Vector2(420f, 60f));
-            var sd = UIKit.Txt("Desc", srow, "dokun: 1 enerji", 26, Dim, TextAnchor.MiddleRight, false);
+            var sd = UIKit.Txt("Desc", srow, L.T("dokun: 1 enerji"), 26, Dim, TextAnchor.MiddleRight, false);
             sd.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-20f, -26f), new Vector2(420f, 40f));
             var icon = UIKit.Img("Src", srow, ProcArt.Item(src, 1), Color.white);
             icon.rectTransform.Anchor(new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 0f), new Vector2(150f, 150f));
@@ -261,7 +261,7 @@ namespace KaraPati
                 if (Recipes.Unlocked(r, GM.TasksDone) && (r.aChain == d.chain || r.bChain == d.chain)) uses.Add(r);
             if (uses.Count == 0) return;
             y += 10f;
-            Line("İksirlerde kullanılır:", 50f, 32, true);
+            Line(L.T("İksirlerde kullanılır:"), 50f, 32, true);
             var urow = UIKit.Rect("Uses", body);
             Top(urow, 180f);
             y += 180f;
@@ -272,7 +272,7 @@ namespace KaraPati
                 int need = r.aChain == d.chain ? r.aLevel : r.bLevel;
                 var pos = new Vector2((i - (n - 1) / 2f) * 170f, -64f);
                 Tile(urow, pos, 120f, ProcArt.Item(Chains.Iksir, r.id), true, need == d.level, 0, 0);
-                var cap = UIKit.Txt("Cap", urow, "Sv. " + need + " lazım", 22, Dim, TextAnchor.UpperCenter, false);
+                var cap = UIKit.Txt("Cap", urow, L.F("Sv. {0} lazım", need), 22, Dim, TextAnchor.UpperCenter, false);
                 cap.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(pos + new Vector2(0f, -70f), new Vector2(170f, 34f));
             }
         }
@@ -289,8 +289,8 @@ namespace KaraPati
             Sign(card, "=", new Vector2(150f, -170f));
             Tile(card, new Vector2(300f, -170f), 160f, ProcArt.Item(Chains.Iksir, r.id), true, true, 0, 0);
             y += 20f;
-            Line("Simya Kazanı'nda kaynar: " + (r.seconds >= 60 ? (r.seconds / 60f).ToString("0.#") + " dakika" : r.seconds + " saniye") + ".", 50f);
-            Line("Siparişte " + r.Gold + " altın + " + Recipes.PotionStamps + " Pati Mührü. Satarsan " + BoardController.PotionSellPrice(r.id) + " altın.", 50f);
+            Line(L.F("Simya Kazanı'nda kaynar: {0}.", r.seconds >= 60 ? L.F("{0} dakika", (r.seconds / 60f).ToString("0.#")) : L.F("{0} saniye", r.seconds)), 50f);
+            Line(L.F("Siparişte {0} altın + {1} Pati Mührü. Satarsan {2} altın.", r.Gold, Recipes.PotionStamps, BoardController.PotionSellPrice(r.id)), 50f);
         }
 
         void FillGenerator(ItemData d)
@@ -299,16 +299,16 @@ namespace KaraPati
             string a = d.chain == Chains.Kazan ? Chains.Ot : Chains.Kristal;
             string b = d.chain == Chains.Kazan ? Chains.Mantar : Chains.Ag;
             var card = CardBox(300f);
-            CardTitle(card, "Üretir  •  Sv. " + gl + "/" + Generators.MaxLevel);
+            CardTitle(card, L.F("Üretir  •  Sv. {0}/{1}", gl, Generators.MaxLevel));
             Tile(card, new Vector2(-300f, -170f), 160f, ProcArt.Item(a, 1), GM.IsDiscovered(a, 1), false, OnTable(a, 1), 1);
             Tile(card, new Vector2(-100f, -170f), 160f, ProcArt.Item(b, 1), GM.IsDiscovered(b, 1), false, OnTable(b, 1), 1);
             Tile(card, new Vector2(100f, -170f), 160f, ProcArt.Item(a, 2), GM.IsDiscovered(a, 2), false, OnTable(a, 2), 2);
             Tile(card, new Vector2(300f, -170f), 160f, ProcArt.Item(b, 2), GM.IsDiscovered(b, 2), false, OnTable(b, 2), 2);
             y += 20f;
-            Line("Her dokunuş 1 enerji. " + Generators.ChanceText(gl) + ".", 50f);
+            Line(L.F("Her dokunuş 1 enerji. {0}.", Generators.ChanceText(gl)), 50f);
             Line(gl < Generators.MaxLevel
-                ? "Sonraki seviye " + Generators.UpgradeCost(gl) + " altın: " + Generators.ChanceText(gl + 1) + "."
-                : "En üst seviyede!", 50f);
+                ? L.F("Sonraki seviye {0} altın: {1}.", Generators.UpgradeCost(gl), Generators.ChanceText(gl + 1))
+                : L.T("En üst seviyede!"), 50f);
         }
     }
 }

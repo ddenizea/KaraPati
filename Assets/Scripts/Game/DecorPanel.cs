@@ -5,7 +5,7 @@ namespace KaraPati
 {
     /// <summary>
     /// Tower decoration sheet that slides up from the bottom. Two tabs:
-    /// "Envanter" (ornaments you own - tap to place on the floor in view) and "Dükkân" (buy ornaments, tap twice).
+    /// L.T("Envanter") (ornaments you own - tap to place on the floor in view) and L.T("Dükkân") (buy ornaments, tap twice).
     /// </summary>
     public class DecorPanel : MonoBehaviour
     {
@@ -53,7 +53,7 @@ namespace KaraPati
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(190f, -16f), new Vector2(440f, 50f));
             nextFloor = UIKit.Btn("NextFloor", sheet, ">", UIKit.PanelDark, () => ChangeFloor(1), 36);
             ((RectTransform)nextFloor.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(638f, -14f), new Vector2(60f, 56f));
-            var sub = UIKit.Txt("Sub", sheet, "Oklarla katı seç, envanterden bir süse dokun.", 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
+            var sub = UIKit.Txt("Sub", sheet, L.T("Oklarla katı seç, envanterden bir süse dokun."), 24, new Color(1f, 1f, 1f, 0.7f), TextAnchor.MiddleLeft, false);
             sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(126f, -66f), new Vector2(640f, 34f));
 
             var coin = UIKit.Img("Coin", sheet, ProcArt.Coin, Color.white);
@@ -64,9 +64,9 @@ namespace KaraPati
             var close = UIKit.Btn("Close", sheet, "X", new Color(0.8f, 0.3f, 0.35f), Close, 40);
             ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-18f, -18f), new Vector2(84f, 84f));
 
-            tabInv = UIKit.Btn("TabInv", sheet, "Envanter", UIKit.PanelDark, () => SetTab(false), 32);
+            tabInv = UIKit.Btn("TabInv", sheet, L.T("Envanter"), UIKit.PanelDark, () => SetTab(false), 32);
             ((RectTransform)tabInv.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(-180f, -116f), new Vector2(340f, 76f));
-            tabShop = UIKit.Btn("TabShop", sheet, "Dükkân", UIKit.PanelDark, () => SetTab(true), 32);
+            tabShop = UIKit.Btn("TabShop", sheet, L.T("Dükkân"), UIKit.PanelDark, () => SetTab(true), 32);
             ((RectTransform)tabShop.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(180f, -116f), new Vector2(340f, 76f));
 
             rows = UIKit.Rect("Rows", sheet);
@@ -101,7 +101,7 @@ namespace KaraPati
         void ChangeFloor(int dir)
         {
             int open = GM.TowerFloorsOpen;
-            if (open <= 1) { GM.Toast("Başka kat açmak için kulede kilitli kata dokun."); return; }
+            if (open <= 1) { GM.Toast(L.T("Başka kat açmak için kulede kilitli kata dokun.")); return; }
             floor = (floor + dir + open) % open;   // wraps around: after the top floor comes floor 1
             Sfx.Play("page");
             Fill();
@@ -122,7 +122,7 @@ namespace KaraPati
         void Fill()
         {
             for (int i = rows.childCount - 1; i >= 0; i--) Destroy(rows.GetChild(i).gameObject);
-            title.text = (floor + 1) + ". Kat  •  " + Tower.FloorNames[floor];
+            title.text = L.F("{0}. Kat  •  {1}", floor + 1, Tower.FloorNames[floor]);
             bool many = GM.TowerFloorsOpen > 1;
             prevFloor.gameObject.SetActive(many);
             nextFloor.gameObject.SetActive(many);
@@ -178,12 +178,12 @@ namespace KaraPati
             Color capColor;
             if (shopTab)
             {
-                caption = armed ? "Emin misin?" : price + " altın";
+                caption = armed ? L.T("Emin misin?") : L.F("{0} altın", price);
                 capColor = armed ? Color.white : GM.Gold >= price ? new Color(1f, 0.85f, 0.4f) : new Color(1f, 0.55f, 0.5f);
             }
             else
             {
-                caption = have > 0 ? "x" + have + "  Yerleştir" : "Yok";
+                caption = have > 0 ? L.F("x{0}  Yerleştir", have) : L.T("Yok");
                 capColor = have > 0 ? UIKit.Cream : new Color(1f, 1f, 1f, 0.35f);
             }
             var cap = UIKit.Txt("Cap", rt, caption, 24, capColor, TextAnchor.MiddleCenter, false);
@@ -204,7 +204,7 @@ namespace KaraPati
             string id = Decor.ItemId(slot, v);
             if (!shopTab)
             {
-                if (GM.InventoryCount(id) <= 0) { GM.Toast("Bu süsten yok. Dükkân sekmesinden alabilirsin."); return; }
+                if (GM.InventoryCount(id) <= 0) { GM.Toast(L.T("Bu süsten yok. Dükkân sekmesinden alabilirsin.")); return; }
                 Close();
                 GM.TowerUI.PlaceFromInventory(id, floor);
                 return;
@@ -217,7 +217,7 @@ namespace KaraPati
                 Fill();
                 return;
             }
-            if (GM.Gold < price) { GM.Toast(Decor.VariantNames[slot][v] + " için " + price + " altın gerekiyor."); Sfx.Play("error"); return; }
+            if (GM.Gold < price) { GM.Toast(L.F("{0} için {1} altın gerekiyor.", Decor.VariantNames[slot][v], price)); Sfx.Play("error"); return; }
             armedSlot = slot;
             armedVariant = v;
             armedUntil = Time.unscaledTime + 3f;

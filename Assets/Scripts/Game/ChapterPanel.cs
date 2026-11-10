@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>"Bölümler": every chapter as a card with its character portrait, progress, status and gift chests.</summary>
+    /// <summary>L.T("Bölümler"): every chapter as a card with its character portrait, progress, status and gift chests.</summary>
     public class ChapterPanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
@@ -42,7 +42,7 @@ namespace KaraPati
             panel = bg.rectTransform;
             panel.At(Vector2.zero, new Vector2(1000f, 1600f));
 
-            var title = UIKit.Txt("Title", panel, "Bölümler", 56, new Color(0.35f, 0.2f, 0.12f), TextAnchor.MiddleLeft, false);
+            var title = UIKit.Txt("Title", panel, L.T("Bölümler"), 56, new Color(0.35f, 0.2f, 0.12f), TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(40f, -34f), new Vector2(600f, 70f));
 
@@ -109,13 +109,13 @@ namespace KaraPati
                 }
 
                 // title + status
-                var name = UIKit.Txt("Name", rt, locked ? (ch + 1) + ". Bölüm: ???" : chapter.name, 36, ink, TextAnchor.MiddleLeft, false);
+                var name = UIKit.Txt("Name", rt, locked ? L.F("{0}. Bölüm: ???", ch + 1) : chapter.name, 36, ink, TextAnchor.MiddleLeft, false);
                 name.fontStyle = FontStyle.Bold;
                 name.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(214f, -22f), new Vector2(560f, 50f));
                 name.rectTransform.pivot = new Vector2(0f, 1f);
                 name.rectTransform.anchoredPosition = new Vector2(214f, -22f);
 
-                string status = locked ? "Kilitli" : finished ? "Tamamlandı" : "Keşfediliyor";
+                string status = locked ? L.T("Kilitli") : finished ? L.T("Tamamlandı") : L.T("Keşfediliyor");
                 var badge = UIKit.Img("Status", rt, ProcArt.Rounded, locked ? new Color(0.5f, 0.45f, 0.42f) : finished ? UIKit.Green : UIKit.Orange, true);
                 badge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-18f, -20f), new Vector2(200f, 52f));
                 var st = UIKit.Txt("T", badge.transform, status, 26, Color.white, TextAnchor.MiddleCenter, false);
@@ -124,7 +124,7 @@ namespace KaraPati
 
                 if (locked)
                 {
-                    var hint = UIKit.Txt("Hint", rt, "Önceki bölümü bitirince açılır.", 26, new Color(0.35f, 0.25f, 0.2f), TextAnchor.MiddleLeft, false);
+                    var hint = UIKit.Txt("Hint", rt, L.T("Önceki bölümü bitirince açılır."), 26, new Color(0.35f, 0.25f, 0.2f), TextAnchor.MiddleLeft, false);
                     hint.rectTransform.Anchor(new Vector2(0f, 0f), new Vector2(0f, 0f)).At(new Vector2(214f, 50f), new Vector2(600f, 50f));
                     continue;
                 }
@@ -167,7 +167,7 @@ namespace KaraPati
 
         void OnCard(int ch)
         {
-            if (ch > Story.CurrentChapter(GM.TasksDone)) { GM.Toast("Bu bölüm henüz kilitli. Önceki bölümü bitir!"); return; }
+            if (ch > Story.CurrentChapter(GM.TasksDone)) { GM.Toast(L.T("Bu bölüm henüz kilitli. Önceki bölümü bitir!")); return; }
             Close();
             GM.ShowHomeChapter(ch);
         }

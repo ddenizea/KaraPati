@@ -30,7 +30,7 @@ namespace KaraPati
 
             var icon = UIKit.Img("Icon", panel, ProcArt.Calendar, Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(100f, -90f), new Vector2(120f, 120f));
-            var title = UIKit.Txt("Title", panel, "Günlük Ödül", 54, UIKit.Orange);
+            var title = UIKit.Txt("Title", panel, L.T("Günlük Ödül"), 54, UIKit.Orange);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(20f, -40f), new Vector2(600f, 70f));
             sub = UIKit.Txt("Sub", panel, "", 28, new Color(1f, 1f, 1f, 0.75f));
@@ -66,7 +66,7 @@ namespace KaraPati
             int today = GM.DailyIndex;
             // after claiming, show the claimed day as done; a full loop restarts from day 1
             if (!can && today == 0) today = DailyRewards.Days.Length;
-            sub.text = can ? "Bugünün ödülü hazır! Her gün gel, 7. gün büyük ödül." : "Bugünkü ödülü aldın. Yarın yine bekleriz!";
+            sub.text = can ? L.T("Bugünün ödülü hazır! Her gün gel, 7. gün büyük ödül.") : L.T("Bugünkü ödülü aldın. Yarın yine bekleriz!");
 
             var days = DailyRewards.Days;
             for (int i = 0; i < days.Length; i++)
@@ -86,7 +86,7 @@ namespace KaraPati
                 var rt = card.rectTransform;
                 rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(pos, size);
 
-                var head = UIKit.Txt("Day", rt, (i + 1) + ". gün", 30, current ? Color.white : UIKit.Cream);
+                var head = UIKit.Txt("Day", rt, L.F("{0}. gün", i + 1), 30, current ? Color.white : UIKit.Cream);
                 head.fontStyle = FontStyle.Bold;
                 head.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -14f), new Vector2(size.x, 44f));
 
@@ -108,7 +108,7 @@ namespace KaraPati
                 }
                 else if (current && can)
                 {
-                    var b = UIKit.Btn("Claim", rt, "Al!", UIKit.Green, Claim, 34);
+                    var b = UIKit.Btn("Claim", rt, L.T("Al!"), UIKit.Green, Claim, 34);
                     ((RectTransform)b.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 10f), new Vector2(Mathf.Min(180f, size.x - 30f), 56f));
                     Tween.Punch(rt, 0.06f, 0.5f);
                 }

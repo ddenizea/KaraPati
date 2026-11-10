@@ -42,6 +42,7 @@ namespace KaraPati
 
         RectTransform taskList;
         Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge, ustaBadge, ustaIcon;
+        Image gameBadge, gameIcon, gameLock;
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
         readonly Dictionary<string, Image> clueSpots = new Dictionary<string, Image>();
@@ -49,24 +50,24 @@ namespace KaraPati
         float eyeUntil;
 
         // chapter-specific lines first, then the general ones
-        static readonly string[][] chapterCatLines =
+        static readonly TrList[] chapterCatLines =
         {
-            new[] { "Önce örümcek ağları. Sonra mama. Sonra yine mama." },
-            new[] { "Bu mahzen çok soğuk... patilerim dondu.", "Aynada bir şey kıpırdadı, gördün mü?" },
-            new[] { "Ay ışığında tüylerim parlıyor, değil mi?", "Bu korkuluk bana bakıyor. Bence o da kedi sever." },
-            new[] { "Hayalet kasabası ama pazarı fena değil!", "Saat kulesi çalışınca herkes uyanacak." },
-            new[] { "Bu merdivenler bitmiyor... beni taşır mısın?", "Teleskopla bakınca Cadı Hanım'ı görebilir miyiz?" },
-            new[] { "Gölge aslında yalnız. Ona bir yumak verelim.", "Eve dönmeye az kaldı, hissediyorum!" },
+            new TrList(L.N("Önce örümcek ağları. Sonra mama. Sonra yine mama.")),
+            new TrList(L.N("Bu mahzen çok soğuk... patilerim dondu."), L.N("Aynada bir şey kıpırdadı, gördün mü?")),
+            new TrList(L.N("Ay ışığında tüylerim parlıyor, değil mi?"), L.N("Bu korkuluk bana bakıyor. Bence o da kedi sever.")),
+            new TrList(L.N("Hayalet kasabası ama pazarı fena değil!"), L.N("Saat kulesi çalışınca herkes uyanacak.")),
+            new TrList(L.N("Bu merdivenler bitmiyor... beni taşır mısın?"), L.N("Teleskopla bakınca Cadı Hanım'ı görebilir miyiz?")),
+            new TrList(L.N("Gölge aslında yalnız. Ona bir yumak verelim."), L.N("Eve dönmeye az kaldı, hissediyorum!")),
         };
 
-        static readonly string[] catLines =
-        {
-            "Miyav. Mühürleri sen topla, dükkânı ben yönetirim.",
-            "Cadı bir yerlerde... bıyıklarımda hissediyorum.",
-            "Mırr. Kulağımın arkasını kaşı, sonra işe dön.",
-            "Hayaletlerden korkma, çoğu sadece sohbet etmek istiyor.",
-            "Göz düğmesine bas, gizli şeyleri birlikte bulalım.",
-        };
+        static readonly TrList catLines = new TrList
+        (
+            L.N("Miyav. Mühürleri sen topla, dükkânı ben yönetirim."),
+            L.N("Cadı bir yerlerde... bıyıklarımda hissediyorum."),
+            L.N("Mırr. Kulağımın arkasını kaşı, sonra işe dön."),
+            L.N("Hayaletlerden korkma, çoğu sadece sohbet etmek istiyor."),
+            L.N("Göz düğmesine bas, gizli şeyleri birlikte bulalım.")
+        );
 
         // ------------------------------------------------------------------ build
         public void Build(RectTransform root)
@@ -127,10 +128,9 @@ namespace KaraPati
             caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(caseBadgeText.rectTransform);
             RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
-            // sound: a small menu with music and effects as two separate switches
-            var soundBtn = RoundButton(sceneArea, "Sound", ProcArt.Speaker(Sfx.Mode), new Vector2(1f, 1f), new Vector2(-66f, -190f), ToggleSoundMenu);
-            soundIcon = soundBtn.transform.Find("Icon").GetComponent<Image>();
-            BuildSoundMenu();
+            // settings: music and effects as two separate switches, and the language
+            RoundButton(sceneArea, "Settings", ProcArt.Gear, new Vector2(1f, 1f), new Vector2(-66f, -190f), ToggleSettings);
+            BuildSettings();
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
             dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
@@ -150,6 +150,15 @@ namespace KaraPati
             ustaBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var ubt = UIKit.Txt("!", ustaBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(ubt.rectTransform);
+            // Game Room: mini games (opens at level 5; "!" while a free play is waiting)
+            var games = RoundButton(sceneArea, "GameRoom", ProcArt.GameRoomIcon, new Vector2(0f, 1f), new Vector2(66f, -580f), () => GM.OpenGameRoom());
+            gameIcon = games.transform.Find("Icon").GetComponent<Image>();
+            gameLock = UIKit.Img("Lock", games.transform, ProcArt.Lock, Color.white);
+            gameLock.rectTransform.At(new Vector2(30f, -30f), new Vector2(46f, 46f));
+            gameBadge = UIKit.Img("Badge", games.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            gameBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var gbt = UIKit.Txt("!", gameBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(gbt.rectTransform);
             // the chapter title also opens the list
             chapterTitle.raycastTarget = true;
             var titleBtn = chapterTitle.gameObject.AddComponent<Button>();
@@ -160,7 +169,7 @@ namespace KaraPati
             var tasks = UIKit.Section(root, "Tasks", 1228f, 515f);
             var panel = UIKit.Img("Panel", tasks, ProcArt.Rounded, UIKit.Panel, true);
             UIKit.Stretch(panel.rectTransform, 30f, 30f);
-            var t = UIKit.Txt("Title", panel.transform, "Görevler", 36, UIKit.Orange, TextAnchor.MiddleLeft);
+            var t = UIKit.Txt("Title", panel.transform, L.T("Görevler"), 36, UIKit.Orange, TextAnchor.MiddleLeft);
             t.fontStyle = FontStyle.Bold;
             t.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -10f), new Vector2(400f, 56f));
             taskList = UIKit.Rect("List", panel.transform);
@@ -173,7 +182,7 @@ namespace KaraPati
             var aIcon = UIKit.Img("Icon", album.transform, ProcArt.AlbumIcon, Color.white);
             aIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(18f, 0f), new Vector2(100f, 100f));
             var aLabel = album.Label();
-            aLabel.text = "Albüm";
+            aLabel.text = L.T("Albüm");
             aLabel.fontSize = 34;
             aLabel.rectTransform.offsetMin = new Vector2(110f, 4f);
             albumBadge = UIKit.Img("Badge", album.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
@@ -187,7 +196,7 @@ namespace KaraPati
             var tIcon = UIKit.Img("Icon", towerBtn.transform, ProcArt.TowerIcon, Color.white);
             tIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(10f, 4f), new Vector2(100f, 100f));
             var tLabel = towerBtn.Label();
-            tLabel.text = "Kule";
+            tLabel.text = L.T("Kule");
             tLabel.fontSize = 34;
             tLabel.rectTransform.offsetMin = new Vector2(100f, 4f);
             towerBadge = UIKit.Img("Badge", towerBtn.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
@@ -195,7 +204,7 @@ namespace KaraPati
             var tbt = UIKit.Txt("!", towerBadge.transform, "!", 32, Color.white);
             UIKit.Stretch(tbt.rectTransform);
 
-            var play = UIKit.Btn("Play", bottom, "Dükkânı Aç", UIKit.Green, () => GM.GoBoard(), 46);
+            var play = UIKit.Btn("Play", bottom, L.T("Dükkânı Aç"), UIKit.Green, () => GM.GoBoard(), 46);
             ((RectTransform)play.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(460f, 150f));
             play.Label().fontStyle = FontStyle.Bold;
             play.Label().rectTransform.offsetMin = new Vector2(110f, 4f);
@@ -313,7 +322,7 @@ namespace KaraPati
                 string line = catLines[Random.Range(0, catLines.Length)];
                 if (view >= 0 && view < chapterCatLines.Length && Random.value < 0.6f)
                     line = chapterCatLines[view][Random.Range(0, chapterCatLines[view].Length)];
-                GM.Toast("Kara Pati: \"" + line + "\"");
+                GM.Toast(L.F("Kara Pati: \"{0}\"", line));
             });
         }
 
@@ -480,41 +489,54 @@ namespace KaraPati
             ustaBadge.gameObject.SetActive(has && GM.UstaNew);
         }
 
-        // ------------------------------------------------------------------ sound menu
-        Image soundIcon;
-        RectTransform soundMenu;
+        // ------------------------------------------------------------------ settings menu
+        RectTransform settings;
         Button musicBtn, fxBtn;
+        readonly Button[] langBtns = new Button[L.Codes.Length];
 
-        void BuildSoundMenu()
+        void BuildSettings()
         {
-            var bg = UIKit.Img("SoundMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.95f), true);
+            var bg = UIKit.Img("SettingsMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.96f), true);
             bg.raycastTarget = true;
-            soundMenu = bg.rectTransform;
-            soundMenu.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(340f, 210f));
-            var title = UIKit.Txt("Title", soundMenu, "Ses", 30, UIKit.Orange, TextAnchor.MiddleCenter, false);
+            settings = bg.rectTransform;
+            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 360f));
+            var title = UIKit.Txt("Title", settings, L.T("Ayarlar"), 32, UIKit.Orange, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
-            title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(300f, 40f));
-            musicBtn = UIKit.Btn("Music", soundMenu, "", UIKit.Green, () => { Sfx.SetMusic(!Sfx.MusicOn); RefreshSoundMenu(); }, 28);
-            ((RectTransform)musicBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -54f), new Vector2(300f, 66f));
-            fxBtn = UIKit.Btn("Effects", soundMenu, "", UIKit.Green, () => { Sfx.SetEffects(!Sfx.EffectsOn); RefreshSoundMenu(); }, 28);
-            ((RectTransform)fxBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -130f), new Vector2(300f, 66f));
-            soundMenu.gameObject.SetActive(false);
+            title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(340f, 44f));
+            musicBtn = UIKit.Btn("Music", settings, "", UIKit.Green, () => { Sfx.SetMusic(!Sfx.MusicOn); RefreshSettings(); }, 28);
+            ((RectTransform)musicBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -58f), new Vector2(340f, 66f));
+            fxBtn = UIKit.Btn("Effects", settings, "", UIKit.Green, () => { Sfx.SetEffects(!Sfx.EffectsOn); RefreshSettings(); }, 28);
+            ((RectTransform)fxBtn.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -134f), new Vector2(340f, 66f));
+
+            var langTitle = UIKit.Txt("Lang", settings, L.T("Dil"), 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            langTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -212f), new Vector2(340f, 40f));
+            for (int i = 0; i < L.Codes.Length; i++)
+            {
+                string code = L.Codes[i];
+                // each language is written in its own language, so a player who can't read the current one still finds theirs
+                langBtns[i] = UIKit.Btn("Lang_" + code, settings, L.Names[i], UIKit.Disabled, () => GM.ChangeLanguage(code), 28);
+                float w = 340f / L.Codes.Length - 8f;
+                ((RectTransform)langBtns[i].transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f))
+                    .At(new Vector2(-170f + w * 0.5f + 4f + i * (w + 8f), -254f), new Vector2(w, 66f));
+            }
+            settings.gameObject.SetActive(false);
         }
 
-        void ToggleSoundMenu()
+        void ToggleSettings()
         {
-            bool open = !soundMenu.gameObject.activeSelf;
-            soundMenu.gameObject.SetActive(open);
-            if (open) { soundMenu.SetAsLastSibling(); RefreshSoundMenu(); Tween.Pop(soundMenu, 0.2f); }
+            bool open = !settings.gameObject.activeSelf;
+            settings.gameObject.SetActive(open);
+            if (open) { settings.SetAsLastSibling(); RefreshSettings(); Tween.Pop(settings, 0.2f); }
         }
 
-        void RefreshSoundMenu()
+        void RefreshSettings()
         {
-            musicBtn.Label().text = "Müzik: " + (Sfx.MusicOn ? "Açık" : "Kapalı");
+            musicBtn.Label().text = L.F("Müzik: {0}", Sfx.MusicOn ? L.T("Açık") : L.T("Kapalı"));
             musicBtn.GetComponent<Image>().color = Sfx.MusicOn ? UIKit.Green : UIKit.Disabled;
-            fxBtn.Label().text = "Efektler: " + (Sfx.EffectsOn ? "Açık" : "Kapalı");
+            fxBtn.Label().text = L.F("Efektler: {0}", Sfx.EffectsOn ? L.T("Açık") : L.T("Kapalı"));
             fxBtn.GetComponent<Image>().color = Sfx.EffectsOn ? UIKit.Green : UIKit.Disabled;
-            if (soundIcon) soundIcon.sprite = ProcArt.Speaker(Sfx.Mode);
+            for (int i = 0; i < langBtns.Length; i++)
+                langBtns[i].GetComponent<Image>().color = L.Codes[i] == L.Lang ? UIKit.Orange : UIKit.Disabled;
         }
 
         void UseEye()
@@ -526,11 +548,11 @@ namespace KaraPati
             {
                 bool more = false;
                 foreach (var c in Story.Clues) if (c.chapter == view && !ClueAvailable(c)) more = true;
-                GM.Toast(more ? "Şimdilik gizli bir şey yok. Görevleri ilerlet, yenileri belirir." : "Buradaki bütün ipuçlarını buldun!");
+                GM.Toast(more ? L.T("Şimdilik gizli bir şey yok. Görevleri ilerlet, yenileri belirir.") : L.T("Buradaki bütün ipuçlarını buldun!"));
                 return;
             }
             eyeUntil = Time.time + 4f;
-            GM.Toast("Parlayan yerlere dokun! (" + waiting + " ipucu)", UIKit.Orange);
+            GM.Toast(L.F("Parlayan yerlere dokun! ({0} ipucu)", waiting), UIKit.Orange);
         }
 
         // ------------------------------------------------------------------ state
@@ -540,7 +562,7 @@ namespace KaraPati
             ch = Mathf.Clamp(ch, 0, Story.Chapters.Length - 1);
             if (ch > current)
             {
-                if (fromButton) GM.Toast("Önce " + Story.Chapters[current].name + " bitmeli.");
+                if (fromButton) GM.Toast(L.F("Önce {0} bitmeli.", Story.Chapters[current].name));
                 return;
             }
             bool changed = ch != view;
@@ -608,7 +630,7 @@ namespace KaraPati
 
         void OnGiftTapped(int g)
         {
-            if (GM.GiftClaimed(view, g)) { GM.Toast("Bu sandığı zaten açtın."); return; }
+            if (GM.GiftClaimed(view, g)) { GM.Toast(L.T("Bu sandığı zaten açtın.")); return; }
             if (GM.GiftReady(view, g))
             {
                 FX.Burst((RectTransform)gifts[g].transform.parent, gifts[g].rectTransform.anchoredPosition, UIKit.Orange, 14);
@@ -618,7 +640,7 @@ namespace KaraPati
             }
             int left = ChapterGifts.TasksNeeded(view, g) - Mathf.Clamp(GM.TasksDone - Story.ChapterStart(view), 0, 999);
             Tween.Punch(gifts[g].transform, 0.12f, 0.25f);
-            GM.Toast("Bu sandık için " + left + " görev daha yap. İçinde: " + ChapterGifts.Text(view, g));
+            GM.Toast(L.F("Bu sandık için {0} görev daha yap. İçinde: {1}", left, ChapterGifts.Text(view, g)));
         }
 
         public void Refresh(bool animate)
@@ -664,6 +686,10 @@ namespace KaraPati
             dailyBadge.gameObject.SetActive(GM.DailyAvailable);
             chaptersBadge.gameObject.SetActive(GM.AnyGiftReady);
             towerBadge.gameObject.SetActive(GM.CatNeedsCare);
+            bool room = GM.GameRoomUnlocked;
+            gameIcon.color = room ? Color.white : new Color(1f, 1f, 1f, 0.4f);
+            gameLock.gameObject.SetActive(!room);
+            gameBadge.gameObject.SetActive(GM.AnyMiniFree);
         }
 
         bool Done(string id, int done) => Story.IsDone(id, done);
@@ -825,7 +851,7 @@ namespace KaraPati
             {
                 var row = Row(0);
                 bool last = view == Story.Chapters.Length - 1;
-                string msg = last ? "Hikâye tamamlandı! Cadı Hanım evinde.\nYeni maceralar yakında..." : "Bölüm tamamlandı!\nSıradaki bölüm için > düğmesine bas.";
+                string msg = last ? L.T("Hikâye tamamlandı! Cadı Hanım evinde.\nYeni maceralar yakında...") : L.T("Bölüm tamamlandı!\nSıradaki bölüm için > düğmesine bas.");
                 var txt = UIKit.Txt("Done", row, msg, 34, UIKit.Cream);
                 UIKit.Stretch(txt.rectTransform, 20f, 20f);
                 return;
@@ -854,12 +880,12 @@ namespace KaraPati
 
                 if (current)
                 {
-                    var btn = UIKit.Btn("Do", row, "Yap", affordable ? UIKit.Green : UIKit.Disabled, () => GM.DoTask(idx), 38);
+                    var btn = UIKit.Btn("Do", row, L.T("Yap"), affordable ? UIKit.Green : UIKit.Disabled, () => GM.DoTask(idx), 38);
                     ((RectTransform)btn.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 0f), new Vector2(180f, 90f));
                 }
                 else
                 {
-                    var wait = UIKit.Txt("Next", row, "Sırada", 28, new Color(1f, 1f, 1f, 0.45f));
+                    var wait = UIKit.Txt("Next", row, L.T("Sırada"), 28, new Color(1f, 1f, 1f, 0.45f));
                     wait.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-14f, 0f), new Vector2(180f, 90f));
                 }
             }

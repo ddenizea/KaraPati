@@ -59,7 +59,7 @@ namespace KaraPati
             stepText.rectTransform.pivot = new Vector2(0f, 1f);
             stepText.rectTransform.anchoredPosition = new Vector2(134f, -8f);
 
-            var skip = UIKit.Btn("Skip", bubble, "Geç", new Color(0.75f, 0.6f, 0.7f), Skip, 26);
+            var skip = UIKit.Btn("Skip", bubble, L.T("Geç"), new Color(0.75f, 0.6f, 0.7f), Skip, 26);
             ((RectTransform)skip.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-12f, 0f), new Vector2(96f, 70f));
 
             layer.gameObject.SetActive(false);
@@ -105,7 +105,7 @@ namespace KaraPati
             if (Step > LastStep)
             {
                 Step = Done;
-                GM.Toast("Harika! Artık dükkânı yönetmeye hazırsın. Bol iksirli günler!", UIKit.Orange, 4.5f);
+                GM.Toast(L.T("Harika! Artık dükkânı yönetmeye hazırsın. Bol iksirli günler!"), UIKit.Orange, 4.5f);
             }
             else if (paw) Tween.Pop(bubble, 0.3f);
             GM.MarkDirty();
@@ -116,7 +116,7 @@ namespace KaraPati
             if (HintActive) { hintCat = null; return; }   // closes only the cat hint
             Step = Done;
             GM.MarkDirty();
-            GM.Toast("Rehber kapandı. İpuçları alttaki panelde.");
+            GM.Toast(L.T("Rehber kapandı. İpuçları alttaki panelde."));
         }
 
         void LateUpdate()
@@ -140,16 +140,16 @@ namespace KaraPati
             {
                 case 1:
                     if (B.FindFirst(d => d.chain == Chains.Kazan, out var k)) target = B.ViewRect(k);
-                    msg = "Kazana dokun: ot ve mantar üretir. Her dokunuş 1 enerji.";
+                    msg = L.T("Kazana dokun: ot ve mantar üretir. Her dokunuş 1 enerji.");
                     break;
                 case 2:
-                    if (B.FindPair(out var a, out var b)) { dragFrom = B.ViewRect(a); target = B.ViewRect(b); msg = "Aynı iki malzemeyi üst üste sürükle, birleşsinler!"; }
-                    else { if (B.FindFirst(d => d.chain == Chains.Kazan, out var k2)) target = B.ViewRect(k2); msg = "Aynı iki malzeme lazım. Kazana dokunmaya devam et."; }
+                    if (B.FindPair(out var a, out var b)) { dragFrom = B.ViewRect(a); target = B.ViewRect(b); msg = L.T("Aynı iki malzemeyi üst üste sürükle, birleşsinler!"); }
+                    else { if (B.FindFirst(d => d.chain == Chains.Kazan, out var k2)) target = B.ViewRect(k2); msg = L.T("Aynı iki malzeme lazım. Kazana dokunmaya devam et."); }
                     break;
                 case 3:
                     target = GM.Orders.ReadyGiveButton();
-                    if (target) msg = "Hayaletin istediği masada! 'Ver'e bas, altın ve Pati Mührü kazan.";
-                    else { target = GM.Orders.FirstReqTile(); msg = "Hayaletlerin istediklerini birleştirerek yap. Hazır olunca 'Ver' yeşil yanar."; }
+                    if (target) msg = L.T("Hayaletin istediği masada! 'Ver'e bas, altın ve Pati Mührü kazan.");
+                    else { target = GM.Orders.FirstReqTile(); msg = L.T("Hayaletlerin istediklerini birleştirerek yap. Hazır olunca 'Ver' yeşil yanar."); }
                     break;
                 case 4:
                     if (B.FindFirst(d => Chains.IsStation(d.chain), out var p))
@@ -158,11 +158,11 @@ namespace KaraPati
                         var pot = B.Get(p);
                         if (B.FindPotIngredient(pot, out var src)) dragFrom = B.ViewRect(src);
                     }
-                    msg = dragFrom ? "Bu malzemeyi mor Simya Kazanı'na sürükle: iksir kaynar!"
-                                   : "Bu mor Simya Kazanı. Seçip 'Tarifler'e bak: iki malzeme = bir iksir!";
+                    msg = dragFrom ? L.T("Bu malzemeyi mor Simya Kazanı'na sürükle: iksir kaynar!")
+                                   : L.T("Bu mor Simya Kazanı. Seçip 'Tarifler'e bak: iki malzeme = bir iksir!");
                     break;
             }
-            stepText.text = hint ? "İpucu" : "Rehber " + Step + "/" + LastStep;
+            stepText.text = hint ? L.T("İpucu") : L.F("Rehber {0}/{1}", Step, LastStep);
             text.text = msg;
 
             if (!target) { paw.gameObject.SetActive(false); ring.gameObject.SetActive(false); PlaceBubble(new Vector2(0f, -200f)); return; }

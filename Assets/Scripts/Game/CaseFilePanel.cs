@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>"Cadı Dosyası": the notebook where every clue found in the scenes is kept.</summary>
+    /// <summary>L.T("Cadı Dosyası"): the notebook where every clue found in the scenes is kept.</summary>
     public class CaseFilePanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
@@ -31,7 +31,7 @@ namespace KaraPati
 
             var icon = UIKit.Img("Icon", panel, ProcArt.CaseFile, Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -24f), new Vector2(100f, 100f));
-            var title = UIKit.Txt("Title", panel, "Cadı Dosyası", 52, new Color(0.35f, 0.2f, 0.12f), TextAnchor.MiddleLeft, false);
+            var title = UIKit.Txt("Title", panel, L.T("Cadı Dosyası"), 52, new Color(0.35f, 0.2f, 0.12f), TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(150f, -30f), new Vector2(600f, 70f));
             count = UIKit.Txt("Count", panel, "", 30, new Color(0.45f, 0.3f, 0.2f), TextAnchor.MiddleLeft, false);
@@ -82,7 +82,7 @@ namespace KaraPati
                 bool open = ch <= current;
                 bool sel = ch == tab;
                 var col = sel ? new Color(0.65f, 0.3f, 0.15f) : open ? new Color(0.82f, 0.68f, 0.5f) : new Color(0.75f, 0.7f, 0.62f);
-                var b = UIKit.Btn("Tab" + ch, tabs, open ? (ch + 1) + ". Bölüm\n" + got + "/" + total : "", col, () => SelectTab(c0), 24);
+                var b = UIKit.Btn("Tab" + ch, tabs, open ? L.F("{0}. Bölüm\n{1}/{2}", ch + 1, got, total) : "", col, () => SelectTab(c0), 24);
                 var brt = (RectTransform)b.transform;
                 brt.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(ch * tw + 3f, 0f), new Vector2(tw - 6f, 90f));
                 brt.pivot = new Vector2(0f, 1f);
@@ -98,7 +98,7 @@ namespace KaraPati
 
             int found = 0;
             foreach (var c in Story.Clues) if (GM.HasClue(c.id)) found++;
-            count.text = found + "/" + Story.Clues.Length + " ipucu bulundu";
+            count.text = L.F("{0}/{1} ipucu bulundu", found, Story.Clues.Length);
 
             var head = UIKit.Txt("Chapter", list, Story.Chapters[tab].name, 34, new Color(0.65f, 0.3f, 0.15f), TextAnchor.MiddleLeft, false);
             head.fontStyle = FontStyle.Bold;
@@ -128,7 +128,7 @@ namespace KaraPati
                 t.fontStyle = FontStyle.Bold;
                 t.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(150f, -16f), new Vector2(760f, 44f));
                 t.rectTransform.pivot = new Vector2(0f, 1f);
-                var d = UIKit.Txt("Text", bg.transform, has ? c.text : "Henüz bulunmadı. Görevleri ilerlet ve göz düğmesini kullan.", 26,
+                var d = UIKit.Txt("Text", bg.transform, has ? c.text : L.T("Henüz bulunmadı. Görevleri ilerlet ve göz düğmesini kullan."), 26,
                     has ? ink : new Color(0.45f, 0.35f, 0.25f), TextAnchor.UpperLeft, false);
                 d.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(150f, -62f), new Vector2(760f, 120f));
                 d.rectTransform.pivot = new Vector2(0f, 1f);
@@ -136,14 +136,14 @@ namespace KaraPati
             }
             if (row == 0)
             {
-                var none = UIKit.Txt("None", list, "Bu bölümde gizli ipucu yok.", 30, new Color(0.45f, 0.35f, 0.25f), TextAnchor.MiddleCenter, false);
+                var none = UIKit.Txt("None", list, L.T("Bu bölümde gizli ipucu yok."), 30, new Color(0.45f, 0.35f, 0.25f), TextAnchor.MiddleCenter, false);
                 none.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -140f), new Vector2(800f, 60f));
             }
         }
 
         void SelectTab(int ch)
         {
-            if (ch > Story.CurrentChapter(GM.TasksDone)) { GM.Toast("Bu bölüm henüz kilitli."); return; }
+            if (ch > Story.CurrentChapter(GM.TasksDone)) { GM.Toast(L.T("Bu bölüm henüz kilitli.")); return; }
             tab = ch;
             Fill();
         }

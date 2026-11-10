@@ -15,20 +15,20 @@ namespace KaraPati
 
         static readonly Dictionary<string, string[]> names = new Dictionary<string, string[]>
         {
-            { Ot, new[] { "Yaprak", "Ot Demeti", "Adaçayı Destesi", "Büyülü Ot", "Ay Çiçeği" } },
-            { Mantar, new[] { "Mantar", "Benekli Mantar", "Mantar Kümesi", "Parlayan Mantar", "Peri Mantarı" } },
-            { Kristal, new[] { "Kum Tanesi", "Çakıl Taşı", "Kristal", "Ay Taşı", "Yıldız Taşı" } },
-            { Ag, new[] { "Örümcek Ağı", "İplik Yumağı", "İpek Yumak", "Gölge Kumaşı", "Hayalet Şal" } },
-            { Kedi, new[] { "Yaramaz Yavru", "Çırak Kedi", "Usta Kedi" } },
-            { Kazan, new[] { "Kazan" } },
-            { Sandik, new[] { "Eski Sandık" } },
-            { Iksir, new[] { "Uyku İksiri", "Işıltı İksiri", "Gölge İksiri", "Ay İksiri", "Hayalet İksiri", "Yıldız İksiri" } },
-            { Simya, new[] { "Simya Kazanı" } },
-            { KediEvi, new[] { "Kedi Evi" } },
+            { Ot, new[] { L.N("Yaprak"), L.N("Ot Demeti"), L.N("Adaçayı Destesi"), L.N("Büyülü Ot"), L.N("Ay Çiçeği") } },
+            { Mantar, new[] { L.N("Mantar"), L.N("Benekli Mantar"), L.N("Mantar Kümesi"), L.N("Parlayan Mantar"), L.N("Peri Mantarı") } },
+            { Kristal, new[] { L.N("Kum Tanesi"), L.N("Çakıl Taşı"), L.N("Kristal"), L.N("Ay Taşı"), L.N("Yıldız Taşı") } },
+            { Ag, new[] { L.N("Örümcek Ağı"), L.N("İplik Yumağı"), L.N("İpek Yumak"), L.N("Gölge Kumaşı"), L.N("Hayalet Şal") } },
+            { Kedi, new[] { L.N("Yaramaz Yavru"), L.N("Çırak Kedi"), L.N("Usta Kedi") } },
+            { Kazan, new[] { L.N("Kazan") } },
+            { Sandik, new[] { L.N("Eski Sandık") } },
+            { Iksir, new[] { L.N("Uyku İksiri"), L.N("Işıltı İksiri"), L.N("Gölge İksiri"), L.N("Ay İksiri"), L.N("Hayalet İksiri"), L.N("Yıldız İksiri") } },
+            { Simya, new[] { L.N("Simya Kazanı") } },
+            { KediEvi, new[] { L.N("Kedi Evi") } },
         };
 
         public static int MaxLevel(string chain) => names[chain].Length;
-        public static string Name(string chain, int level) => names[chain][Mathf.Clamp(level - 1, 0, names[chain].Length - 1)];
+        public static string Name(string chain, int level) => L.T(names[chain][Mathf.Clamp(level - 1, 0, names[chain].Length - 1)]);
         public static bool IsIngredient(string c) => c == Ot || c == Mantar || c == Kristal || c == Ag;
         public static bool IsGenerator(string c) => c == Kazan || c == Sandik;
         public static bool IsPotion(string c) => c == Iksir;
@@ -51,12 +51,12 @@ namespace KaraPati
         {
             switch (c)
             {
-                case Ot: return "Otlar";
-                case Mantar: return "Mantarlar";
-                case Kristal: return "Taşlar ve Kristaller";
-                case Ag: return "Ağlar ve Kumaşlar";
-                case Iksir: return "İksirler";
-                default: return "Dükkân Eşyası";
+                case Ot: return L.T("Otlar");
+                case Mantar: return L.T("Mantarlar");
+                case Kristal: return L.T("Taşlar ve Kristaller");
+                case Ag: return L.T("Ağlar ve Kumaşlar");
+                case Iksir: return L.T("İksirler");
+                default: return L.T("Dükkân Eşyası");
             }
         }
         public static string RandomIngredient() => Ingredients[UnityEngine.Random.Range(0, Ingredients.Length)];
@@ -246,6 +246,9 @@ namespace KaraPati
         public List<int> friends = new List<int>();   // friendship points per customer (Customers.All order) // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int cluesSeen;                   // clues already looked at in the witch's case file (the red badge shows the rest)
+        public int miniDay;                     // day the mini game plays below were counted on (DailyRewards.Today)
+        public List<int> miniUsed = new List<int>();   // free plays used today, per mini game (MiniGames order)
+        public List<int> miniBest = new List<int>();   // best score per mini game
         public int level = 1;
         public int xp;
         public List<ReqSave> storage = new List<ReqSave>();
@@ -263,7 +266,9 @@ namespace KaraPati
 
     public class StickerSet
     {
-        public string id, name;
+        string name_;
+        public string id;
+        public string name { get => L.T(name_); set => name_ = value; }   // texts translate themselves when read
         public string[] ids;
     }
 
@@ -275,27 +280,27 @@ namespace KaraPati
 
         public static readonly StickerSet[] Sets =
         {
-            new StickerSet { id = "ghosts", name = "Hayalet Dostlar", ids = new[] { "g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7" } },
-            new StickerSet { id = "cats", name = "Dükkân Kedileri", ids = new[] { "c_yavru", "c_uykucu", "c_cirak", "c_usta", "c_karapati", "c_hayaletkedi" } },
-            new StickerSet { id = "witch", name = "Cadının Eşyaları", ids = new[] { "w_sapka", "w_supurge", "w_kitap", "w_kure", "w_kazan", "w_mektup" } },
-            new StickerSet { id = "renkli", name = "Renkli Çıraklar", ids = new[] { "r0", "r1", "r2", "r3", "r4" } },
+            new StickerSet { id = "ghosts", name = L.N("Hayalet Dostlar"), ids = new[] { "g0", "g1", "g2", "g3", "g4", "g5", "g6", "g7" } },
+            new StickerSet { id = "cats", name = L.N("Dükkân Kedileri"), ids = new[] { "c_yavru", "c_uykucu", "c_cirak", "c_usta", "c_karapati", "c_hayaletkedi" } },
+            new StickerSet { id = "witch", name = L.N("Cadının Eşyaları"), ids = new[] { "w_sapka", "w_supurge", "w_kitap", "w_kure", "w_kazan", "w_mektup" } },
+            new StickerSet { id = "renkli", name = L.N("Renkli Çıraklar"), ids = new[] { "r0", "r1", "r2", "r3", "r4" } },
         };
 
         static readonly Dictionary<string, string> names = new Dictionary<string, string>
         {
-            { "c_yavru", "Yaramaz Yavru" }, { "c_uykucu", "Uykucu Yavru" }, { "c_cirak", "Çırak Kedi" },
-            { "c_usta", "Usta Kedi" }, { "c_karapati", "Kara Pati" }, { "c_hayaletkedi", "Hayalet Kedi" },
-            { "w_sapka", "Sivri Şapka" }, { "w_supurge", "Uçan Süpürge" }, { "w_kitap", "Büyü Kitabı" },
-            { "w_kure", "Kristal Küre" }, { "w_kazan", "Eski Kazan" }, { "w_mektup", "Kayıp Mektup" },
-            { "r0", "Turuncu Tekir Çırak" }, { "r1", "Gri Çırak" }, { "r2", "Beyaz Çırak" },
-            { "r3", "Siyah-Beyaz Çırak" }, { "r4", "Üç Renkli Çırak" },
+            { "c_yavru", L.N("Yaramaz Yavru") }, { "c_uykucu", L.N("Uykucu Yavru") }, { "c_cirak", L.N("Çırak Kedi") },
+            { "c_usta", L.N("Usta Kedi") }, { "c_karapati", L.N("Kara Pati") }, { "c_hayaletkedi", L.N("Hayalet Kedi") },
+            { "w_sapka", L.N("Sivri Şapka") }, { "w_supurge", L.N("Uçan Süpürge") }, { "w_kitap", L.N("Büyü Kitabı") },
+            { "w_kure", L.N("Kristal Küre") }, { "w_kazan", L.N("Eski Kazan") }, { "w_mektup", L.N("Kayıp Mektup") },
+            { "r0", L.N("Turuncu Tekir Çırak") }, { "r1", L.N("Gri Çırak") }, { "r2", L.N("Beyaz Çırak") },
+            { "r3", L.N("Siyah-Beyaz Çırak") }, { "r4", L.N("Üç Renkli Çırak") },
         };
 
         public static string Name(string id)
         {
             if (id.StartsWith("g") && int.TryParse(id.Substring(1), out int gi) && gi >= 0 && gi < Ghosts.Names.Length)
                 return Ghosts.Names[gi];
-            return names.TryGetValue(id, out var n) ? n : id;
+            return names.TryGetValue(id, out var n) ? L.T(n) : id;
         }
 
         public static StickerSet SetOf(string id)
@@ -308,20 +313,30 @@ namespace KaraPati
 
     public class StoryTask
     {
-        public string id, title, speaker, line;
+        string title_, speaker_, line_;
+        public string id;
+        public string title { get => L.T(title_); set => title_ = value; }
+        public string speaker { get => L.T(speaker_); set => speaker_ = value; }
+        public string line { get => L.T(line_); set => line_ = value; }
         public int cost;
     }
 
     public class Chapter
     {
-        public string id, name, endLine;
+        string name_, endLine_;
+        public string id;
+        public string name { get => L.T(name_); set => name_ = value; }
+        public string endLine { get => L.T(endLine_); set => endLine_ = value; }
         public StoryTask[] tasks;
     }
 
     /// <summary>A hidden clue in a scene. Becomes findable once enough story tasks are done.</summary>
     public class Clue
     {
-        public string id, title, text;
+        string title_, text_;
+        public string id;
+        public string title { get => L.T(title_); set => title_ = value; }
+        public string text { get => L.T(text_); set => text_ = value; }
         public int chapter;
         public float x, y;          // position in the scene (scene-local units)
         public int afterTasks;      // global number of finished tasks needed before it shows up
@@ -329,208 +344,206 @@ namespace KaraPati
 
     public static class Story
     {
-        public const string IntroLine =
-            "Cadı ortadan kayboldu, dükkân da toz içinde kaldı. Hayaletlere iksir malzemesi verip Pati Mührü kazanalım, " +
-            "dükkânı adım adım toparlayalım. İlk iş: şu örümcek ağları!";
+        public static string IntroLine => L.T("Cadı ortadan kayboldu, dükkân da toz içinde kaldı. Hayaletlere iksir malzemesi verip Pati Mührü kazanalım, dükkânı adım adım toparlayalım. İlk iş: şu örümcek ağları!");
 
         /// <summary>Epilogue after the very last chapter.</summary>
-        public static readonly string[][] Finale =
+        public static readonly TrList[] Finale =
         {
-            new[] { "Cadı Hanım", "Dükkânım! Ne kadar güzel olmuş... Kara Pati, hayaletler, sizi çok özledim." },
-            new[] { "Gölge", "Ben de... Beni unuttun sandım. Yeni kedi gelince aynaya küstüm. Özür dilerim." },
-            new[] { "Cadı Hanım", "Seni hiç unutmadım Gölge. Afişleri hâlâ saklıyorum, bak!" },
-            new[] { "Kara Pati", "Dükkânda iki kedilik yer var. Hatta yavrularla beraber... bir sürü kedilik!" },
-            new[] { "Cadı Hanım", "O zaman Kara Pati'nin İksir Dükkânı yeniden açılıyor! Bu bir son değil, yeni bir başlangıç." },
+            new TrList(L.N("Cadı Hanım"), L.N("Dükkânım! Ne kadar güzel olmuş... Kara Pati, hayaletler, sizi çok özledim.")),
+            new TrList(L.N("Gölge"), L.N("Ben de... Beni unuttun sandım. Yeni kedi gelince aynaya küstüm. Özür dilerim.")),
+            new TrList(L.N("Cadı Hanım"), L.N("Seni hiç unutmadım Gölge. Afişleri hâlâ saklıyorum, bak!")),
+            new TrList(L.N("Kara Pati"), L.N("Dükkânda iki kedilik yer var. Hatta yavrularla beraber... bir sürü kedilik!")),
+            new TrList(L.N("Cadı Hanım"), L.N("O zaman Kara Pati'nin İksir Dükkânı yeniden açılıyor! Bu bir son değil, yeni bir başlangıç.")),
         };
 
         public const int FinaleGold = 300, FinaleStamps = 10;
 
-        public const string FirstBoardHint = "Mühür bitti! 'Dükkânı Aç'a bas, hayaletlerin siparişlerini hazırla.";
+        public static string FirstBoardHint => L.T("Mühür bitti! 'Dükkânı Aç'a bas, hayaletlerin siparişlerini hazırla.");
 
         public static readonly Chapter[] Chapters =
         {
             new Chapter
             {
-                id = "dukkan", name = "Bölüm 1: Tozlu Dükkân",
-                endLine = "Bölüm 1 bitti, dükkân pırıl pırıl! Sıra mahzende... ama kapı kilitli. Notta ne yazıyordu? 'Anahtar kedide.'",
+                id = "dukkan", name = L.N("Bölüm 1: Tozlu Dükkân"),
+                endLine = L.N("Bölüm 1 bitti, dükkân pırıl pırıl! Sıra mahzende... ama kapı kilitli. Notta ne yazıyordu? 'Anahtar kedide.'"),
                 tasks = new[]
                 {
-                    new StoryTask { id = "ag", title = "Örümcek ağlarını temizle", cost = 1, speaker = "Kara Pati",
-                        line = "Hapşu! Cadı gittiğinden beri örümcekler dükkânı kendi evleri sanmış." },
-                    new StoryTask { id = "pencere", title = "Pencereyi sil", cost = 2, speaker = "Kara Pati",
-                        line = "Ay ışığı içeri süzülünce dükkân bambaşka oldu. Cadı her gece aya bakardı..." },
-                    new StoryTask { id = "raf", title = "Rafları onar", cost = 2, speaker = "Kara Pati",
-                        line = "Rafın arkasından buruşuk bir not düştü: 'Mahzenin anahtarı... kedide.' Kedide mi?!" },
-                    new StoryTask { id = "kazan", title = "Kazanı yak", cost = 3, speaker = "Minik Boo",
-                        line = "Kazan yeniden fokurduyor! Kasabadaki bütün hayaletler bu sesi duydu, hepsi geliyor!" },
-                    new StoryTask { id = "hali", title = "Halıyı ser", cost = 2, speaker = "Kara Pati",
-                        line = "Halının altında pati izleri var... ama benimkilerden çok daha büyük. Hmm." },
-                    new StoryTask { id = "fener", title = "Fenerleri yak", cost = 3, speaker = "Sis Teyze",
-                        line = "Fener ışığında duvarda bir harita belirdi canım! Ok işareti... aşağıyı gösteriyor." },
-                    new StoryTask { id = "tezgah", title = "Tezgâhı onar", cost = 3, speaker = "Kara Pati",
-                        line = "Çekmecede cadının günlüğü! Son sayfa: 'Mahzene iniyorum. Dükkâna Kara Pati baksın.'" },
-                    new StoryTask { id = "yatak", title = "Kara Pati'ye yatak al", cost = 4, speaker = "Kara Pati",
-                        line = "Ohh, kendime ait bir yatak... Biraz kestireyim, sonra o mahzene ineceğiz." },
+                    new StoryTask { id = "ag", title = L.N("Örümcek ağlarını temizle"), cost = 1, speaker = L.N("Kara Pati"),
+                        line = L.N("Hapşu! Cadı gittiğinden beri örümcekler dükkânı kendi evleri sanmış.") },
+                    new StoryTask { id = "pencere", title = L.N("Pencereyi sil"), cost = 2, speaker = L.N("Kara Pati"),
+                        line = L.N("Ay ışığı içeri süzülünce dükkân bambaşka oldu. Cadı her gece aya bakardı...") },
+                    new StoryTask { id = "raf", title = L.N("Rafları onar"), cost = 2, speaker = L.N("Kara Pati"),
+                        line = L.N("Rafın arkasından buruşuk bir not düştü: 'Mahzenin anahtarı... kedide.' Kedide mi?!") },
+                    new StoryTask { id = "kazan", title = L.N("Kazanı yak"), cost = 3, speaker = L.N("Minik Boo"),
+                        line = L.N("Kazan yeniden fokurduyor! Kasabadaki bütün hayaletler bu sesi duydu, hepsi geliyor!") },
+                    new StoryTask { id = "hali", title = L.N("Halıyı ser"), cost = 2, speaker = L.N("Kara Pati"),
+                        line = L.N("Halının altında pati izleri var... ama benimkilerden çok daha büyük. Hmm.") },
+                    new StoryTask { id = "fener", title = L.N("Fenerleri yak"), cost = 3, speaker = L.N("Sis Teyze"),
+                        line = L.N("Fener ışığında duvarda bir harita belirdi canım! Ok işareti... aşağıyı gösteriyor.") },
+                    new StoryTask { id = "tezgah", title = L.N("Tezgâhı onar"), cost = 3, speaker = L.N("Kara Pati"),
+                        line = L.N("Çekmecede cadının günlüğü! Son sayfa: 'Mahzene iniyorum. Dükkâna Kara Pati baksın.'") },
+                    new StoryTask { id = "yatak", title = L.N("Kara Pati'ye yatak al"), cost = 4, speaker = L.N("Kara Pati"),
+                        line = L.N("Ohh, kendime ait bir yatak... Biraz kestireyim, sonra o mahzene ineceğiz.") },
                 }
             },
             new Chapter
             {
-                id = "mahzen", name = "Bölüm 2: Mahzenin Sırrı",
-                endLine = "Aynadan cadının sesi yankılandı: 'Kara Pati! Aynanın içinde sıkışıp kaldım. Dolunayda beni çıkarabilirsin...' Bölüm 3 yakında!",
+                id = "mahzen", name = L.N("Bölüm 2: Mahzenin Sırrı"),
+                endLine = L.N("Aynadan cadının sesi yankılandı: 'Kara Pati! Aynanın içinde sıkışıp kaldım. Dolunayda beni çıkarabilirsin...' Bölüm 3 yakında!"),
                 tasks = new[]
                 {
-                    new StoryTask { id = "kapi", title = "Mahzen kapısını aç", cost = 2, speaker = "Kara Pati",
-                        line = "Tasmamda tıngırdayan o şey... anahtarmış! Not haklıymış: anahtar kedideymiş. Yani bendeymiş!" },
-                    new StoryTask { id = "mum", title = "Mumları yak", cost = 2, speaker = "Kara Pati",
-                        line = "Mumlar yanınca duvardaki gölgeler kıpırdadı. Sadece gölge... değil mi? Değil mi?!" },
-                    new StoryTask { id = "kavanoz", title = "Kavanoz rafını düzelt", cost = 3, speaker = "Profesör Uğultu",
-                        line = "Şu etiketlere bak: 'Dolunay Tozu', 'Ayna Cilası'... Cadı büyük bir büyü hazırlıyormuş!" },
-                    new StoryTask { id = "masa", title = "Çalışma masasını topla", cost = 3, speaker = "Kara Pati",
-                        line = "Masadaki kâğıtların hepsi aynı şeyi çizmiş: bir ayna, bir kedi ve dolunay." },
-                    new StoryTask { id = "zincir", title = "Zincirli sandığı aç", cost = 4, speaker = "Kont Gıcırtı",
-                        line = "Gıcırrr... Bu zincirleri ben bile açamazdım! İçinde ne var bakalım, ne var?" },
-                    new StoryTask { id = "daire", title = "Büyü dairesini temizle", cost = 3, speaker = "Leydi Ürperti",
-                        line = "Daire parlıyor! Bu bir geçit büyüsü tatlım. Biri buradan bir yerlere gitmiş." },
-                    new StoryTask { id = "portre", title = "Tozlu portreyi sil", cost = 3, speaker = "Sis Teyze",
-                        line = "Aa, bu cadının portresi! Kucağındaki kara kediye bak canım... sen değil misin o?" },
-                    new StoryTask { id = "ayna", title = "Sihirli aynayı onar", cost = 5, speaker = "Kara Pati",
-                        line = "Ayna titredi ve camın ardında bir yüz belirdi... Cadı! Aynanın içinde!" },
+                    new StoryTask { id = "kapi", title = L.N("Mahzen kapısını aç"), cost = 2, speaker = L.N("Kara Pati"),
+                        line = L.N("Tasmamda tıngırdayan o şey... anahtarmış! Not haklıymış: anahtar kedideymiş. Yani bendeymiş!") },
+                    new StoryTask { id = "mum", title = L.N("Mumları yak"), cost = 2, speaker = L.N("Kara Pati"),
+                        line = L.N("Mumlar yanınca duvardaki gölgeler kıpırdadı. Sadece gölge... değil mi? Değil mi?!") },
+                    new StoryTask { id = "kavanoz", title = L.N("Kavanoz rafını düzelt"), cost = 3, speaker = L.N("Profesör Uğultu"),
+                        line = L.N("Şu etiketlere bak: 'Dolunay Tozu', 'Ayna Cilası'... Cadı büyük bir büyü hazırlıyormuş!") },
+                    new StoryTask { id = "masa", title = L.N("Çalışma masasını topla"), cost = 3, speaker = L.N("Kara Pati"),
+                        line = L.N("Masadaki kâğıtların hepsi aynı şeyi çizmiş: bir ayna, bir kedi ve dolunay.") },
+                    new StoryTask { id = "zincir", title = L.N("Zincirli sandığı aç"), cost = 4, speaker = L.N("Kont Gıcırtı"),
+                        line = L.N("Gıcırrr... Bu zincirleri ben bile açamazdım! İçinde ne var bakalım, ne var?") },
+                    new StoryTask { id = "daire", title = L.N("Büyü dairesini temizle"), cost = 3, speaker = L.N("Leydi Ürperti"),
+                        line = L.N("Daire parlıyor! Bu bir geçit büyüsü tatlım. Biri buradan bir yerlere gitmiş.") },
+                    new StoryTask { id = "portre", title = L.N("Tozlu portreyi sil"), cost = 3, speaker = L.N("Sis Teyze"),
+                        line = L.N("Aa, bu cadının portresi! Kucağındaki kara kediye bak canım... sen değil misin o?") },
+                    new StoryTask { id = "ayna", title = L.N("Sihirli aynayı onar"), cost = 5, speaker = L.N("Kara Pati"),
+                        line = L.N("Ayna titredi ve camın ardında bir yüz belirdi... Cadı! Aynanın içinde!") },
                 }
             },
             new Chapter
             {
-                id = "bahce", name = "Bölüm 3: Dolunay Bahçesi",
-                endLine = "Dolunay doğdu ve ayin başladı... ama aynadan simsiyah, dev bir kedi fırladı! Pati izlerinin sahibi oymuş. Cadıyı da kapıp aynaya geri daldı. Rüzgârda bir fısıltı: 'Hayalet Kasabası'na git...'",
+                id = "bahce", name = L.N("Bölüm 3: Dolunay Bahçesi"),
+                endLine = L.N("Dolunay doğdu ve ayin başladı... ama aynadan simsiyah, dev bir kedi fırladı! Pati izlerinin sahibi oymuş. Cadıyı da kapıp aynaya geri daldı. Rüzgârda bir fısıltı: 'Hayalet Kasabası'na git...'"),
                 tasks = new[]
                 {
-                    new StoryTask { id = "b_kapi", title = "Bahçe kapısını aç", cost = 3, speaker = "Kara Pati",
-                        line = "Dükkânın arkasında koca bir bahçe varmış! Cadı ayin için burayı hazırlıyormuş." },
-                    new StoryTask { id = "b_ot", title = "Yabani otları biç", cost = 3, speaker = "Kara Pati",
-                        line = "Otların arasında yine o kocaman pati izleri... Biri burada dolaşıyor." },
-                    new StoryTask { id = "b_cesme", title = "Çeşmeyi çalıştır", cost = 4, speaker = "Minik Boo",
-                        line = "Su şırıl şırıl! Ayin için ay ışığını yansıtacak su lazımmış, kitapta öyle yazıyor." },
-                    new StoryTask { id = "b_cicek", title = "Ay çiçeklerini dik", cost = 3, speaker = "Bayan Fısıltı",
-                        line = "Ay çiçekleri sadece dolunayda açar canım. Cadı onları hep buraya dikerdi." },
-                    new StoryTask { id = "b_korkuluk", title = "Korkuluğu giydir", cost = 4, speaker = "Kaptan Pus",
-                        line = "Ahoy! Korkuluğa cadının eski şapkasını giydirdik. Kargalar artık bize selam veriyor!" },
-                    new StoryTask { id = "b_bal", title = "Balkabağı tarlasını düzelt", cost = 4, speaker = "Kara Pati",
-                        line = "Balkabakları tombul tombul! Hayaletler şenlikte bunlara bayılıyor." },
-                    new StoryTask { id = "b_fener", title = "Ateşböceği fenerlerini as", cost = 5, speaker = "Leydi Ürperti",
-                        line = "Ateşböcekleri fenerlere doldu. Ne romantik... ama çalılarda iki sarı göz parladı!" },
-                    new StoryTask { id = "b_kadran", title = "Ay kadranını kur", cost = 5, speaker = "Kara Pati",
-                        line = "Kadran kuruldu. Dolunay tam tepede. Ayna parlıyor... Hazırım cadı hanım!" },
+                    new StoryTask { id = "b_kapi", title = L.N("Bahçe kapısını aç"), cost = 3, speaker = L.N("Kara Pati"),
+                        line = L.N("Dükkânın arkasında koca bir bahçe varmış! Cadı ayin için burayı hazırlıyormuş.") },
+                    new StoryTask { id = "b_ot", title = L.N("Yabani otları biç"), cost = 3, speaker = L.N("Kara Pati"),
+                        line = L.N("Otların arasında yine o kocaman pati izleri... Biri burada dolaşıyor.") },
+                    new StoryTask { id = "b_cesme", title = L.N("Çeşmeyi çalıştır"), cost = 4, speaker = L.N("Minik Boo"),
+                        line = L.N("Su şırıl şırıl! Ayin için ay ışığını yansıtacak su lazımmış, kitapta öyle yazıyor.") },
+                    new StoryTask { id = "b_cicek", title = L.N("Ay çiçeklerini dik"), cost = 3, speaker = L.N("Bayan Fısıltı"),
+                        line = L.N("Ay çiçekleri sadece dolunayda açar canım. Cadı onları hep buraya dikerdi.") },
+                    new StoryTask { id = "b_korkuluk", title = L.N("Korkuluğu giydir"), cost = 4, speaker = L.N("Kaptan Pus"),
+                        line = L.N("Ahoy! Korkuluğa cadının eski şapkasını giydirdik. Kargalar artık bize selam veriyor!") },
+                    new StoryTask { id = "b_bal", title = L.N("Balkabağı tarlasını düzelt"), cost = 4, speaker = L.N("Kara Pati"),
+                        line = L.N("Balkabakları tombul tombul! Hayaletler şenlikte bunlara bayılıyor.") },
+                    new StoryTask { id = "b_fener", title = L.N("Ateşböceği fenerlerini as"), cost = 5, speaker = L.N("Leydi Ürperti"),
+                        line = L.N("Ateşböcekleri fenerlere doldu. Ne romantik... ama çalılarda iki sarı göz parladı!") },
+                    new StoryTask { id = "b_kadran", title = L.N("Ay kadranını kur"), cost = 5, speaker = L.N("Kara Pati"),
+                        line = L.N("Kadran kuruldu. Dolunay tam tepede. Ayna parlıyor... Hazırım cadı hanım!") },
                 }
             },
             new Chapter
             {
-                id = "kasaba", name = "Bölüm 4: Hayalet Kasabası",
-                endLine = "Çan çaldı ve kasabadaki bütün hayaletler aynı yönü gösterdi: tepedeki Kayıp Kule. 'Aynalar Diyarı'nın kapısı orada,' dedi Profesör Uğultu.",
+                id = "kasaba", name = L.N("Bölüm 4: Hayalet Kasabası"),
+                endLine = L.N("Çan çaldı ve kasabadaki bütün hayaletler aynı yönü gösterdi: tepedeki Kayıp Kule. 'Aynalar Diyarı'nın kapısı orada,' dedi Profesör Uğultu."),
                 tasks = new[]
                 {
-                    new StoryTask { id = "k_kopru", title = "Sisli köprüyü onar", cost = 3, speaker = "Sis Teyze",
-                        line = "Hoş geldin canım, Hayalet Kasabası'na! Köprü sisten yapılmıştı, hep çökerdi zaten." },
-                    new StoryTask { id = "k_lamba", title = "Sokak lambalarını yak", cost = 4, speaker = "Kont Gıcırtı",
-                        line = "Gıcır! Lambalar yandı. Bu kasabada en son ışık yüz yıl önce yanmıştı." },
-                    new StoryTask { id = "k_tezgah", title = "Pazar tezgâhlarını kur", cost = 4, speaker = "Bayan Fısıltı",
-                        line = "Pazar yeniden kuruldu! Satıcılardan biri o dev kediyi tanıyor: adı Gölge'ymiş." },
-                    new StoryTask { id = "k_cesme", title = "Meydan çeşmesini temizle", cost = 4, speaker = "Minik Boo",
-                        line = "Çeşmeden bir şişe çıktı, içinde not var: 'Gölge, cadının ilk kedisiydi.' Vay!" },
-                    new StoryTask { id = "k_ev", title = "Evlerin camlarını sil", cost = 5, speaker = "Leydi Ürperti",
-                        line = "Pencereler ışıl ışıl. Gölge yıllar önce buralarda yaşarmış, yalnız ve küskün..." },
-                    new StoryTask { id = "k_bayrak", title = "Şenlik bayraklarını as", cost = 4, speaker = "Minik Boo",
-                        line = "Bayraklar asıldı! Kasaba ilk kez şenlik havasında. Herkes sana yardım edecek Kara Pati!" },
-                    new StoryTask { id = "k_saat", title = "Saat kulesini onar", cost = 5, speaker = "Profesör Uğultu",
-                        line = "Saat tekrar işliyor delikanlı. Akrep dolunayı, yelkovan da tepedeki kuleyi gösteriyor." },
-                    new StoryTask { id = "k_can", title = "Kule çanını çal", cost = 6, speaker = "Kaptan Pus",
-                        line = "DONG! Bu çan sadece kayıp bir dost geri dönecekken çalarmış. Rotamız belli!" },
+                    new StoryTask { id = "k_kopru", title = L.N("Sisli köprüyü onar"), cost = 3, speaker = L.N("Sis Teyze"),
+                        line = L.N("Hoş geldin canım, Hayalet Kasabası'na! Köprü sisten yapılmıştı, hep çökerdi zaten.") },
+                    new StoryTask { id = "k_lamba", title = L.N("Sokak lambalarını yak"), cost = 4, speaker = L.N("Kont Gıcırtı"),
+                        line = L.N("Gıcır! Lambalar yandı. Bu kasabada en son ışık yüz yıl önce yanmıştı.") },
+                    new StoryTask { id = "k_tezgah", title = L.N("Pazar tezgâhlarını kur"), cost = 4, speaker = L.N("Bayan Fısıltı"),
+                        line = L.N("Pazar yeniden kuruldu! Satıcılardan biri o dev kediyi tanıyor: adı Gölge'ymiş.") },
+                    new StoryTask { id = "k_cesme", title = L.N("Meydan çeşmesini temizle"), cost = 4, speaker = L.N("Minik Boo"),
+                        line = L.N("Çeşmeden bir şişe çıktı, içinde not var: 'Gölge, cadının ilk kedisiydi.' Vay!") },
+                    new StoryTask { id = "k_ev", title = L.N("Evlerin camlarını sil"), cost = 5, speaker = L.N("Leydi Ürperti"),
+                        line = L.N("Pencereler ışıl ışıl. Gölge yıllar önce buralarda yaşarmış, yalnız ve küskün...") },
+                    new StoryTask { id = "k_bayrak", title = L.N("Şenlik bayraklarını as"), cost = 4, speaker = L.N("Minik Boo"),
+                        line = L.N("Bayraklar asıldı! Kasaba ilk kez şenlik havasında. Herkes sana yardım edecek Kara Pati!") },
+                    new StoryTask { id = "k_saat", title = L.N("Saat kulesini onar"), cost = 5, speaker = L.N("Profesör Uğultu"),
+                        line = L.N("Saat tekrar işliyor delikanlı. Akrep dolunayı, yelkovan da tepedeki kuleyi gösteriyor.") },
+                    new StoryTask { id = "k_can", title = L.N("Kule çanını çal"), cost = 6, speaker = L.N("Kaptan Pus"),
+                        line = L.N("DONG! Bu çan sadece kayıp bir dost geri dönecekken çalarmış. Rotamız belli!") },
                 }
             },
             new Chapter
             {
-                id = "kule", name = "Bölüm 5: Kayıp Kule",
-                endLine = "Geçit dairesi parladı ve mor bir kapı açıldı: Aynalar Diyarı! Kara Pati derin bir nefes aldı: 'Geliyorum cadı hanım. Gölge... seninle de konuşacağız.'",
+                id = "kule", name = L.N("Bölüm 5: Kayıp Kule"),
+                endLine = L.N("Geçit dairesi parladı ve mor bir kapı açıldı: Aynalar Diyarı! Kara Pati derin bir nefes aldı: 'Geliyorum cadı hanım. Gölge... seninle de konuşacağız.'"),
                 tasks = new[]
                 {
-                    new StoryTask { id = "t_merdiven", title = "Döner merdiveni sağlamlaştır", cost = 4, speaker = "Kara Pati",
-                        line = "Bu kule cadının gözlemeviymiş! Merdivenler gıcırdıyor ama artık sağlam." },
-                    new StoryTask { id = "t_kitap", title = "Kitaplığı düzenle", cost = 4, speaker = "Profesör Uğultu",
-                        line = "Şu kitaba bak: 'Kediler ve Kıskançlık'. Altı çizili satır: 'Unutulduğunu sanan kedi, gölgeye dönüşür.'" },
-                    new StoryTask { id = "t_harita", title = "Yıldız haritasını as", cost = 5, speaker = "Kara Pati",
-                        line = "Haritadaki yıldızlar bir kedi şeklinde dizilmiş... Gölge'nin takımyıldızı!" },
-                    new StoryTask { id = "t_teleskop", title = "Teleskobu onar", cost = 5, speaker = "Leydi Ürperti",
-                        line = "Teleskopla aya baktım tatlım: ayın içinde bir kafes ve içinde cadı hanım var!" },
-                    new StoryTask { id = "t_kure", title = "Kristal küreyi parlat", cost = 5, speaker = "Sis Teyze",
-                        line = "Kürede Gölge görünüyor canım. Kızgın değil... sadece çok, çok yalnız." },
-                    new StoryTask { id = "t_kazan", title = "Kule kazanını yak", cost = 5, speaker = "Minik Boo",
-                        line = "Kazan mor fokurduyor! Geçit iksiri neredeyse hazır, son bir adım kaldı." },
-                    new StoryTask { id = "t_pencere", title = "Ay penceresini aç", cost = 6, speaker = "Kaptan Pus",
-                        line = "Ay ışığı içeri doldu! Pusula ilk kez dümdüz gösteriyor: aynanın içine!" },
-                    new StoryTask { id = "t_gecit", title = "Geçit dairesini çiz", cost = 6, speaker = "Kara Pati",
-                        line = "Daireyi pati izimle mühürledim. Anahtar kedideymiş, hatırladın mı? Hep bendeymiş." },
+                    new StoryTask { id = "t_merdiven", title = L.N("Döner merdiveni sağlamlaştır"), cost = 4, speaker = L.N("Kara Pati"),
+                        line = L.N("Bu kule cadının gözlemeviymiş! Merdivenler gıcırdıyor ama artık sağlam.") },
+                    new StoryTask { id = "t_kitap", title = L.N("Kitaplığı düzenle"), cost = 4, speaker = L.N("Profesör Uğultu"),
+                        line = L.N("Şu kitaba bak: 'Kediler ve Kıskançlık'. Altı çizili satır: 'Unutulduğunu sanan kedi, gölgeye dönüşür.'") },
+                    new StoryTask { id = "t_harita", title = L.N("Yıldız haritasını as"), cost = 5, speaker = L.N("Kara Pati"),
+                        line = L.N("Haritadaki yıldızlar bir kedi şeklinde dizilmiş... Gölge'nin takımyıldızı!") },
+                    new StoryTask { id = "t_teleskop", title = L.N("Teleskobu onar"), cost = 5, speaker = L.N("Leydi Ürperti"),
+                        line = L.N("Teleskopla aya baktım tatlım: ayın içinde bir kafes ve içinde cadı hanım var!") },
+                    new StoryTask { id = "t_kure", title = L.N("Kristal küreyi parlat"), cost = 5, speaker = L.N("Sis Teyze"),
+                        line = L.N("Kürede Gölge görünüyor canım. Kızgın değil... sadece çok, çok yalnız.") },
+                    new StoryTask { id = "t_kazan", title = L.N("Kule kazanını yak"), cost = 5, speaker = L.N("Minik Boo"),
+                        line = L.N("Kazan mor fokurduyor! Geçit iksiri neredeyse hazır, son bir adım kaldı.") },
+                    new StoryTask { id = "t_pencere", title = L.N("Ay penceresini aç"), cost = 6, speaker = L.N("Kaptan Pus"),
+                        line = L.N("Ay ışığı içeri doldu! Pusula ilk kez dümdüz gösteriyor: aynanın içine!") },
+                    new StoryTask { id = "t_gecit", title = L.N("Geçit dairesini çiz"), cost = 6, speaker = L.N("Kara Pati"),
+                        line = L.N("Daireyi pati izimle mühürledim. Anahtar kedideymiş, hatırladın mı? Hep bendeymiş.") },
                 }
             },
             new Chapter
             {
-                id = "diyar", name = "Bölüm 6: Aynalar Diyarı",
-                endLine = "Kafes açıldı! Cadı hanım, Gölge ve Kara Pati birlikte geçitten süzüldü... ve dükkânın sıcak ışığına geri döndüler.",
+                id = "diyar", name = L.N("Bölüm 6: Aynalar Diyarı"),
+                endLine = L.N("Kafes açıldı! Cadı hanım, Gölge ve Kara Pati birlikte geçitten süzüldü... ve dükkânın sıcak ışığına geri döndüler."),
                 tasks = new[]
                 {
-                    new StoryTask { id = "d_kopru", title = "Kristal köprüyü kur", cost = 4, speaker = "Kara Pati",
-                        line = "Burası Aynalar Diyarı... Her şey mor ve parlak. Köprüyü kristallerle tamamladım." },
-                    new StoryTask { id = "d_fener", title = "Yıldız fenerlerini yak", cost = 5, speaker = "Sis Teyze",
-                        line = "Fenerler yandı canım! Biz hayaletler de geldik, yalnız değilsin." },
-                    new StoryTask { id = "d_ayna", title = "Kırık aynaları birleştir", cost = 5, speaker = "Profesör Uğultu",
-                        line = "Aynalar birleşince Gölge'nin anıları göründü: cadıyla oynadığı mutlu günler." },
-                    new StoryTask { id = "d_yol", title = "Pati izli yolu takip et", cost = 6, speaker = "Kara Pati",
-                        line = "İzler bir tahta çıkıyor. Tahtta Gölge oturuyor. Dev ama... ürkek bakıyor." },
-                    new StoryTask { id = "d_yastik", title = "Gölge için yastık bırak", cost = 6, speaker = "Gölge",
-                        line = "Bu yastık... benim eski yastığım mı? Cadı onu saklamış mı? Mrr..." },
-                    new StoryTask { id = "d_yumak", title = "Gölge'yle yumak oyna", cost = 6, speaker = "Gölge",
-                        line = "Hah! Yakaladım! Uzun zamandır kimse benimle oynamamıştı, küçük kara kedi." },
-                    new StoryTask { id = "d_kafes", title = "Kafesin kilidini aç", cost = 7, speaker = "Cadı Hanım",
-                        line = "Kara Pati! Beni buldun! Gölge'yi de yumuşatmışsın, ah benim akıllı kedim." },
-                    new StoryTask { id = "d_eve", title = "Herkesle eve dön", cost = 8, speaker = "Gölge",
-                        line = "Ben de gelebilir miyim? Söz, artık aynalara saklanmak yok. Sadece... bir yastık lazım." },
+                    new StoryTask { id = "d_kopru", title = L.N("Kristal köprüyü kur"), cost = 4, speaker = L.N("Kara Pati"),
+                        line = L.N("Burası Aynalar Diyarı... Her şey mor ve parlak. Köprüyü kristallerle tamamladım.") },
+                    new StoryTask { id = "d_fener", title = L.N("Yıldız fenerlerini yak"), cost = 5, speaker = L.N("Sis Teyze"),
+                        line = L.N("Fenerler yandı canım! Biz hayaletler de geldik, yalnız değilsin.") },
+                    new StoryTask { id = "d_ayna", title = L.N("Kırık aynaları birleştir"), cost = 5, speaker = L.N("Profesör Uğultu"),
+                        line = L.N("Aynalar birleşince Gölge'nin anıları göründü: cadıyla oynadığı mutlu günler.") },
+                    new StoryTask { id = "d_yol", title = L.N("Pati izli yolu takip et"), cost = 6, speaker = L.N("Kara Pati"),
+                        line = L.N("İzler bir tahta çıkıyor. Tahtta Gölge oturuyor. Dev ama... ürkek bakıyor.") },
+                    new StoryTask { id = "d_yastik", title = L.N("Gölge için yastık bırak"), cost = 6, speaker = L.N("Gölge"),
+                        line = L.N("Bu yastık... benim eski yastığım mı? Cadı onu saklamış mı? Mrr...") },
+                    new StoryTask { id = "d_yumak", title = L.N("Gölge'yle yumak oyna"), cost = 6, speaker = L.N("Gölge"),
+                        line = L.N("Hah! Yakaladım! Uzun zamandır kimse benimle oynamamıştı, küçük kara kedi.") },
+                    new StoryTask { id = "d_kafes", title = L.N("Kafesin kilidini aç"), cost = 7, speaker = L.N("Cadı Hanım"),
+                        line = L.N("Kara Pati! Beni buldun! Gölge'yi de yumuşatmışsın, ah benim akıllı kedim.") },
+                    new StoryTask { id = "d_eve", title = L.N("Herkesle eve dön"), cost = 8, speaker = L.N("Gölge"),
+                        line = L.N("Ben de gelebilir miyim? Söz, artık aynalara saklanmak yok. Sadece... bir yastık lazım.") },
                 }
             },
         };
 
         public static readonly Clue[] Clues =
         {
-            new Clue { id = "c1_not", chapter = 0, x = 400f, y = 60f, afterTasks = 3, title = "Buruşuk Not",
-                text = "'Mahzenin anahtarı kedide.' Cadının el yazısı... ama çok aceleyle yazılmış." },
-            new Clue { id = "c1_iz", chapter = 0, x = 200f, y = -430f, afterTasks = 5, title = "Dev Pati İzi",
-                text = "Bu iz kocaman! Bir kedinin ama dev gibi bir kedinin. Cadının başka bir yardımcısı mı vardı?" },
-            new Clue { id = "c1_gunluk", chapter = 0, x = 200f, y = -150f, afterTasks = 7, title = "Günlük Sayfası",
-                text = "'Ayna çatladığı gece bir şeyler ters gitti. Kara Pati'yi korumalıyım, ne olursa olsun.'" },
-            new Clue { id = "c2_supurge", chapter = 1, x = -400f, y = -390f, afterTasks = 10, title = "Kırık Süpürge",
-                text = "Cadının süpürgesi ikiye ayrılmış. Buradan aceleyle kaçmış olmalı... ya da biri onu çekmiş." },
-            new Clue { id = "c2_takvim", chapter = 1, x = 170f, y = -40f, afterTasks = 12, title = "Ay Takvimi",
-                text = "Dolunay günleri kırmızıyla daire içine alınmış. Bir sonraki dolunay... çok yakında!" },
-            new Clue { id = "c2_tasma", chapter = 1, x = -20f, y = -170f, afterTasks = 13, title = "Gümüş Tasma",
-                text = "Sandıktan minik bir gümüş tasma çıktı. Üzerinde 'K.P.' yazıyor. Bu benim bebeklik tasmam mı?!" },
-            new Clue { id = "c2_iz", chapter = 1, x = 220f, y = -430f, afterTasks = 14, title = "Parlayan İzler",
-                text = "Büyü dairesinden aynaya doğru uzanan parlak pati izleri. Dev kedi buradan geçmiş!" },
-            new Clue { id = "c2_mektup", chapter = 1, x = 170f, y = 380f, afterTasks = 15, title = "Mühürlü Mektup",
-                text = "Portrenin arkasında bir mektup: 'Aynayı onaran, beni geri getirir. -C.'" },
-            new Clue { id = "c3_iz", chapter = 2, x = 120f, y = -430f, afterTasks = 18, title = "Çamurdaki Dev İz",
-                text = "Bahçedeki çamurda kocaman bir pati izi. Kenarında siyah tüyler var. Bu kedi benden üç kat büyük!" },
-            new Clue { id = "c3_tuy", chapter = 2, x = -300f, y = -270f, afterTasks = 20, title = "Siyah Tüy Yumağı",
-                text = "Korkuluğun dibinde simsiyah tüyler. Dokununca hafifçe titriyorlar... sanki gölgeden yapılmışlar." },
-            new Clue { id = "c3_not", chapter = 2, x = 430f, y = -20f, afterTasks = 23, title = "Yırtık Ayin Notu",
-                text = "'Dolunayda ayna açılırsa, içeride bekleyen de dışarı çıkar. Dikkat et.' Hmm, keşke daha önce okusaydım." },
-            new Clue { id = "c4_afis", chapter = 3, x = 390f, y = 40f, afterTasks = 26, title = "Eski Afiş",
-                text = "Solmuş bir afiş: 'Kayıp kedi: Gölge. Siyah, iri, çok sevimli. Bulana kocaman teşekkür. -Cadı'" },
-            new Clue { id = "c4_foto", chapter = 3, x = -170f, y = -130f, afterTasks = 29, title = "Soluk Fotoğraf",
-                text = "Genç cadı kucağında koca siyah bir kediyle gülümsüyor. Arkasında: 'Gölge ile, ilk dükkân günü.'" },
-            new Clue { id = "c5_gunluk", chapter = 4, x = 330f, y = 30f, afterTasks = 35, title = "Cadının Son Notu",
-                text = "'Gölge kaybolduğunda çok ağladım. Sonra Kara Pati geldi. Gölge bunu duyunca küstü sanırım...'" },
-            new Clue { id = "c5_tasma", chapter = 4, x = -330f, y = -330f, afterTasks = 38, title = "Kocaman Tasma",
-                text = "Yerde dev bir tasma. Üzerinde 'G.' harfi. Benim 'K.P.' tasmamın kocaman bir ikizi gibi." },
-            new Clue { id = "c6_oyuncak", chapter = 5, x = -160f, y = -340f, afterTasks = 43, title = "Eski Oyuncak Fare",
-                text = "Yıpranmış bir oyuncak fare. Gölge bunu yıllardır saklamış. Demek ki hep eve dönmek istemiş." },
-            new Clue { id = "c6_mektup", chapter = 5, x = 430f, y = -40f, afterTasks = 46, title = "Gölge'nin Mektubu",
-                text = "Pati izleriyle yazılmış: 'Beni unuttuklarını sandım. Belki... yeni kedi ile arkadaş olabiliriz?'" },
+            new Clue { id = "c1_not", chapter = 0, x = 400f, y = 60f, afterTasks = 3, title = L.N("Buruşuk Not"),
+                text = L.N("'Mahzenin anahtarı kedide.' Cadının el yazısı... ama çok aceleyle yazılmış.") },
+            new Clue { id = "c1_iz", chapter = 0, x = 200f, y = -430f, afterTasks = 5, title = L.N("Dev Pati İzi"),
+                text = L.N("Bu iz kocaman! Bir kedinin ama dev gibi bir kedinin. Cadının başka bir yardımcısı mı vardı?") },
+            new Clue { id = "c1_gunluk", chapter = 0, x = 200f, y = -150f, afterTasks = 7, title = L.N("Günlük Sayfası"),
+                text = L.N("'Ayna çatladığı gece bir şeyler ters gitti. Kara Pati'yi korumalıyım, ne olursa olsun.'") },
+            new Clue { id = "c2_supurge", chapter = 1, x = -400f, y = -390f, afterTasks = 10, title = L.N("Kırık Süpürge"),
+                text = L.N("Cadının süpürgesi ikiye ayrılmış. Buradan aceleyle kaçmış olmalı... ya da biri onu çekmiş.") },
+            new Clue { id = "c2_takvim", chapter = 1, x = 170f, y = -40f, afterTasks = 12, title = L.N("Ay Takvimi"),
+                text = L.N("Dolunay günleri kırmızıyla daire içine alınmış. Bir sonraki dolunay... çok yakında!") },
+            new Clue { id = "c2_tasma", chapter = 1, x = -20f, y = -170f, afterTasks = 13, title = L.N("Gümüş Tasma"),
+                text = L.N("Sandıktan minik bir gümüş tasma çıktı. Üzerinde 'K.P.' yazıyor. Bu benim bebeklik tasmam mı?!") },
+            new Clue { id = "c2_iz", chapter = 1, x = 220f, y = -430f, afterTasks = 14, title = L.N("Parlayan İzler"),
+                text = L.N("Büyü dairesinden aynaya doğru uzanan parlak pati izleri. Dev kedi buradan geçmiş!") },
+            new Clue { id = "c2_mektup", chapter = 1, x = 170f, y = 380f, afterTasks = 15, title = L.N("Mühürlü Mektup"),
+                text = L.N("Portrenin arkasında bir mektup: 'Aynayı onaran, beni geri getirir. -C.'") },
+            new Clue { id = "c3_iz", chapter = 2, x = 120f, y = -430f, afterTasks = 18, title = L.N("Çamurdaki Dev İz"),
+                text = L.N("Bahçedeki çamurda kocaman bir pati izi. Kenarında siyah tüyler var. Bu kedi benden üç kat büyük!") },
+            new Clue { id = "c3_tuy", chapter = 2, x = -300f, y = -270f, afterTasks = 20, title = L.N("Siyah Tüy Yumağı"),
+                text = L.N("Korkuluğun dibinde simsiyah tüyler. Dokununca hafifçe titriyorlar... sanki gölgeden yapılmışlar.") },
+            new Clue { id = "c3_not", chapter = 2, x = 430f, y = -20f, afterTasks = 23, title = L.N("Yırtık Ayin Notu"),
+                text = L.N("'Dolunayda ayna açılırsa, içeride bekleyen de dışarı çıkar. Dikkat et.' Hmm, keşke daha önce okusaydım.") },
+            new Clue { id = "c4_afis", chapter = 3, x = 390f, y = 40f, afterTasks = 26, title = L.N("Eski Afiş"),
+                text = L.N("Solmuş bir afiş: 'Kayıp kedi: Gölge. Siyah, iri, çok sevimli. Bulana kocaman teşekkür. -Cadı'") },
+            new Clue { id = "c4_foto", chapter = 3, x = -170f, y = -130f, afterTasks = 29, title = L.N("Soluk Fotoğraf"),
+                text = L.N("Genç cadı kucağında koca siyah bir kediyle gülümsüyor. Arkasında: 'Gölge ile, ilk dükkân günü.'") },
+            new Clue { id = "c5_gunluk", chapter = 4, x = 330f, y = 30f, afterTasks = 35, title = L.N("Cadının Son Notu"),
+                text = L.N("'Gölge kaybolduğunda çok ağladım. Sonra Kara Pati geldi. Gölge bunu duyunca küstü sanırım...'") },
+            new Clue { id = "c5_tasma", chapter = 4, x = -330f, y = -330f, afterTasks = 38, title = L.N("Kocaman Tasma"),
+                text = L.N("Yerde dev bir tasma. Üzerinde 'G.' harfi. Benim 'K.P.' tasmamın kocaman bir ikizi gibi.") },
+            new Clue { id = "c6_oyuncak", chapter = 5, x = -160f, y = -340f, afterTasks = 43, title = L.N("Eski Oyuncak Fare"),
+                text = L.N("Yıpranmış bir oyuncak fare. Gölge bunu yıllardır saklamış. Demek ki hep eve dönmek istemiş.") },
+            new Clue { id = "c6_mektup", chapter = 5, x = 430f, y = -40f, afterTasks = 46, title = L.N("Gölge'nin Mektubu"),
+                text = L.N("Pati izleriyle yazılmış: 'Beni unuttuklarını sandım. Belki... yeni kedi ile arkadaş olabiliriz?'") },
         };
 
         public static int TotalTasks
@@ -581,8 +594,8 @@ namespace KaraPati
     /// <summary>The witch's tower: floors bought with gold, and Kara Pati's food and water bowls.</summary>
     public static class Tower
     {
-        public static readonly string[] FloorNames =
-            { "Kara Pati'nin Odası", "Mutfak", "Kütüphane", "Yatak Odası", "Teras", "Gözlem Odası" };
+        public static readonly TrList FloorNames = new TrList
+            (L.N("Kara Pati'nin Odası"), L.N("Mutfak"), L.N("Kütüphane"), L.N("Yatak Odası"), L.N("Teras"), L.N("Gözlem Odası"));
         public static readonly int[] FloorPrice = { 0, 500, 1200, 2500, 4500, 8000 };
         public static readonly Color[] Wall =
         {
@@ -611,13 +624,13 @@ namespace KaraPati
     public static class Decor
     {
         public const int Slots = 4, Variants = 4;   // variant 0 = empty
-        public static readonly string[] SlotNames = { "Süs Zinciri", "Saksı", "Kedi Köşesi", "Işık" };
-        public static readonly string[][] VariantNames =
+        public static readonly TrList SlotNames = new TrList(L.N("Süs Zinciri"), L.N("Saksı"), L.N("Kedi Köşesi"), L.N("Işık"));
+        public static readonly TrList[] VariantNames =
         {
-            new[] { "Yok", "Bayraklar", "Balkabakları", "Yıldızlar" },
-            new[] { "Yok", "Ay Çiçeği", "Peri Mantarı", "Kristal Küme" },
-            new[] { "Yok", "Minder", "Yumak Sepeti", "Kedi Kulesi" },
-            new[] { "Yok", "Mumlar", "Fener", "Kristal Küre" },
+            new TrList(L.N("Yok"), L.N("Bayraklar"), L.N("Balkabakları"), L.N("Yıldızlar")),
+            new TrList(L.N("Yok"), L.N("Ay Çiçeği"), L.N("Peri Mantarı"), L.N("Kristal Küme")),
+            new TrList(L.N("Yok"), L.N("Minder"), L.N("Yumak Sepeti"), L.N("Kedi Kulesi")),
+            new TrList(L.N("Yok"), L.N("Mumlar"), L.N("Fener"), L.N("Kristal Küre")),
         };
         static readonly int[][] basePrice =
         {
@@ -683,8 +696,8 @@ namespace KaraPati
 
         public static string ChanceText(int level)
         {
-            string t = "2. seviye şansı %" + Mathf.RoundToInt(Level2Chance(level) * 100f);
-            if (Level3Chance(level) > 0f) t += ", 3. seviye %" + Mathf.RoundToInt(Level3Chance(level) * 100f);
+            string t = L.F("2. seviye şansı %{0}", Mathf.RoundToInt(Level2Chance(level) * 100f));
+            if (Level3Chance(level) > 0f) t += L.F(", 3. seviye %{0}", Mathf.RoundToInt(Level3Chance(level) * 100f));
             return t;
         }
     }
@@ -708,12 +721,46 @@ namespace KaraPati
 
         public static string Text(int chapter, int gift)
         {
-            var parts = new List<string> { "+" + Gold(chapter, gift) + " altın" };
-            if (Energy(chapter, gift) > 0) parts.Add("+" + Energy(chapter, gift) + " enerji");
-            if (Stamps(chapter, gift) > 0) parts.Add("+" + Stamps(chapter, gift) + " Pati Mührü");
-            if (Sticker(chapter, gift)) parts.Add("bir etiket");
+            var parts = new List<string> { L.F("+{0} altın", Gold(chapter, gift)) };
+            if (Energy(chapter, gift) > 0) parts.Add(L.F("+{0} enerji", Energy(chapter, gift)));
+            if (Stamps(chapter, gift) > 0) parts.Add(L.F("+{0} Pati Mührü", Stamps(chapter, gift)));
+            if (Sticker(chapter, gift)) parts.Add(L.T("bir etiket"));
             return string.Join(", ", parts);
         }
+    }
+
+    /// <summary>
+    /// Game Room mini games. Each game has a few free plays a day; after that a play costs energy.
+    /// </summary>
+    public static class MiniGames
+    {
+        public const int Fare = 0, Yumak = 1, Hafiza = 2, Count = 3;
+        public const int UnlockLevel = 5;
+        public const int FreePerDay = 2;
+        public const int EnergyCost = 10;
+        public const float FareSeconds = 30f;
+
+        public static readonly TrList Names = new TrList(L.N("Fare Avı"), L.N("Yumak Atma"), L.N("İksir Hafızası"));
+        public static readonly TrList Blurbs = new TrList
+        (
+            L.N("Fıçılardan çıkan fareleri yakala! Hayaletlere dokunma."),
+            L.N("Yumağı doğru anda at, kediler yakalasın."),
+            L.N("Kartları çevir, aynı malzemeleri eşleştir.")
+        );
+        /// <summary>Games that are built so far; the others show "Yakında".</summary>
+        public static bool Ready(int g) => g == Fare;   // Yumak Atma: in progress
+
+        // Free play of Fare Avı gives energy. A paid play (energy in) gives gold instead, so energy can never
+        // turn into more energy. It stays under 20 gold: 10 energy costs 20 gold in the shop, so gold -> energy -> gold
+        // can not make money either.
+        public static int FareEnergy(int score) => score <= 0 ? 0 : Mathf.Min(15, 3 + score / 3);
+        public static int FareGold(int score) => score <= 0 ? 0 : Mathf.Min(18, 2 + score / 2);
+
+        // Yumak Atma gives gold; a free play with a long catch streak also opens a gift chest (ingredients).
+        // The chest is for free plays only: with energy in, it would be worth more than the energy.
+        public const int YarnChestStreak = 15, YarnLives = 3;
+        public static int YarnGold(int score) => score <= 0 ? 0 : Mathf.Min(30, 3 + score);
+        public static int YarnGoldPaid(int score) => score <= 0 ? 0 : Mathf.Min(18, 2 + score / 2);
     }
 
     public static class Levels
@@ -738,7 +785,7 @@ namespace KaraPati
     /// <summary>Time-limited Halloween event: collect pumpkins from orders and tasks, walk the reward path.</summary>
     public static class PumpkinEvent
     {
-        public const string Name = "Balkabağı Şenliği";
+        public static string Name => L.T("Balkabağı Şenliği");
         public const int Days = 7;
 
         public static readonly EventMilestone[] Path =
@@ -759,10 +806,10 @@ namespace KaraPati
         {
             switch (m.type)
             {
-                case "gold": return m.amount + " altın";
-                case "energy": return m.amount + " enerji";
-                case "stamps": return m.amount + " Pati Mührü";
-                default: return "Sürpriz etiket";
+                case "gold": return L.F("{0} altın", m.amount);
+                case "energy": return L.F("{0} enerji", m.amount);
+                case "stamps": return L.F("{0} Pati Mührü", m.amount);
+                default: return L.T("Sürpriz etiket");
             }
         }
     }
@@ -784,7 +831,7 @@ namespace KaraPati
         public static int Today => (int)(DateTime.Now.Date - new DateTime(2020, 1, 1)).TotalDays;
 
         public static string Text(EventMilestone m) =>
-            m.type == "sticker" ? m.amount + " altın + etiket" : PumpkinEvent.RewardText(m);
+            m.type == "sticker" ? L.F("{0} altın + etiket", m.amount) : PumpkinEvent.RewardText(m);
     }
 
     /// <summary>
@@ -795,19 +842,19 @@ namespace KaraPati
     {
         public const int Turuncu = 0, Gri = 1, Beyaz = 2, SiyahBeyaz = 3, UcRenkli = 4, Gece = 5;
         public const int Count = 5;   // colours that can arrive on the table
-        public static readonly string[] Names = { "Turuncu Tekir", "Gri", "Beyaz", "Siyah-Beyaz", "Üç Renkli", "Gece" };
+        public static readonly TrList Names = new TrList(L.N("Turuncu Tekir"), L.N("Gri"), L.N("Beyaz"), L.N("Siyah-Beyaz"), L.N("Üç Renkli"), L.N("Gece"));
         public static string Name(int c) => Names[Mathf.Clamp(c, 0, Names.Length - 1)];
         static readonly int[] weights = { 35, 30, 20, 12, 3 };   // out of 100: the calico is rare
 
-        public static readonly string[] Talents =
-        {
-            "Şanslı: bazen 2. seviye malzeme getirir.",
-            "Usta karıştırıcı: kazanı 2,5 kat hızlı karıştırır.",
-            "Çalışkan: daha sık malzeme getirir (8 sn'de bir).",
-            "Çevik: yavruları çok hızlı kovalar.",
-            "Sadık: 2 değil 3 saat kalır.",
-            "",
-        };
+        public static readonly TrList Talents = new TrList
+        (
+            L.N("Şanslı: bazen 2. seviye malzeme getirir."),
+            L.N("Usta karıştırıcı: kazanı 2,5 kat hızlı karıştırır."),
+            L.N("Çalışkan: daha sık malzeme getirir (8 sn'de bir)."),
+            L.N("Çevik: yavruları çok hızlı kovalar."),
+            L.N("Sadık: 2 değil 3 saat kalır."),
+            ""
+        );
 
         public static int Pick()
         {
@@ -823,7 +870,7 @@ namespace KaraPati
     /// <summary>The Master cat's expeditions: longer trips bring better finds, but it doesn't work at the table meanwhile.</summary>
     public static class Expeditions
     {
-        public static readonly string[] Names = { "Kısa Gezinti", "Orman Turu", "Dolunay Seferi" };
+        public static readonly TrList Names = new TrList(L.N("Kısa Gezinti"), L.N("Orman Turu"), L.N("Dolunay Seferi"));
         public static readonly int[] Minutes = { 30, 120, 480 };
         public static readonly int[] Energy = { 5, 10, 20 };     // energy it costs to send the Master
         public static readonly int[] Items = { 3, 3, 4 };      // how many ingredients it brings back
@@ -836,27 +883,29 @@ namespace KaraPati
 
         public static string Rewards(int k)
         {
-            var parts = new List<string> { Items[k] + " malzeme (Sv. " + MinLevel[k] + "-" + MaxLevel[k] + ")" };
-            if (Gold[k] > 0) parts.Add(Gold[k] + " altın");
-            if (Stamps[k] > 0) parts.Add(Stamps[k] + " mühür");
-            if (StickerChance[k] >= 1f) parts.Add("etiket");
-            else if (StickerChance[k] > 0f) parts.Add("belki etiket");
-            if (Ornament[k]) parts.Add("kule süsü");
+            var parts = new List<string> { L.F("{0} malzeme (Sv. {1}-{2})", Items[k], MinLevel[k], MaxLevel[k]) };
+            if (Gold[k] > 0) parts.Add(L.F("{0} altın", Gold[k]));
+            if (Stamps[k] > 0) parts.Add(L.F("{0} mühür", Stamps[k]));
+            if (StickerChance[k] >= 1f) parts.Add(L.T("etiket"));
+            else if (StickerChance[k] > 0f) parts.Add(L.T("belki etiket"));
+            if (Ornament[k]) parts.Add(L.T("kule süsü"));
             return string.Join(", ", parts);
         }
 
-        public static string Duration(int k) => Minutes[k] < 60 ? Minutes[k] + " dk" : Minutes[k] / 60 + " saat";
+        public static string Duration(int k) => Minutes[k] < 60 ? L.F("{0} dk", Minutes[k]) : L.F("{0} saat", Minutes[k] / 60);
     }
 
     /// <summary>One customer of the shop: who they are, how hard they are to befriend, what they tell you.</summary>
     public class CustomerDef
     {
-        public string id, name;
+        string name_, difficulty_;
+        public string id;
+        public string name { get => L.T(name_); set => name_ = value; }
         public bool ghost;          // one of the town's ghosts (the others are fantasy creatures)
-        public string difficulty;   // Kolay / Orta / Zor / En zor
+        public string difficulty { get => L.T(difficulty_); set => difficulty_ = value; }   // Kolay / Orta / Zor / En zor
         public int unlockLevel;     // player level at which they start visiting
         public int[] steps;         // points needed for each next friendship stage
-        public string[] lines;      // what they say when you reach stage 1..max
+        public TrList lines;        // what they say when you reach stage 1..max
         public float size;          // height compared to Kara Pati (for the tower)
         public int MaxStage => steps.Length;
 
@@ -885,65 +934,65 @@ namespace KaraPati
     /// </summary>
     public static class Customers
     {
-        public static readonly string[] StageNames = { "Yabancı", "Tanıdık", "Arkadaş", "Dost", "Yakın Dost", "Sırdaş" };
-        public const string BestFriend = "Can Dostu";
+        public static readonly TrList StageNames = new TrList(L.N("Yabancı"), L.N("Tanıdık"), L.N("Arkadaş"), L.N("Dost"), L.N("Yakın Dost"), L.N("Sırdaş"));
+        public static string BestFriend => L.T("Can Dostu");
 
         public static readonly CustomerDef[] All =
         {
-            new CustomerDef { id = "kurbaga", name = "Kurbağa Prens", difficulty = "Kolay", unlockLevel = 1, size = 0.5f, steps = new[] { 2, 3, 4 }, lines = new[] {
-                "Vırak! Ben Kurbağa Prens. Bir cadı beni... neyse, uzun hikâye.",
-                "İksirlerin dudaklarımı gıdıklıyor. Belki biri beni yeniden prens yapar?",
-                "Prens olmasam da olur, burada dostlarım var. Tacımı sana göstermek isterim!" } },
-            new CustomerDef { id = "boo", name = "Minik Boo", ghost = true, difficulty = "Kolay", unlockLevel = 1, size = 0.7f, steps = new[] { 2, 3, 4 }, lines = new[] {
-                "Boo! Korktun mu? ...Korkmadın. Ben Minik Boo.",
-                "Ayıcığım Pamuk da seni sevdi. Onu kimseye göstermem ama sana gösterdim!",
-                "En iyi arkadaşım sensin! Kurdelemi senin için taktım." } },
-            new CustomerDef { id = "bocek", name = "Bay Böcek", difficulty = "Kolay", unlockLevel = 1, size = 0.4f, steps = new[] { 2, 3, 4, 5 }, lines = new[] {
-                "Şapkamı çıkarırım efendim. Bay Böcek, emrinize amade.",
-                "Bu dükkân annemin bahçesi gibi kokuyor: lavanta ve sihir.",
-                "Cuma akşamları uğur dağıtırım. Bu hafta hepsi senin!",
-                "En sevdiğim papyonumu taktım. Dostluğumuza, efendim!" } },
-            new CustomerDef { id = "sis", name = "Sis Teyze", ghost = true, difficulty = "Kolay", unlockLevel = 2, size = 1.3f, steps = new[] { 2, 3, 5, 6 }, lines = new[] {
-                "Ah, yeni dükkâncı! Ben Sis Teyze. Her sabah sisi ben örerim.",
-                "Kasabayı saran bu kalın sis benim örgüm değil canım. Başka bir şey bu.",
-                "Sana bir şal örüyorum. Rengi sürpriz!",
-                "Şalın hazır! Bundan sonra sis seni üşütemez." } },
-            new CustomerDef { id = "tirtil", name = "Korsan Tırtıl", difficulty = "Orta", unlockLevel = 3, size = 0.55f, steps = new[] { 3, 4, 6, 7 }, lines = new[] {
-                "Yo-ho! Hazine kokusu aldım. Bu dükkânda bir şey var!",
-                "Bir gözümü martıya kaptırdım ama hazineyi kaptırmadım!",
-                "Bu kılıç mı? Aslında tereyağı bıçağı. Sakın kimseye söyleme.",
-                "Kelebek olunca bile senin tayfan olacağım!" } },
-            new CustomerDef { id = "pus", name = "Kaptan Pus", ghost = true, difficulty = "Orta", unlockLevel = 4, size = 1.3f, steps = new[] { 3, 5, 6, 8 }, lines = new[] {
-                "Ahoy! Kaptan Pus. Gemim sisin içinde kayboldu...",
-                "Batan gemim Gümüş Martı'ydı. Tayfam hâlâ beni arıyor olabilir.",
-                "Pipomu yaktım. Bu, bir kaptanın en büyük güvenidir.",
-                "Bu dükkân benim limanım oldu. Demir attım!" } },
-            new CustomerDef { id = "kartal", name = "Pilot Kartal", difficulty = "Orta", unlockLevel = 5, size = 1.35f, steps = new[] { 3, 4, 6, 8, 10 }, lines = new[] {
-                "Acil teslimat! Ben Pilot Kartal, kanatlarım emrinde.",
-                "Sis yüzünden üç mektubu yanlış bacaya attım. Aramızda kalsın!",
-                "Gözlüğüm dedemden kalma. Fırtınaların içini gösterir.",
-                "Bir gün seni bulutların üstüne götüreceğim. Söz!",
-                "Atkım artık senin. Her kanat çırpışımda seni düşüneceğim." } },
-            new CustomerDef { id = "baykus", name = "Baykuş Kütüphaneci", difficulty = "Zor", unlockLevel = 6, size = 0.8f, steps = new[] { 4, 5, 7, 9, 11 }, lines = new[] {
-                "Hu-hu. Kütüphaneden geliyorum. Biraz sessiz lütfen.",
-                "Cadının kitaplarını ben ödünç verirdim. Hepsinin süresi geçti!",
-                "Sen benim gözlüğüm gibisin: işleri netleştiriyorsun.",
-                "Sisin kaydı eski bir kitapta var: 'Kaybolan dostlukların gölgesi'...",
-                "Kütüphanenin anahtarı artık sende. Kitaplar senin de." } },
-            new CustomerDef { id = "ugultu", name = "Profesör Uğultu", ghost = true, difficulty = "En zor", unlockLevel = 7, size = 1.4f, steps = new[] { 4, 6, 8, 10, 12, 15 }, lines = new[] {
-                "Hmm. Profesör Uğultu. Eski bir öğretmen, yorgun bir hayalet.",
-                "Cadı Hanım'a ilk büyüsünü ben öğrettim. Kaşlarını yakmıştı!",
-                "Papyonum mu? Mezuniyet günümden kalma. Yüz yıl önceydi.",
-                "İksirlerin dengesi kusursuz. Öğrencim olsaydın birinci olurdun.",
-                "Bir sır vereyim: Cadı, aynanın arkasındaki kediyi hiç unutmadı.",
-                "Son dersim bitti. Bundan sonra öğretmen sensin, sevgili dostum." } },
-            new CustomerDef { id = "ejderha", name = "Ejderha Yavrusu", difficulty = "En zor", unlockLevel = 8, size = 0.9f, steps = new[] { 5, 6, 8, 11, 13, 16 }, lines = new[] {
-                "*hık* Pardon! Ben bir ejderha yavrusuyum. Adım Kıvılcım.",
-                "Hıçkırınca alev çıkıyor. Kütüphaneyi bir kere az kalsın yakıyordum.",
-                "Annem dağlarda. Ben burada senin iksirlerini seviyorum.",
-                "Bak, uçabiliyorum! ...Üç saniye kadar.",
-                "Kazanının altını ben yakabilirim. Bedava!",
-                "Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*" } },
+            new CustomerDef { id = "kurbaga", name = L.N("Kurbağa Prens"), difficulty = L.N("Kolay"), unlockLevel = 1, size = 0.5f, steps = new[] { 2, 3, 4 }, lines = new TrList(
+                L.N("Vırak! Ben Kurbağa Prens. Bir cadı beni... neyse, uzun hikâye."),
+                L.N("İksirlerin dudaklarımı gıdıklıyor. Belki biri beni yeniden prens yapar?"),
+                L.N("Prens olmasam da olur, burada dostlarım var. Tacımı sana göstermek isterim!") ) },
+            new CustomerDef { id = "boo", name = L.N("Minik Boo"), ghost = true, difficulty = L.N("Kolay"), unlockLevel = 1, size = 0.7f, steps = new[] { 2, 3, 4 }, lines = new TrList(
+                L.N("Boo! Korktun mu? ...Korkmadın. Ben Minik Boo."),
+                L.N("Ayıcığım Pamuk da seni sevdi. Onu kimseye göstermem ama sana gösterdim!"),
+                L.N("En iyi arkadaşım sensin! Kurdelemi senin için taktım.") ) },
+            new CustomerDef { id = "bocek", name = L.N("Bay Böcek"), difficulty = L.N("Kolay"), unlockLevel = 1, size = 0.4f, steps = new[] { 2, 3, 4, 5 }, lines = new TrList(
+                L.N("Şapkamı çıkarırım efendim. Bay Böcek, emrinize amade."),
+                L.N("Bu dükkân annemin bahçesi gibi kokuyor: lavanta ve sihir."),
+                L.N("Cuma akşamları uğur dağıtırım. Bu hafta hepsi senin!"),
+                L.N("En sevdiğim papyonumu taktım. Dostluğumuza, efendim!") ) },
+            new CustomerDef { id = "sis", name = L.N("Sis Teyze"), ghost = true, difficulty = L.N("Kolay"), unlockLevel = 2, size = 1.3f, steps = new[] { 2, 3, 5, 6 }, lines = new TrList(
+                L.N("Ah, yeni dükkâncı! Ben Sis Teyze. Her sabah sisi ben örerim."),
+                L.N("Kasabayı saran bu kalın sis benim örgüm değil canım. Başka bir şey bu."),
+                L.N("Sana bir şal örüyorum. Rengi sürpriz!"),
+                L.N("Şalın hazır! Bundan sonra sis seni üşütemez.") ) },
+            new CustomerDef { id = "tirtil", name = L.N("Korsan Tırtıl"), difficulty = L.N("Orta"), unlockLevel = 3, size = 0.55f, steps = new[] { 3, 4, 6, 7 }, lines = new TrList(
+                L.N("Yo-ho! Hazine kokusu aldım. Bu dükkânda bir şey var!"),
+                L.N("Bir gözümü martıya kaptırdım ama hazineyi kaptırmadım!"),
+                L.N("Bu kılıç mı? Aslında tereyağı bıçağı. Sakın kimseye söyleme."),
+                L.N("Kelebek olunca bile senin tayfan olacağım!") ) },
+            new CustomerDef { id = "pus", name = L.N("Kaptan Pus"), ghost = true, difficulty = L.N("Orta"), unlockLevel = 4, size = 1.3f, steps = new[] { 3, 5, 6, 8 }, lines = new TrList(
+                L.N("Ahoy! Kaptan Pus. Gemim sisin içinde kayboldu..."),
+                L.N("Batan gemim Gümüş Martı'ydı. Tayfam hâlâ beni arıyor olabilir."),
+                L.N("Pipomu yaktım. Bu, bir kaptanın en büyük güvenidir."),
+                L.N("Bu dükkân benim limanım oldu. Demir attım!") ) },
+            new CustomerDef { id = "kartal", name = L.N("Pilot Kartal"), difficulty = L.N("Orta"), unlockLevel = 5, size = 1.35f, steps = new[] { 3, 4, 6, 8, 10 }, lines = new TrList(
+                L.N("Acil teslimat! Ben Pilot Kartal, kanatlarım emrinde."),
+                L.N("Sis yüzünden üç mektubu yanlış bacaya attım. Aramızda kalsın!"),
+                L.N("Gözlüğüm dedemden kalma. Fırtınaların içini gösterir."),
+                L.N("Bir gün seni bulutların üstüne götüreceğim. Söz!"),
+                L.N("Atkım artık senin. Her kanat çırpışımda seni düşüneceğim.") ) },
+            new CustomerDef { id = "baykus", name = L.N("Baykuş Kütüphaneci"), difficulty = L.N("Zor"), unlockLevel = 6, size = 0.8f, steps = new[] { 4, 5, 7, 9, 11 }, lines = new TrList(
+                L.N("Hu-hu. Kütüphaneden geliyorum. Biraz sessiz lütfen."),
+                L.N("Cadının kitaplarını ben ödünç verirdim. Hepsinin süresi geçti!"),
+                L.N("Sen benim gözlüğüm gibisin: işleri netleştiriyorsun."),
+                L.N("Sisin kaydı eski bir kitapta var: 'Kaybolan dostlukların gölgesi'..."),
+                L.N("Kütüphanenin anahtarı artık sende. Kitaplar senin de.") ) },
+            new CustomerDef { id = "ugultu", name = L.N("Profesör Uğultu"), ghost = true, difficulty = L.N("En zor"), unlockLevel = 7, size = 1.4f, steps = new[] { 4, 6, 8, 10, 12, 15 }, lines = new TrList(
+                L.N("Hmm. Profesör Uğultu. Eski bir öğretmen, yorgun bir hayalet."),
+                L.N("Cadı Hanım'a ilk büyüsünü ben öğrettim. Kaşlarını yakmıştı!"),
+                L.N("Papyonum mu? Mezuniyet günümden kalma. Yüz yıl önceydi."),
+                L.N("İksirlerin dengesi kusursuz. Öğrencim olsaydın birinci olurdun."),
+                L.N("Bir sır vereyim: Cadı, aynanın arkasındaki kediyi hiç unutmadı."),
+                L.N("Son dersim bitti. Bundan sonra öğretmen sensin, sevgili dostum.") ) },
+            new CustomerDef { id = "ejderha", name = L.N("Ejderha Yavrusu"), difficulty = L.N("En zor"), unlockLevel = 8, size = 0.9f, steps = new[] { 5, 6, 8, 11, 13, 16 }, lines = new TrList(
+                L.N("*hık* Pardon! Ben bir ejderha yavrusuyum. Adım Kıvılcım."),
+                L.N("Hıçkırınca alev çıkıyor. Kütüphaneyi bir kere az kalsın yakıyordum."),
+                L.N("Annem dağlarda. Ben burada senin iksirlerini seviyorum."),
+                L.N("Bak, uçabiliyorum! ...Üç saniye kadar."),
+                L.N("Kazanının altını ben yakabilirim. Bedava!"),
+                L.N("Büyüyünce seni sırtımda taşırım. Ejderha sözü! *hık*") ) },
         };
 
         public static int IndexOf(string id)
@@ -970,24 +1019,24 @@ namespace KaraPati
 
     public static class Ghosts
     {
-        public static readonly string[] Names =
-        {
-            "Bayan Fısıltı", "Sör Tıkırtı", "Minik Boo", "Kont Gıcırtı",
-            "Sis Teyze", "Kaptan Pus", "Profesör Uğultu", "Leydi Ürperti"
-        };
+        public static readonly TrList Names = new TrList
+        (
+            L.N("Bayan Fısıltı"), L.N("Sör Tıkırtı"), L.N("Minik Boo"), L.N("Kont Gıcırtı"),
+            L.N("Sis Teyze"), L.N("Kaptan Pus"), L.N("Profesör Uğultu"), L.N("Leydi Ürperti")
+        );
 
-        public static readonly string[] Lines =
-        {
-            "Oh, teşekkürler! Artık rahat uyuyabilirim...",
-            "Muhteşem! Kedin de çok tatlı bu arada.",
-            "Boo-hoo! Mutluluktan ağlıyorum!",
-            "Bu iksirle duvarlardan iki kat hızlı geçeceğim!",
-            "Cadı hanım da tam böyle yapardı... Nereye kayboldu acaba?",
-            "Miyavlayan dükkân, harika hizmet!",
-            "Kara Pati! Cadıyı en son mahzende görmüştüm, biliyor muydun?",
-            "Zincirlerimi şıngırdatmadan teşekkür ederim.",
-            "Cadının süpürgesi hâlâ çatıda duruyor, garip değil mi?",
-            "Bir dahaki sefere kedi maması getiririm!"
-        };
+        public static readonly TrList Lines = new TrList
+        (
+            L.N("Oh, teşekkürler! Artık rahat uyuyabilirim..."),
+            L.N("Muhteşem! Kedin de çok tatlı bu arada."),
+            L.N("Boo-hoo! Mutluluktan ağlıyorum!"),
+            L.N("Bu iksirle duvarlardan iki kat hızlı geçeceğim!"),
+            L.N("Cadı hanım da tam böyle yapardı... Nereye kayboldu acaba?"),
+            L.N("Miyavlayan dükkân, harika hizmet!"),
+            L.N("Kara Pati! Cadıyı en son mahzende görmüştüm, biliyor muydun?"),
+            L.N("Zincirlerimi şıngırdatmadan teşekkür ederim."),
+            L.N("Cadının süpürgesi hâlâ çatıda duruyor, garip değil mi?"),
+            L.N("Bir dahaki sefere kedi maması getiririm!")
+        );
     }
 }

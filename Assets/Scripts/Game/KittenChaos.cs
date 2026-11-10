@@ -51,12 +51,12 @@ namespace KaraPati
         BoardController B => GM.Board;
         public bool Active => GM != null && GM.OnBoard && !GM.ModalOpen;
 
-        static readonly string[] arriveLines =
-        {
-            "Miyav! Bir yavru pencereden masaya zıpladı.",
-            "Kapı gıcırdadı... bir yavru masaya hopladı!",
-            "Bacadan minik bir yavru düştü, pıt diye masaya!",
-        };
+        static readonly TrList arriveLines = new TrList
+        (
+            L.N("Miyav! Bir yavru pencereden masaya zıpladı."),
+            L.N("Kapı gıcırdadı... bir yavru masaya hopladı!"),
+            L.N("Bacadan minik bir yavru düştü, pıt diye masaya!")
+        );
 
         public void Init(RectTransform catsLayer) => layer = catsLayer;
 
@@ -189,13 +189,13 @@ namespace KaraPati
             string msg = arriveLines[Random.Range(0, arriveLines.Length)];
             if (!GM.KittenHintShown)
             {
-                msg += " Onu tezgahtaki Kedi Evi'ne sürükle: iki yavru toplanınca Çırak Kedi olurlar!";
+                msg += " " + L.T("Onu tezgahtaki Kedi Evi'ne sürükle: iki yavru toplanınca Çırak Kedi olurlar!");
                 GM.KittenHintShown = true;
             }
             if (!houseHintShown && (HasMaster || HasApprentice) && FindHouse(out _))
             {
                 houseHintShown = true;
-                msg += " Kovalanmasın diye onu Kedi Evi'ne sürükle!";
+                msg += " " + L.T("Kovalanmasın diye onu Kedi Evi'ne sürükle!");
             }
             GM.Toast(msg, UIKit.Orange, 4.5f);
             Sfx.Play("paw", 1.15f, 0.8f);
@@ -251,7 +251,7 @@ namespace KaraPati
             bool sel = B.Selected == c;
             B.MoveItem(c, n, 0.35f, true);
             if (sel) B.Select(n);
-            GM.Toast("Hop! Yavru patisiyle itti: " + d.Name, UIKit.Orange);
+            GM.Toast(L.F("Hop! Yavru patisiyle itti: {0}", d.Name), UIKit.Orange);
             Sfx.Play("paw", 1.3f, 0.6f);
             GM.OnBoardChanged();
         }
@@ -266,7 +266,7 @@ namespace KaraPati
             a.Nap(c, BoardController.CellPos(c) + new Vector2(0f, 12f));
             a.rt.SetAsLastSibling();
             B.RefreshSelection();
-            GM.Toast("Yavru, " + d.Name + " üstüne kıvrılıp uyudu. Dokunup okşa!", UIKit.Orange);
+            GM.Toast(L.F("Yavru, {0} üstüne kıvrılıp uyudu. Dokunup okşa!", d.Name), UIKit.Orange);
             GM.OnBoardChanged();
         }
 
@@ -304,7 +304,7 @@ namespace KaraPati
             Tween.Punch(a.rt, 0.2f, 0.3f);
             a.WalkTo(a.Pos + Random.insideUnitCircle.normalized * 170f);
             FX.Burst(B.FxLayer, a.Pos + new Vector2(0f, 30f), new Color(1f, 0.6f, 0.75f), 5);
-            GM.Toast("Mırrr... Yavru uyandı ve gerindi.");
+            GM.Toast(L.T("Mırrr... Yavru uyandı ve gerindi."));
             Sfx.Play("paw", 1.1f, 0.7f);
             GM.GiveSticker("c_uykucu", false);
             B.RefreshSelection();
@@ -328,23 +328,23 @@ namespace KaraPati
             switch (a.level)
             {
                 case 1:
-                    GM.Toast(a.Training ? "Usta'dan ders alıyor, rahatsız etmeyelim!" : "Miyav! (Beni tezgahtaki Kedi Evi'ne sürükle.)");
+                    GM.Toast(a.Training ? L.T("Usta'dan ders alıyor, rahatsız etmeyelim!") : L.T("Miyav! (Beni tezgahtaki Kedi Evi'ne sürükle.)"));
                     break;
                 case 4:
-                    GM.Toast(MiniBusy ? "Minik Çırak malzeme taşıyor!" : "Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.");
+                    GM.Toast(MiniBusy ? L.T("Minik Çırak malzeme taşıyor!") : L.T("Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın."));
                     break;
                 case 2:
-                    if (a.cd > 0f) GM.Toast("Çırak dinleniyor... " + Mathf.CeilToInt(a.cd) + " sn");
+                    if (a.cd > 0f) GM.Toast(L.F("Çırak dinleniyor... {0} sn", Mathf.CeilToInt(a.cd)));
                     else if (ProduceNear(a, a.color == KittenColors.Turuncu && Random.value < 0.3f ? 2 : 1))
                     {
                         a.cd = a.color == KittenColors.Beyaz ? 8f : ApprenticeCooldown;
-                        GM.Toast("Çırak kedi bir malzeme getirdi!");
+                        GM.Toast(L.T("Çırak kedi bir malzeme getirdi!"));
                     }
-                    else GM.Toast("Masa dolu! Çırak malzemeyi koyacak yer bulamadı.");
+                    else GM.Toast(L.T("Masa dolu! Çırak malzemeyi koyacak yer bulamadı."));
                     break;
                 default:
-                    GM.Toast(a.homed ? "Usta Kedi yastığından her " + (int)MasterInterval + " saniyede bir malzeme getirir."
-                                     : "Usta'yı tezgahın sağındaki mor yastığa sürükle, oradan çalışsın.");
+                    GM.Toast(a.homed ? L.F("Usta Kedi yastığından her {0} saniyede bir malzeme getirir.", (int)MasterInterval)
+                                     : L.T("Usta'yı tezgahın sağındaki mor yastığa sürükle, oradan çalışsın."));
                     break;
             }
         }
@@ -366,7 +366,7 @@ namespace KaraPati
                 if (d < best) { best = d; other = o; }
             }
             if (!other) return;
-            if (HasApprentice) { GM.Toast("Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!"); return; }
+            if (HasApprentice) { GM.Toast(L.T("Dükkânda zaten bir Çırak var. Yavruları o kovalıyor!")); return; }
             MergeKittens(a, other);
         }
 
@@ -378,7 +378,7 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.3f);
             Sfx.Play("pop", 1.3f);
             Say(m, "Topum!", UIKit.Orange);
-            GM.Toast("Minik Çırak topuyla oynuyor, masada gezmez. 'Yaptır' dersen yine koşar.", UIKit.Orange, 4.5f);
+            GM.Toast(L.T("Minik Çırak topuyla oynuyor, masada gezmez. 'Yaptır' dersen yine koşar."), UIKit.Orange, 4.5f);
             GM.MarkDirty();
         }
 
@@ -390,8 +390,8 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.35f);
             FX.Burst(B.FxLayer, m.Pos, new Color(0.8f, 0.5f, 1f), 12);
             Sfx.Play("gift", 1.2f);
-            Say(m, "Burası benim!", UIKit.Orange);
-            GM.Toast(GM.UstaDisplayName(m.color) + " yastığına kuruldu! Buradan malzeme getirir, yavrulara tıslar, yavru eğitir.", UIKit.Orange, 5f);
+            Say(m, L.T("Burası benim!"), UIKit.Orange);
+            GM.Toast(L.F("{0} yastığına kuruldu! Buradan malzeme getirir, yavrulara tıslar, yavru eğitir.", GM.UstaDisplayName(m.color)), UIKit.Orange, 5f);
             GM.ShowKittenInfo(m);
             GM.MarkDirty();
         }
@@ -503,8 +503,8 @@ namespace KaraPati
         {
             bool gift = ProduceNear(a, 2);
             GM.Toast(gift
-                ? "Çırak kedi vedalaştı ve sana bir hediye bıraktı. Yavrular yeniden gelebilir!"
-                : "Çırak kedi vedalaştı. Yavrular yeniden gelebilir!", UIKit.Orange, 5f);
+                ? L.T("Çırak kedi vedalaştı ve sana bir hediye bıraktı. Yavrular yeniden gelebilir!")
+                : L.T("Çırak kedi vedalaştı. Yavrular yeniden gelebilir!"), UIKit.Orange, 5f);
             if (Selected == a) { Selected = null; GM.ShowInfo(null); }
             a.Leave();
             spawnTimer = 30f;
@@ -514,8 +514,8 @@ namespace KaraPati
         public void Promote(KittenAgent a)
         {
             if (!a || a.level != 2 || a.IsGone) return;
-            if (HasMaster) { GM.Toast("Dükkânda zaten bir Usta Kedi var."); return; }
-            if (UstaAway) { GM.Toast("Usta Kedi keşifte. Dönünce yine burada olacak."); return; }
+            if (HasMaster) { GM.Toast(L.T("Dükkânda zaten bir Usta Kedi var.")); return; }
+            if (UstaAway) { GM.Toast(L.T("Usta Kedi keşifte. Dönünce yine burada olacak.")); return; }
             if (!GM.TrySpendGold(PromoteCost)) return;
             var pos = a.Pos;
             int col = a.color;
@@ -525,13 +525,13 @@ namespace KaraPati
             Tween.Pop(m.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.8f, 0.5f, 1f), 14);
             Select(m);
-            GM.Toast("Usta Kedi! Onu tezgahın sağındaki mor yastığa sürükle, oradan çalışsın. Adını ve rengini ana ekrandaki Usta Kedim'den seçebilirsin.", UIKit.Orange, 7f);
+            GM.Toast(L.T("Usta Kedi! Onu tezgahın sağındaki mor yastığa sürükle, oradan çalışsın. Adını ve rengini ana ekrandaki Usta Kedim'den seçebilirsin."), UIKit.Orange, 7f);
             EnsureHouse();
             GM.GiveSticker("c_usta", false);
             GM.OnBoardChanged();
             GM.UstaPromoted();   // "!" on the Usta Kedim button: name it and pick a colour there
             if (GM.FirstTime("usta_cushion"))
-                GM.Tut?.CatHint(m, B.CushionRect, "Usta'yı tezgahtaki mor yastığına sürükle: oradan malzeme getirir, yavruları kovar.", () => m && m.homed);
+                GM.Tut?.CatHint(m, B.CushionRect, L.T("Usta'yı tezgahtaki mor yastığına sürükle: oradan malzeme getirir, yavruları kovar."), () => m && m.homed);
         }
 
         /// <summary>There is a Master Cat: in the shop or away on a trip.</summary>
@@ -559,7 +559,7 @@ namespace KaraPati
             else if (UstaAway) TripColor = col;
             else return;
             Sfx.Play("pop");
-            GM.Toast(GM.UstaDisplayName(col) + " yeni rengini çok sevdi!", UIKit.Orange);
+            GM.Toast(L.F("{0} yeni rengini çok sevdi!", GM.UstaDisplayName(col)), UIKit.Orange);
             GM.SeenUsta();
             GM.RefreshUstaViews();
             GM.MarkDirty();
@@ -572,7 +572,7 @@ namespace KaraPati
             Deselect();
             a.Leave();
             GM.AddGold(3);
-            GM.Toast("Yavru yeni ailesine kavuştu! +3 altın");
+            GM.Toast(L.T("Yavru yeni ailesine kavuştu! +3 altın"));
             GM.ShowInfo(null);
             GM.OnBoardChanged();
         }
@@ -735,7 +735,7 @@ namespace KaraPati
             if (!FindHouse(out var hc)) return false;
             if ((BoardController.CellPos(hc) - a.Pos).sqrMagnitude > 80f * 80f) return false;   // not dropped on the house
             var h = B.Get(hc);
-            if (h.cats >= HouseSlots) { GM.Toast("Kedi Evi dolu! Dokun, içindekiler Çırak olsun."); return true; }
+            if (h.cats >= HouseSlots) { GM.Toast(L.T("Kedi Evi dolu! Dokun, içindekiler Çırak olsun.")); return true; }
             if ((h.catCols ?? "").Length < h.cats) h.catCols = (h.catCols ?? "").PadRight(h.cats, '0');
             h.catCols = (h.catCols ?? "") + a.color;
             h.cats = h.catCols.Length;
@@ -745,8 +745,8 @@ namespace KaraPati
             if (v) Tween.Punch(v.rt, 0.15f, 0.3f);
             Sfx.Play("paw", 1.25f, 0.7f);
             GM.Toast(h.cats >= HouseSlots
-                ? "İki yavru da evde! Kedi Evi'ne dokun: Çırak Kedi çıksın."
-                : "Yavru Kedi Evi'ne girdi. Bir yavru daha getir!", UIKit.Orange, 4f);
+                ? L.T("İki yavru da evde! Kedi Evi'ne dokun: Çırak Kedi çıksın.")
+                : L.T("Yavru Kedi Evi'ne girdi. Bir yavru daha getir!"), UIKit.Orange, 4f);
             GM.OnBoardChanged();
             return true;
         }
@@ -770,7 +770,7 @@ namespace KaraPati
             B.RefreshView(hc);
             GM.AddGold(3);
             Sfx.Play("coin");
-            GM.Toast(KittenColors.Name(col) + " yavru yeni ailesine kavuştu! +3 altın");
+            GM.Toast(L.F("{0} yavru yeni ailesine kavuştu! +3 altın", KittenColors.Name(col)));
             if (B.Selected == hc) GM.ShowInfo(h);   // keep the "1/2" in the info bar up to date
             GM.OnBoardChanged();
         }
@@ -780,8 +780,8 @@ namespace KaraPati
         {
             var h = B.Get(hc);
             if (h == null || !Chains.IsHouse(h.chain)) return;
-            if (h.cats < HouseSlots) { GM.Toast("Evde " + h.cats + "/" + HouseSlots + " yavru var. İki yavru olunca Çırak çıkar."); return; }
-            if (HasApprentice) { GM.Toast("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın."); return; }
+            if (h.cats < HouseSlots) { GM.Toast(L.F("Evde {0}/{1} yavru var. İki yavru olunca Çırak çıkar.", h.cats, HouseSlots)); return; }
+            if (HasApprentice) { GM.Toast(L.T("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın.")); return; }
             string cols = h.catCols ?? "";
             int col = cols.Length > 0 ? cols[Random.Range(0, cols.Length)] - '0' : KittenColors.Pick();
             h.cats = 0;
@@ -816,10 +816,10 @@ namespace KaraPati
         /// <summary>Why the Master can't train right now, or null if it can.</summary>
         public string TrainBlock()
         {
-            if (UstaAway) return "Usta keşifte. Dönünce eğitebilir.";
-            if (!Master()) return "Eğitim için masada bir Usta Kedi lazım.";
-            if (Trainee()) return "Usta zaten bir yavruyu eğitiyor.";
-            if (HasMini) return "Masada zaten bir Minik Çırak var.";
+            if (UstaAway) return L.T("Usta keşifte. Dönünce eğitebilir.");
+            if (!Master()) return L.T("Eğitim için masada bir Usta Kedi lazım.");
+            if (Trainee()) return L.T("Usta zaten bir yavruyu eğitiyor.");
+            if (HasMini) return L.T("Masada zaten bir Minik Çırak var.");
             return null;
         }
 
@@ -860,9 +860,9 @@ namespace KaraPati
             k.trainUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(TrainMinutes).Ticks;
             k.Sit(m.Pos + new Vector2(side * 165f, -10f), -side);   // room between them for the yarn ball
             Tween.Pop(k.rt, 0.3f);
-            Say(m, "Bak ve öğren!", UIKit.Cream);
+            Say(m, L.T("Bak ve öğren!"), UIKit.Cream);
             Sfx.Play("paw", 0.9f, 0.7f);
-            GM.Toast("Usta, " + KittenColors.Name(k.color) + " yavruyu eğitiyor. " + (int)TrainMinutes + " dakika sonra Minik Çırak olacak!", UIKit.Orange, 5f);
+            GM.Toast(L.F("Usta, {0} yavruyu eğitiyor. {1} dakika sonra Minik Çırak olacak!", KittenColors.Name(k.color), (int)TrainMinutes), UIKit.Orange, 5f);
             GM.MarkDirty();
         }
 
@@ -878,12 +878,12 @@ namespace KaraPati
             mini.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(MiniHours).Ticks;
             Tween.Pop(mini.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
-            Say(mini, "Artık Minik Çıraksın!", UIKit.Orange);
+            Say(mini, L.T("Artık Minik Çıraksın!"), UIKit.Orange);
             if (GM.FirstTime("mini_toy"))
-                GM.Tut?.CatHint(mini, B.ToyBall.rectTransform, "Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle.", () => mini && mini.parked);
+                GM.Tut?.CatHint(mini, B.ToyBall.rectTransform, L.T("Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle."), () => mini && mini.parked);
             if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
             Sfx.Play("levelup", 1.3f);
-            GM.Toast(KittenColors.Name(col) + " Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", UIKit.Orange, 6f);
+            GM.Toast(L.F("{0} Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", KittenColors.Name(col)), UIKit.Orange, 6f);
             GM.OnBoardChanged();
         }
 
@@ -940,9 +940,9 @@ namespace KaraPati
         void MiniFarewell(KittenAgent a)
         {
             if (Selected == a) { Selected = null; GM.ShowInfo(null); }
-            Say(a, "Hoşça kal!", UIKit.Cream);
+            Say(a, L.T("Hoşça kal!"), UIKit.Cream);
             a.Leave();
-            GM.Toast("Minik Çırak'ın süresi doldu, el salladı. Usta yeni bir yavru eğitebilir.", UIKit.Orange, 4.5f);
+            GM.Toast(L.T("Minik Çırak'ın süresi doldu, el salladı. Usta yeni bir yavru eğitebilir."), UIKit.Orange, 4.5f);
             GM.MarkDirty();
         }
 
@@ -990,7 +990,7 @@ namespace KaraPati
             }
             miniJob = null;
             if (mini) { mini.Idle(1.5f); Say(mini, "Peki!", UIKit.Cream); }
-            GM.Toast("Minik Çırak işi bıraktı, malzemeler serbest.");
+            GM.Toast(L.T("Minik Çırak işi bıraktı, malzemeler serbest."));
             GM.OnBoardChanged();
         }
         MiniJob miniJob;
@@ -1001,11 +1001,11 @@ namespace KaraPati
         public void MiniBrew(Recipe r)
         {
             var mini = Mini();
-            if (!mini) { GM.Toast("Önce Usta bir yavruyu Minik Çırak olarak eğitmeli."); return; }
-            if (miniJob != null) { GM.Toast("Minik Çırak şu an başka bir tarif için koşturuyor."); return; }
+            if (!mini) { GM.Toast(L.T("Önce Usta bir yavruyu Minik Çırak olarak eğitmeli.")); return; }
+            if (miniJob != null) { GM.Toast(L.T("Minik Çırak şu an başka bir tarif için koşturuyor.")); return; }
             if (!B.FindFirst(d => d.chain == Chains.Simya, out var pc)) return;
             var pot = B.Get(pc);
-            if (pot.brew > 0) { GM.Toast(pot.BrewReady ? "Kazanda hazır iksir var. Önce onu al." : "Kazan şu an kaynıyor, bitmesini bekle."); return; }
+            if (pot.brew > 0) { GM.Toast(pot.BrewReady ? L.T("Kazanda hazır iksir var. Önce onu al.") : L.T("Kazan şu an kaynıyor, bitmesini bekle.")); return; }
 
             var job = new MiniJob { recipe = r };
             job.needs.Add(new ReqSave { chain = r.aChain, level = r.aLevel });
@@ -1014,7 +1014,7 @@ namespace KaraPati
             {
                 // one ingredient may already be waiting in the pot
                 int idx = job.needs.FindIndex(q => Recipes.Key(q.chain, q.level) == pot.mix);
-                if (idx < 0) { GM.Toast("Kazanda bu tarife uymayan bir malzeme var. Kazanı seçip 'Geri Al'a bas."); return; }
+                if (idx < 0) { GM.Toast(L.T("Kazanda bu tarife uymayan bir malzeme var. Kazanı seçip 'Geri Al'a bas.")); return; }
                 job.needs.RemoveAt(idx);
             }
 
@@ -1032,7 +1032,7 @@ namespace KaraPati
                 mini.ShowWant(missing, 3f);
                 Tween.Punch(mini.rt, 0.15f, 0.3f);
                 Sfx.Play("error");
-                GM.Toast("Masada eksik: " + string.Join(", ", missingNames), new Color(1f, 0.7f, 0.6f));
+                GM.Toast(L.F("Masada eksik: {0}", string.Join(", ", missingNames)), new Color(1f, 0.7f, 0.6f));
                 return;
             }
             miniJob = job;
@@ -1083,7 +1083,7 @@ namespace KaraPati
                     if (!FindIngredient(q, null, out miniJob.target))
                     {
                         mini.ShowWant(new List<Sprite> { ProcArt.Item(q.chain, q.level) }, 3f);
-                        GM.Toast("Minik Çırak " + Chains.Name(q.chain, q.level) + " bulamadı.", new Color(1f, 0.7f, 0.6f));
+                        GM.Toast(L.F("Minik Çırak {0} bulamadı.", Chains.Name(q.chain, q.level)), new Color(1f, 0.7f, 0.6f));
                         ReleaseReservations();
                         miniJob = null;
                         mini.Idle(1.5f);
@@ -1124,7 +1124,7 @@ namespace KaraPati
             {
                 // the pot changed meanwhile: put the ingredient back on the table
                 if (B.NearestEmpty(pc, out var e)) B.SpawnFromPos(mini.Pos, e, new ItemData(item.chain, item.level));
-                GM.Toast("Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı.");
+                GM.Toast(L.T("Kazan şu an malzeme almıyor, Minik Çırak malzemeyi masaya bıraktı."));
                 ReleaseReservations();
                 miniJob = null;
                 mini.Idle(1.5f);
@@ -1149,7 +1149,7 @@ namespace KaraPati
         void ApprenticeBorn(KittenAgent c)
         {
             int col = Mathf.Clamp(c.color, 0, KittenColors.Count - 1);
-            GM.Toast(KittenColors.Names[col] + " Çırak doğdu! " + KittenColors.Talents[col], UIKit.Orange, 6f);
+            GM.Toast(L.F("{0} Çırak doğdu!", KittenColors.Names[col]) + " " + KittenColors.Talents[col], UIKit.Orange, 6f);
             Sfx.Play("levelup", 1.2f);
             GM.GiveSticker("c_cirak", false);
             GM.GiveSticker("r" + col);   // "Renkli Çıraklar" album page
@@ -1215,7 +1215,7 @@ namespace KaraPati
                 // the kitten notices and scampers away (unless it's asleep)
                 if (chaseTarget.CanAct)
                     chaseTarget.WalkTo(chaseTarget.Pos + (chaseTarget.Pos - ap.Pos).normalized * 260f);
-                Say(ap, "Kışt!", UIKit.Orange);
+                Say(ap, L.T("Kışt!"), UIKit.Orange);
                 Sfx.Play("paw", 0.9f, 0.6f);
             }
 
@@ -1231,7 +1231,7 @@ namespace KaraPati
                 if (!chaseHintShown)
                 {
                     chaseHintShown = true;
-                    GM.Toast("Çırak Kedi yavruyu kovaladı! Sonra kazanının başına döner, iksiri hızlı karıştırır.", UIKit.Orange, 5f);
+                    GM.Toast(L.T("Çırak Kedi yavruyu kovaladı! Sonra kazanının başına döner, iksiri hızlı karıştırır."), UIKit.Orange, 5f);
                 }
             }
         }
@@ -1278,13 +1278,13 @@ namespace KaraPati
             {
                 if (!m || !Shooable(k)) return;   // the player rescued it in time
                 Tween.Punch(m.rt, 0.2f, 0.3f);
-                Say(m, "Tısss!", new Color(0.85f, 0.7f, 1f));
+                Say(m, L.T("Tısss!"), new Color(0.85f, 0.7f, 1f));
                 Sfx.Play("hiss");
                 Scare(k);
                 if (!hissHintShown)
                 {
                     hissHintShown = true;
-                    GM.Toast("Usta Kedi tısladı, yavru masadan atladı! Yavruları Kedi Evi'ne sürüklersen kovalanmazlar.", UIKit.Orange, 5f);
+                    GM.Toast(L.T("Usta Kedi tısladı, yavru masadan atladı! Yavruları Kedi Evi'ne sürüklersen kovalanmazlar."), UIKit.Orange, 5f);
                 }
             });
         }
@@ -1335,8 +1335,8 @@ namespace KaraPati
             Sfx.Play("brew", 1.3f, 0.6f);
             var pot = B.Get(best);
             GM.Toast(pot != null && pot.Brewing
-                ? "Çırak kazanı karıştırıyor: iksir 2 kat hızlı pişiyor!"
-                : "Çırak kazanın başında bekliyor. İksir koyunca 2 kat hızlı karıştıracak.", UIKit.Orange, 4.5f);
+                ? L.T("Çırak kazanı karıştırıyor: iksir 2 kat hızlı pişiyor!")
+                : L.T("Çırak kazanın başında bekliyor. İksir koyunca 2 kat hızlı karıştıracak."), UIKit.Orange, 4.5f);
             GM.ShowKittenInfo(a);
             GM.MarkDirty();
         }
@@ -1371,18 +1371,18 @@ namespace KaraPati
         public void SendOnTrip(int k)
         {
             var m = Master();
-            if (!m) { GM.Toast("Masada Usta Kedi yok."); return; }
+            if (!m) { GM.Toast(L.T("Masada Usta Kedi yok.")); return; }
             if (m.state == KittenAgent.State.Napping || m.IsHeld) return;
-            if (Trainee()) { GM.Toast("Usta şu an bir yavruyu eğitiyor. Eğitim bitince keşfe çıkabilir."); return; }
+            if (Trainee()) { GM.Toast(L.T("Usta şu an bir yavruyu eğitiyor. Eğitim bitince keşfe çıkabilir.")); return; }
             if (!GM.TrySpendEnergy(Expeditions.Energy[k])) return;
             if (Selected == m) { Selected = null; GM.ShowInfo(null); }
             Trip = k;
             TripColor = m.color;
             TripUntil = DateTime.UtcNow.Ticks + TimeSpan.FromMinutes(Expeditions.Minutes[k]).Ticks;
-            Say(m, "Görüşürüz!", UIKit.Cream);
+            Say(m, L.T("Görüşürüz!"), UIKit.Cream);
             m.Leave();
             Sfx.Play("whoosh");
-            GM.Toast(GM.UstaDisplayName(m.color) + " " + Expeditions.Names[k] + " için yola çıktı. " + Expeditions.Duration(k) + " sonra dönecek.", UIKit.Orange, 4.5f);
+            GM.Toast(L.F("{0} {1} için yola çıktı. {2} sonra dönecek.", GM.UstaDisplayName(m.color), Expeditions.Names[k], Expeditions.Duration(k)), UIKit.Orange, 4.5f);
             GM.RefreshTripButton();
             GM.ShowInfo(null);
             GM.RefreshUstaViews();
@@ -1395,7 +1395,7 @@ namespace KaraPati
             if (Trip < 0 || now < TripUntil || readyAnnounced) return;
             readyAnnounced = true;
             if (FindHouse(out var hc)) B.RefreshView(hc);
-            GM.Toast(GM.UstaDisplayName(TripColor) + " döndü! Kedi Evi'nde sandığıyla bekliyor. Eve dokun!", UIKit.Orange, 5f);
+            GM.Toast(L.F("{0} döndü! Kedi Evi'nde sandığıyla bekliyor. Eve dokun!", GM.UstaDisplayName(TripColor)), UIKit.Orange, 5f);
             GM.RefreshUstaViews();
             Sfx.Play("ready");
         }
@@ -1426,9 +1426,9 @@ namespace KaraPati
         {
             if (Trip < 0) return "";
             var left = TimeSpan.FromTicks(Math.Max(0L, TripUntil - DateTime.UtcNow.Ticks));
-            string time = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
-            if (TripReady) return "Usta Kedi döndü! Kedi Evi'ne dokun, sandığı açılsın.";
-            return "Usta Kedi " + Expeditions.Names[Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1)] + " yolunda: " + time + " sonra döner.";
+            string time = left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds);
+            if (TripReady) return L.T("Usta Kedi döndü! Kedi Evi'ne dokun, sandığı açılsın.");
+            return L.F("Usta Kedi {0} yolunda: {1} sonra döner.", Expeditions.Names[Mathf.Clamp(Trip, 0, Expeditions.Names.Length - 1)], time);
         }
 
         void ReturnFromTrip(Vector2 origin)
@@ -1468,14 +1468,14 @@ namespace KaraPati
                 else if (GM.Storage.Count < GM.StorageSlots) { GM.Storage.Add(item); stored++; }
                 else { GM.AddGold(Chains.Value(item.level)); sold++; }
             }
-            var found = new List<string> { Expeditions.Items[k] + " malzeme" };
-            if (Expeditions.Gold[k] > 0) { GM.AddGold(Expeditions.Gold[k]); found.Add(Expeditions.Gold[k] + " altın"); }
-            if (Expeditions.Stamps[k] > 0) { GM.AddStamps(Expeditions.Stamps[k]); found.Add(Expeditions.Stamps[k] + " Pati Mührü"); }
+            var found = new List<string> { L.F("{0} malzeme", Expeditions.Items[k]) };
+            if (Expeditions.Gold[k] > 0) { GM.AddGold(Expeditions.Gold[k]); found.Add(L.F("{0} altın", Expeditions.Gold[k])); }
+            if (Expeditions.Stamps[k] > 0) { GM.AddStamps(Expeditions.Stamps[k]); found.Add(L.F("{0} Pati Mührü", Expeditions.Stamps[k])); }
             if (Expeditions.Ornament[k])
             {
                 string id = Decor.ItemId(Random.Range(0, Decor.Slots), Random.Range(1, Decor.Variants));
                 GM.GiftTowerDecor(id);
-                found.Add("kule için " + Decor.ItemName(id));
+                found.Add(L.F("kule için {0}", Decor.ItemName(id)));
             }
             if (Random.value < Expeditions.StickerChance[k])
             {
@@ -1484,10 +1484,10 @@ namespace KaraPati
             }
 
             string where = stored > 0 || sold > 0
-                ? " Masa doluydu: " + (stored > 0 ? stored + " tanesi depoya" : "") + (stored > 0 && sold > 0 ? ", " : "") + (sold > 0 ? sold + " tanesi altına" : "") + " gitti."
+                ? " " + L.F("Masa doluydu: {0} gitti.", (stored > 0 ? L.F("{0} tanesi depoya", stored) : "") + (stored > 0 && sold > 0 ? ", " : "") + (sold > 0 ? L.F("{0} tanesi altına", sold) : ""))
                 : "";
             Sfx.Play("gift");
-            GM.ShowDialog(GM.UstaDisplayName(m.color), Expeditions.Names[k] + " bitti, miyav! Getirdiklerim: " + string.Join(", ", found) + "." + where);
+            GM.ShowDialog(GM.UstaDisplayName(m.color), L.F("{0} bitti, miyav! Getirdiklerim: {1}.", Expeditions.Names[k], string.Join(", ", found)) + where);
             GM.RefreshHud();
             if (Selected == null) GM.ShowInfo(null);
             GM.OnBoardChanged();

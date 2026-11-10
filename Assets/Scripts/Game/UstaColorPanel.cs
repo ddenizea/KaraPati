@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace KaraPati
 {
     /// <summary>
-    /// "Usta Kedim": opened from the round button on the home screen. Name the Master Cat and pick its colour
+    /// L.T("Usta Kedim"): opened from the round button on the home screen. Name the Master Cat and pick its colour
     /// (free, any time; it only changes the look). Also shows where the Master is right now.
     /// </summary>
     public class UstaColorPanel : MonoBehaviour
@@ -23,7 +23,7 @@ namespace KaraPati
         static readonly Color Ink = new Color(0.32f, 0.2f, 0.12f);
         public const int NameLimit = 12;
 
-        public static string ColorName(int col) => col == KittenColors.Gece ? "Siyah" : KittenColors.Name(col);
+        public static string ColorName(int col) => col == KittenColors.Gece ? L.T("Siyah") : KittenColors.Name(col);
 
         public void Build()
         {
@@ -47,7 +47,7 @@ namespace KaraPati
             head.rectTransform.pivot = new Vector2(0.5f, 1f);
             head.rectTransform.anchoredPosition = Vector2.zero;
             head.rectTransform.sizeDelta = new Vector2(0f, 120f);
-            var title = UIKit.Txt("Title", head.transform, "Usta Kedim", 52, Color.white, TextAnchor.MiddleCenter, true);
+            var title = UIKit.Txt("Title", head.transform, L.T("Usta Kedim"), 52, Color.white, TextAnchor.MiddleCenter, true);
             title.fontStyle = FontStyle.Bold;
             UIKit.Stretch(title.rectTransform, 30f, 120f, 10f, 10f);
             var close = UIKit.Btn("Close", head.transform, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
@@ -60,7 +60,7 @@ namespace KaraPati
             preview.rectTransform.sizeDelta = new Vector2(270f, 270f);
 
             // name
-            var nameLbl = UIKit.Txt("NameLbl", panel, "Adı", 30, new Color(0.45f, 0.32f, 0.22f), TextAnchor.MiddleLeft, false);
+            var nameLbl = UIKit.Txt("NameLbl", panel, L.T("Adı"), 30, new Color(0.45f, 0.32f, 0.22f), TextAnchor.MiddleLeft, false);
             nameLbl.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(390f, -180f), new Vector2(480f, 40f));
             nameField = BuildInput(panel);
             ((RectTransform)nameField.transform).Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(390f, -240f), new Vector2(500f, 84f));
@@ -71,7 +71,7 @@ namespace KaraPati
             status.rectTransform.pivot = new Vector2(0f, 1f);
             status.rectTransform.anchoredPosition = new Vector2(390f, -300f);
 
-            var colLbl = UIKit.Txt("ColLbl", panel, "Rengi  <size=24>(istediğin zaman ücretsiz değiştirebilirsin)</size>", 30, new Color(0.45f, 0.32f, 0.22f), TextAnchor.MiddleLeft, false);
+            var colLbl = UIKit.Txt("ColLbl", panel, L.T("Rengi  <size=24>(istediğin zaman ücretsiz değiştirebilirsin)</size>"), 30, new Color(0.45f, 0.32f, 0.22f), TextAnchor.MiddleLeft, false);
             colLbl.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 0.5f)).At(new Vector2(40f, -480f), new Vector2(860f, 46f));
 
             grid = UIKit.Rect("Grid", panel);
@@ -89,7 +89,7 @@ namespace KaraPati
             var txt = UIKit.Txt("Text", bg.transform, "", 38, Ink, TextAnchor.MiddleLeft, false);
             txt.supportRichText = false;
             UIKit.Stretch(txt.rectTransform, 22f, 22f, 6f, 6f);
-            var ph = UIKit.Txt("Placeholder", bg.transform, "Bir isim yaz...", 34, new Color(0.32f, 0.2f, 0.12f, 0.4f), TextAnchor.MiddleLeft, false);
+            var ph = UIKit.Txt("Placeholder", bg.transform, L.T("Bir isim yaz..."), 34, new Color(0.32f, 0.2f, 0.12f, 0.4f), TextAnchor.MiddleLeft, false);
             ph.fontStyle = FontStyle.Italic;
             UIKit.Stretch(ph.rectTransform, 22f, 22f, 6f, 6f);
             field.textComponent = txt;
@@ -104,7 +104,7 @@ namespace KaraPati
         {
             if (!GM.Cats.HasAnyMaster)
             {
-                GM.Toast("Bir Çırak'ı Usta yapınca burada seni bekleyecek.");
+                GM.Toast(L.T("Bir Çırak'ı Usta yapınca burada seni bekleyecek."));
                 return;
             }
             Sfx.Play("page");
@@ -135,15 +135,15 @@ namespace KaraPati
             string who = GM.UstaDisplayName(col);
             if (cats.UstaAway)
             {
-                if (cats.TripReady) status.text = who + " keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.";
+                if (cats.TripReady) status.text = L.F("{0} keşiften döndü!\nKedi Evi'nde sandığıyla seni bekliyor.", who);
                 else
                 {
                     var left = TimeSpan.FromTicks(Math.Max(0L, cats.TripUntil - DateTime.UtcNow.Ticks));
-                    string t = left.TotalHours >= 1.0 ? (int)left.TotalHours + " sa " + left.Minutes + " dk" : left.Minutes + " dk " + left.Seconds + " sn";
-                    status.text = who + " keşifte.\nDönüşüne " + t + " var.";
+                    string t = left.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)left.TotalHours, left.Minutes) : L.F("{0} dk {1} sn", left.Minutes, left.Seconds);
+                    status.text = L.F("{0} keşifte.\nDönüşüne {1} var.", who, t);
                 }
             }
-            else status.text = who + " dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.";
+            else status.text = L.F("{0} dükkânda çalışıyor.\nAkşamları kulede minderinde uyur.", who);
         }
 
         void Fill()

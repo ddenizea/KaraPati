@@ -5,7 +5,7 @@ namespace KaraPati
 {
     /// <summary>
     /// The cat house window: the two places inside, each kitten with "Sahiplendir" (send it to a family, so a
-    /// different colour can come) and "Eğit" (to the Master, becomes a Mini Apprentice), and "Çırak Yap" at the bottom.
+    /// different colour can come) and "Eğit" (to the Master, becomes a Mini Apprentice), and L.T("Çırak Yap") at the bottom.
     /// </summary>
     public class HousePanel : MonoBehaviour
     {
@@ -44,7 +44,7 @@ namespace KaraPati
             head.rectTransform.sizeDelta = new Vector2(0f, 130f);
             var icon = UIKit.Img("Icon", head.transform, ProcArt.Item(Chains.KediEvi, 1), Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(24f, 0f), new Vector2(110f, 110f));
-            var title = UIKit.Txt("Title", head.transform, "Kedi Evi", 56, Color.white, TextAnchor.MiddleCenter, true);
+            var title = UIKit.Txt("Title", head.transform, L.T("Kedi Evi"), 56, Color.white, TextAnchor.MiddleCenter, true);
             title.fontStyle = FontStyle.Bold;
             UIKit.Stretch(title.rectTransform, 140f, 140f, 10f, 10f);
             var close = UIKit.Btn("Close", head.transform, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
@@ -58,7 +58,7 @@ namespace KaraPati
             hint = UIKit.Txt("Hint", panel, "", 28, Dim, TextAnchor.MiddleCenter, false);
             hint.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 150f), new Vector2(860f, 70f));
 
-            makeBtn = UIKit.Btn("Make", panel, "Çırak Yap", UIKit.Green, () =>
+            makeBtn = UIKit.Btn("Make", panel, L.T("Çırak Yap"), UIKit.Green, () =>
             {
                 GM.Cats.MakeApprenticeFromHouse(house);
                 Close();
@@ -98,7 +98,7 @@ namespace KaraPati
 
                 if (i >= cols.Length)
                 {
-                    var empty = UIKit.Txt("Empty", rt, "Boş\n\n<size=26>Masadaki bir yavruyu\nKedi Evi'ne sürükle.</size>", 40, Dim, TextAnchor.MiddleCenter, false);
+                    var empty = UIKit.Txt("Empty", rt, L.T("Boş\n\n<size=26>Masadaki bir yavruyu\nKedi Evi'ne sürükle.</size>"), 40, Dim, TextAnchor.MiddleCenter, false);
                     empty.fontStyle = FontStyle.Bold;
                     UIKit.Stretch(empty.rectTransform, 20f, 20f, 20f, 20f);
                     continue;
@@ -111,14 +111,14 @@ namespace KaraPati
                 name.fontStyle = FontStyle.Bold;
                 name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, -245f), new Vector2(390f, 46f));
 
-                var adopt = UIKit.Btn("Adopt", rt, "Sahiplendir  +3", UIKit.Orange, () =>
+                var adopt = UIKit.Btn("Adopt", rt, L.T("Sahiplendir  +3"), UIKit.Orange, () =>
                 {
                     GM.Cats.AdoptFromHouse(house, idx);
                     Fill();
                 }, 30);
                 ((RectTransform)adopt.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 120f), new Vector2(350f, 84f));
 
-                var train = UIKit.Btn("Train", rt, "Usta'ya Eğit", trainWhy == null ? new Color(0.42f, 0.28f, 0.6f) : UIKit.Disabled, () =>
+                var train = UIKit.Btn("Train", rt, L.T("Usta'ya Eğit"), trainWhy == null ? new Color(0.42f, 0.28f, 0.6f) : UIKit.Disabled, () =>
                 {
                     var why = GM.Cats.TrainBlock();
                     if (why != null) { GM.Toast(why); return; }
@@ -132,9 +132,9 @@ namespace KaraPati
             bool canMake = full && !GM.Cats.HasApprentice;
             makeBtn.GetComponent<Image>().color = canMake ? UIKit.Green : UIKit.Disabled;
             makeBtn.interactable = canMake;
-            hint.text = !full ? "İki yavru toplanınca birleşip Çırak Kedi olurlar."
-                : GM.Cats.HasApprentice ? "Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın."
-                : "İki yavru hazır! Çırak'ın rengi ikisinden biri olur.";
+            hint.text = !full ? L.T("İki yavru toplanınca birleşip Çırak Kedi olurlar.")
+                : GM.Cats.HasApprentice ? L.T("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın.")
+                : L.T("İki yavru hazır! Çırak'ın rengi ikisinden biri olur.");
         }
     }
 }

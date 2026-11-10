@@ -170,6 +170,21 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Dil/Çevrilmemiş Metinleri Göster (Play modunda)")]
+        static void ShowMissingTexts()
+        {
+            // only texts that were on screen in a non-Turkish language this session; run Tools/loc_extract.py for the full table
+            if (L.Missing.Count == 0) Debug.Log("KaraPati: bu oturumda çevrilmemiş metin görülmedi (dil: " + L.Lang + ").");
+            else Debug.LogWarning("KaraPati: çevirisi olmayan " + L.Missing.Count + " metin:\n" + string.Join("\n", L.Missing));
+        }
+
+        [MenuItem("KaraPati/Test/Oyun Odası (kilitsiz, haklar yenilenir) (Play modunda)")]
+        static void GameRoomTest()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.DebugGameRoom();
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         // ------------------------------------------------------------ save backup for testing
         // Test on the real save, then put it back exactly as it was. The file lives in UserSettings/,
         // which Git ignores, so it never ends up on GitHub.

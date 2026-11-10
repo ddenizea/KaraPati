@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>"Usta'yı Keşfe Gönder": pick one of three trips. Longer trips bring better finds.</summary>
+    /// <summary>L.T("Usta'yı Keşfe Gönder"): pick one of three trips. Longer trips bring better finds.</summary>
     public class ExpeditionPanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
@@ -31,10 +31,10 @@ namespace KaraPati
             var ink = new Color(0.3f, 0.18f, 0.1f);
             var cat = UIKit.Img("Usta", panel, ProcArt.SideCat(3, 4), Color.white);
             cat.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -20f), new Vector2(120f, 120f));
-            var title = UIKit.Txt("Title", panel, "Usta'yı Keşfe Gönder", 50, ink, TextAnchor.MiddleLeft, false);
+            var title = UIKit.Txt("Title", panel, L.T("Usta'yı Keşfe Gönder"), 50, ink, TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(160f, -30f), new Vector2(640f, 64f));
-            var sub = UIKit.Txt("Sub", panel, "Enerji harcar. Keşifteyken malzeme getirmez, yavrulara tıslamaz.", 26, new Color(0.4f, 0.28f, 0.2f), TextAnchor.MiddleLeft, false);
+            var sub = UIKit.Txt("Sub", panel, L.T("Enerji harcar. Keşifteyken malzeme getirmez, yavrulara tıslamaz."), 26, new Color(0.4f, 0.28f, 0.2f), TextAnchor.MiddleLeft, false);
             sub.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(162f, -94f), new Vector2(700f, 40f));
 
             var close = UIKit.Btn("Close", panel, "X", new Color(0.75f, 0.3f, 0.35f), Close, 44);
@@ -68,13 +68,13 @@ namespace KaraPati
             var dur = UIKit.Txt("Dur", rt, Expeditions.Duration(k), 34, UIKit.Orange, TextAnchor.MiddleRight, false);
             dur.fontStyle = FontStyle.Bold;
             dur.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-30f, -24f), new Vector2(200f, 60f));
-            var reward = UIKit.Txt("Reward", rt, "Getirir: " + Expeditions.Rewards(k), 28, new Color(0.35f, 0.25f, 0.2f), TextAnchor.UpperLeft, false);
+            var reward = UIKit.Txt("Reward", rt, L.F("Getirir: {0}", Expeditions.Rewards(k)), 28, new Color(0.35f, 0.25f, 0.2f), TextAnchor.UpperLeft, false);
             reward.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(36f, -100f), new Vector2(560f, 140f));
 
             int kk = k;
-            var go = UIKit.Btn("Go", rt, "Gönder", UIKit.Green, () =>
+            var go = UIKit.Btn("Go", rt, L.T("Gönder"), UIKit.Green, () =>
             {
-                if (GM.Energy < Expeditions.Energy[kk]) { GM.Toast("Bu keşif için " + Expeditions.Energy[kk] + " enerji gerekiyor."); Sfx.Play("error"); return; }
+                if (GM.Energy < Expeditions.Energy[kk]) { GM.Toast(L.F("Bu keşif için {0} enerji gerekiyor.", Expeditions.Energy[kk])); Sfx.Play("error"); return; }
                 Close();
                 GM.Cats.SendOnTrip(kk);
             }, 34);

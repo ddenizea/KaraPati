@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>"Tarif Defteri": every alchemy recipe, what goes in, how long it brews and what ghosts pay for it.</summary>
+    /// <summary>L.T("Tarif Defteri"): every alchemy recipe, what goes in, how long it brews and what ghosts pay for it.</summary>
     public class RecipePanel : MonoBehaviour
     {
         GameManager GM => GameManager.I;
@@ -30,7 +30,7 @@ namespace KaraPati
 
             var icon = UIKit.Img("Icon", panel, ProcArt.Item(Chains.Simya, 1), Color.white);
             icon.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(30f, -20f), new Vector2(110f, 110f));
-            var title = UIKit.Txt("Title", panel, "Tarif Defteri", 52, UIKit.Orange, TextAnchor.MiddleLeft, false);
+            var title = UIKit.Txt("Title", panel, L.T("Tarif Defteri"), 52, UIKit.Orange, TextAnchor.MiddleLeft, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0f, 1f)).At(new Vector2(160f, -28f), new Vector2(600f, 70f));
             count = UIKit.Txt("Count", panel, "", 28, new Color(1f, 1f, 1f, 0.75f), TextAnchor.MiddleLeft, false);
@@ -59,8 +59,8 @@ namespace KaraPati
         {
             for (int i = list.childCount - 1; i >= 0; i--) Destroy(list.GetChild(i).gameObject);
             int done = GM.TasksDone;
-            count.text = Recipes.UnlockedCount(done) + "/" + Recipes.All.Length + " tarif açık. " +
-                (GM.Cats != null && GM.Cats.HasMini ? "Minik Çırak'a 'Yaptır' de!" : "İki malzemeyi kazana sürükle!");
+            count.text = L.F("{0}/{1} tarif açık.", Recipes.UnlockedCount(done), Recipes.All.Length) + " " +
+                (GM.Cats != null && GM.Cats.HasMini ? L.T("Minik Çırak'a 'Yaptır' de!") : L.T("İki malzemeyi kazana sürükle!"));
 
             for (int i = 0; i < Recipes.All.Length; i++)
             {
@@ -86,7 +86,7 @@ namespace KaraPati
                 {
                     var lk = UIKit.Img("Lock", rt, ProcArt.Lock, new Color(1f, 1f, 1f, 0.7f));
                     lk.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(59f, 0f), new Vector2(60f, 60f));
-                    var info = UIKit.Txt("Info", rt, (r.chapter + 1) + ". bölümde açılır", 30, new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleLeft, false);
+                    var info = UIKit.Txt("Info", rt, L.F("{0}. bölümde açılır", r.chapter + 1), 30, new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleLeft, false);
                     info.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(180f, -20f), new Vector2(600f, 50f));
                     info.rectTransform.pivot = new Vector2(0f, 0.5f);
                     continue;
@@ -99,15 +99,15 @@ namespace KaraPati
                 plus.rectTransform.pivot = new Vector2(0f, 0.5f);
                 Ingredient(rt, r.bChain, r.bLevel, 340f);
 
-                var time = UIKit.Txt("Time", rt, "Süre: " + (r.seconds >= 60 ? (r.seconds / 60f).ToString("0.#") + " dk" : r.seconds + " sn"), 26, new Color(1f, 1f, 1f, 0.75f), TextAnchor.MiddleLeft, false);
+                var time = UIKit.Txt("Time", rt, L.F("Süre: {0}", r.seconds >= 60 ? L.F("{0} dk", (r.seconds / 60f).ToString("0.#")) : L.F("{0} sn", r.seconds)), 26, new Color(1f, 1f, 1f, 0.75f), TextAnchor.MiddleLeft, false);
                 time.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(470f, -2f), new Vector2(300f, 40f));
                 time.rectTransform.pivot = new Vector2(0f, 0.5f);
 
-                // with a Mini Apprentice on the table: "Yaptır" sends it to fetch both ingredients
+                // with a Mini Apprentice on the table: L.T("Yaptır") sends it to fetch both ingredients
                 if (GM.Cats != null && GM.Cats.HasMini)
                 {
                     var rr = r;
-                    var make = UIKit.Btn("Make", rt, "Yaptır", GM.Cats.MiniBusy ? UIKit.Disabled : UIKit.Green, () =>
+                    var make = UIKit.Btn("Make", rt, L.T("Yaptır"), GM.Cats.MiniBusy ? UIKit.Disabled : UIKit.Green, () =>
                     {
                         Close();
                         GM.Cats.MiniBrew(rr);
