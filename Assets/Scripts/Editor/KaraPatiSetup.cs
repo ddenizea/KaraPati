@@ -1,7 +1,9 @@
 using System.IO;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.Android;
+#if UNITY_ANDROID
+using UnityEditor.Android;   // only available while the active platform is Android
+#endif
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -203,6 +205,9 @@ namespace KaraPati.EditorTools
         static void BuildApk()
         {
             if (Application.isPlaying) { Debug.LogWarning("KaraPati: önce Play modundan çık."); return; }
+#if !UNITY_ANDROID
+            Debug.LogWarning("KaraPati: APK için önce File → Build Profiles'ta Android'i seçip 'Switch Platform' de (Android modülü kurulu olmalı), sonra tekrar dene.");
+#else
 
             // 1) app icons drawn by the game's own procedural painter
             var full = SaveIcon("Assets/Art/AppIcon.png", ProcArt.AppIcon(512, 0));
@@ -245,6 +250,7 @@ namespace KaraPati.EditorTools
                 EditorUtility.RevealInFinder(ApkPath);
             }
             else Debug.LogError("KaraPati: APK derlemesi başarısız: " + sum.result + " (" + sum.totalErrors + " hata). Ayrıntı için Console'a bak.");
+#endif
         }
 
         static Texture2D SaveIcon(string path, Texture2D tex)
