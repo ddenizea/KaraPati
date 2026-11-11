@@ -192,6 +192,7 @@ namespace KaraPati
             if (Random.value < StarChance)
             {
                 a.MakeStar(DateTime.UtcNow.Ticks + TimeSpan.FromHours(StarHours).Ticks);
+                GM.AddStat("star");
                 GM.ShowDialog(L.T("Yıldızlı Yavru"), L.F("Parıl parıl bir yavru geldi! {0} saat kalacak. Usta'nın üstüne bırakırsan Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükleyebilirsin.", (int)StarHours));
                 Sfx.Play("gift", 1.3f);
                 GM.MarkDirty();
@@ -958,6 +959,7 @@ namespace KaraPati
         void FinishTraining(KittenAgent k)
         {
             GM.AddUstaXp(UstaLevels.XpTraining);
+            GM.AddStat("train");
             var pos = k.Pos;
             int col = Mathf.Clamp(k.color, 0, KittenColors.Count - 1);
             var m = Master();
@@ -1280,6 +1282,7 @@ namespace KaraPati
             if (m.state == KittenAgent.State.Napping || m.IsHeld) return;
             if (Trainee()) { GM.Toast(L.T("Usta şu an bir yavruyu eğitiyor. Eğitim bitince keşfe çıkabilir.")); return; }
             if (!GM.TrySpendEnergy(Expeditions.Energy[k])) return;
+            GM.AddStat("trip");
             if (Selected == m) { Selected = null; GM.ShowInfo(null); }
             Trip = k;
             TripColor = m.color;

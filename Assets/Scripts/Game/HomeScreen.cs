@@ -42,7 +42,7 @@ namespace KaraPati
 
         RectTransform taskList;
         Image albumBadge, caseBadge, dailyBadge, chaptersBadge, towerBadge, ustaBadge, ustaIcon;
-        Image gameBadge, gameIcon, gameLock, friendBadge;
+        Image gameBadge, gameIcon, gameLock, friendBadge, achBadge;
         RectTransform gameNew, friendNew;   // "YENİ" tags until the feature is opened once
         Text caseBadgeText;
         readonly List<RectTransform> floatingGhosts = new List<RectTransform>();
@@ -138,6 +138,12 @@ namespace KaraPati
             var fbt = UIKit.Txt("!", friendBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(fbt.rectTransform);
             friendNew = NewTag(book.transform);
+            // Achievements: "!" while a reward is waiting
+            var trophy = RoundButton(sceneArea, "Achievements", ProcArt.Trophy, new Vector2(1f, 1f), new Vector2(-66f, -450f), () => GM.OpenAchievements());
+            achBadge = UIKit.Img("Badge", trophy.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            achBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
+            var abt = UIKit.Txt("!", achBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
+            UIKit.Stretch(abt.rectTransform);
             BuildSettings();
             var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
             dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
@@ -714,6 +720,7 @@ namespace KaraPati
             gameLock.gameObject.SetActive(!room);
             gameBadge.gameObject.SetActive(GM.AnyMiniFree);
             friendBadge.gameObject.SetActive(GM.AnyFriendNew);
+            achBadge.gameObject.SetActive(GM.AnyAchReady);
             GM.CheckIntros();   // may introduce a feature that just opened (and start its "YENİ" tag)
             gameNew.gameObject.SetActive(GM.GameRoomNew);
             friendNew.gameObject.SetActive(GM.FriendBookNew);

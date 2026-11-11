@@ -25,7 +25,7 @@ namespace KaraPati
                 new GameObject("KaraPati Game").AddComponent<GameManager>();
         }
 
-        public const float EnergyRegenSec = 8f;
+        public const float EnergyRegenSec = 120f;   // one energy every 2 minutes (economy pass: the story lasts about 2-3 weeks)
         public const int EnergyPackCost = 20, EnergyPackAmount = 10;
         const string SaveKey = "karapati_save_v1";
         const string BackupKey = "karapati_save_v1_backup";   // last save that loaded fine
@@ -68,6 +68,7 @@ namespace KaraPati
         int friendGiftDay;
         readonly List<string> friendGifts = new List<string>();
         FriendBookPanel friendBook;
+        AchievementsPanel achPanel;
         readonly HashSet<string> clues = new HashSet<string>();
 
         public RectTransform Root { get; private set; }
@@ -78,7 +79,7 @@ namespace KaraPati
         public bool OnBoard { get; private set; }
         public bool OnTower { get; private set; }
         public TowerScreen TowerUI => tower;
-        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (gameRoom && gameRoom.IsOpen) || (friendBook && friendBook.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
+        public bool ModalOpen => (album && album.IsOpen) || (caseFile && caseFile.IsOpen) || (storagePanel && storagePanel.IsOpen) || (eventPanel && eventPanel.IsOpen) || (dailyPanel && dailyPanel.IsOpen) || (recipePanel && recipePanel.IsOpen) || (itemInfo && itemInfo.IsOpen) || (chapterPanel && chapterPanel.IsOpen) || (decorPanel && decorPanel.IsOpen) || (expeditionPanel && expeditionPanel.IsOpen) || (housePanel && housePanel.IsOpen) || (ustaColorPanel && ustaColorPanel.IsOpen) || (gameRoom && gameRoom.IsOpen) || (friendBook && friendBook.IsOpen) || (achPanel && achPanel.IsOpen) || (dialogRoot && dialogRoot.activeSelf);
 
         HomeScreen home;
         AlbumPanel album;
@@ -121,6 +122,94 @@ namespace KaraPati
                 ShowDialog(L.T("Kara Pati"), L.T("Oyun Odası açıldı! Fare Avı, Yumak Atma ve İksir Hafızası seni bekliyor. Her oyunu günde 2 kez bedava oynarsın, sonrası enerjiyle. Soldaki yeni düğmeye dokun!"));
             if (AnyFriendNew && FirstTime("intro_friendbook"))
                 ShowDialog(L.T("Kara Pati"), L.T("Müşterilerinle dost oluyorsun! Sağdaki kalp düğmesi Dostluk Defteri'ni açar, herkesin hikâyesi orada. Bir müşteri Can Dostun olunca her gün kuleye uğrar ve hediye bırakır."));
+        }
+
+        // ------------------------------------------------------------------ achievements
+        readonly Dictionary<string, int> stats = new Dictionary<string, int>();
+        readonly List<string> achClaimed = new List<string>();   // "id#step" for every reward taken
+
+        public int Stat(string key) => stats.TryGetValue(key, out var v) ? v : 0;
+
+        /// <summary>Counts something for the achievements; a toast when it just reached a step.</summary>
+        public void AddStat(string key, int amount = 1)
+        {
+            int before = Stat(key);
+            stats[key] = before + amount;
+            MarkDirty();
+            var d = Achievements.Get(key);
+            if (d == null) return;
+            for (int k = 0; k < d.steps.Length; k++)
+                if (before < d.steps[k] && before + amount >= d.steps[k])
+                {
+                    Toast(L.F("Başarım: {0} ({1})!", d.Name, Achievements.StepName(k)), UIKit.Orange, 3.5f);
+                    Sfx.Play("gift", 1.2f);
+                    break;
+                }
+        }
+
+        /// <summary>How far the player is on an achievement (some are worked out from the save, so old saves count too).</summary>
+        public int AchProgress(Achievements.Def d)
+        {
+            int n = 0;
+            switch (d.id)
+            {
+                case "order": return Served;
+                case "friend":
+                    foreach (var c in Customers.All) if (IsBestFriend(c)) n++;
+                    return n;
+                case "chapter":
+                    for (int c = 0; c < Story.Chapters.Length; c++)
+                        if (TasksDone >= Story.ChapterStart(c) + Story.Chapters[c].tasks.Length) n++;
+                    return n;
+                case "sticker":
+                    foreach (var s in Stickers.Sets) if (StickerCount(s) >= s.ids.Length) n++;
+                    return n;
+                case "decor":
+                    n = placed.Count;
+                    foreach (var kv in inventory) if (Decor.ParseItem(kv.Key, out _, out _)) n += kv.Value;
+                    return Mathf.Max(n, Stat("decor"));
+                default: return Stat(d.id);
+            }
+        }
+
+        /// <summary>How many steps' rewards were taken (0..3).</summary>
+        public int AchClaimed(Achievements.Def d)
+        {
+            int n = 0;
+            while (n < d.steps.Length && achClaimed.Contains(d.id + "#" + n)) n++;
+            return n;
+        }
+
+        /// <summary>The next step is reached and its reward is waiting.</summary>
+        public bool AchReady(Achievements.Def d)
+        {
+            int k = AchClaimed(d);
+            return k < d.steps.Length && AchProgress(d) >= d.steps[k];
+        }
+
+        public bool AnyAchReady
+        {
+            get { foreach (var d in Achievements.All) if (AchReady(d)) return true; return false; }
+        }
+
+        public void ClaimAchievement(Achievements.Def d)
+        {
+            if (!AchReady(d)) return;
+            int k = AchClaimed(d);
+            achClaimed.Add(d.id + "#" + k);
+            AddGold(Achievements.Gold[k]);
+            AddEnergy(Achievements.Energy[k]);
+            Sfx.Play("gift");
+            Toast(L.F("{0} ({1}): {2}", d.Name, Achievements.StepName(k), Achievements.RewardText(k)), UIKit.Orange, 3.5f);
+            Save();
+        }
+
+        public void OpenAchievements() => achPanel.Open();
+
+        public void OnAchievementsClosed()
+        {
+            if (!OnBoard && !OnTower) home.Refresh(false);
+            Save();
         }
 
         // ------------------------------------------------------------------ best friends in the tower (can be turned off)
@@ -234,7 +323,8 @@ namespace KaraPati
                     RefreshHud();
                     MarkDirty();
                 }
-                energyTimerText.text = Energy < MaxEnergy ? L.F("{0} sn", Mathf.CeilToInt(EnergyRegenSec - energyTimer)) : L.T("dolu");
+                int left = Mathf.CeilToInt(EnergyRegenSec - energyTimer);
+                energyTimerText.text = Energy < MaxEnergy ? (left / 60) + ":" + (left % 60).ToString("00") : L.T("dolu");   // m:ss
             }
             else
             {
@@ -399,6 +489,10 @@ namespace KaraPati
             var bookRt = UIKit.Rect("FriendBook", canvasRt);
             friendBook = bookRt.gameObject.AddComponent<FriendBookPanel>();
             friendBook.Build();
+
+            var achRt = UIKit.Rect("Achievements", canvasRt);
+            achPanel = achRt.gameObject.AddComponent<AchievementsPanel>();
+            achPanel.Build();
 
             var roomRt = UIKit.Rect("GameRoom", canvasRt);
             gameRoom = roomRt.gameObject.AddComponent<GameRoomPanel>();
@@ -808,6 +902,7 @@ namespace KaraPati
             if (!TrySpendGold(Decor.TowerPrice(slot, variant))) return false;
             string id = Decor.ItemId(slot, variant);
             inventory[id] = InventoryCount(id) + 1;
+            AddStat("decor");
             Toast(L.F("{0} envantere eklendi!", Decor.ItemName(id)), UIKit.Orange);
             Save();
             return true;
@@ -2083,6 +2178,8 @@ namespace KaraPati
             friendGifts.Clear();
             friendGiftDay = 0;
             TowerFriendsOn = true;
+            stats.Clear();
+            achClaimed.Clear();
             UstaName = "";
             hintsSeen.Clear();
             UstaNew = false;
@@ -2163,7 +2260,10 @@ namespace KaraPati
                 friendSeen = new List<int>(friendSeen),
                 friendGiftDay = friendGiftDay,
                 friendGifts = new List<string>(friendGifts),
-                towerFriendsOff = !TowerFriendsOn
+                towerFriendsOff = !TowerFriendsOn,
+                statKeys = new List<string>(stats.Keys),
+                statVals = new List<int>(stats.Values),
+                achClaimed = new List<string>(achClaimed)
             };
             Board.WriteSave(s.cells);
             // a real game always has machines on the table; an empty board means the game state was wiped
@@ -2262,6 +2362,9 @@ namespace KaraPati
                 friendGifts.Clear();
                 if (s.friendGifts != null) friendGifts.AddRange(s.friendGifts);
                 TowerFriendsOn = !s.towerFriendsOff;
+                if (s.statKeys != null && s.statVals != null)
+                    for (int k = 0; k < s.statKeys.Count && k < s.statVals.Count; k++) stats[s.statKeys[k]] = s.statVals[k];
+                if (s.achClaimed != null) achClaimed.AddRange(s.achClaimed);
 
                 eventStart = s.eventStart > 0 ? s.eventStart : DateTime.UtcNow.Ticks;
                 Pumpkins = s.pumpkins;

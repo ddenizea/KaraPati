@@ -443,6 +443,7 @@ namespace KaraPati
             GM.AddStamps(StampReward(o));
             GM.AddPumpkins(o.reqs.Count + (o.reqs.Count > 1 ? 1 : 0));
             GM.RegisterServed();
+            if (o.cust == Customers.NightOwl) GM.AddStat("kontes");
             var cust = Customers.Get(o.cust);
             string who = cust != null && GM.FriendStage(cust) == 0 ? "???" : o.ghost;
             GM.Toast(who + ": \"" + ThankLines[o.line % ThankLines.Length] + "\"", UIKit.Cream, 4f);

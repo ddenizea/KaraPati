@@ -302,6 +302,7 @@ namespace KaraPati
         void OnRoundOver(int g, int score)
         {
             playing = false;
+            GM.AddStat("minigame");
             int reward = 0;
             string rewardText;
             if (g == MiniGames.Fare)

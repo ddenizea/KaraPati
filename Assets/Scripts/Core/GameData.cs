@@ -250,6 +250,9 @@ namespace KaraPati
         public List<int> friendSeen = new List<int>();   // friendship stage whose story the player already read in the Friendship Book
         public int friendGiftDay;                     // day the list below belongs to (DailyRewards.Today)
         public bool towerFriendsOff;            // the player turned off best friends visiting the tower (gifts then come from the Friendship Book)
+        public List<string> statKeys = new List<string>();   // achievement counters (merges, potions, ...), keys ...
+        public List<int> statVals = new List<int>();         // ... and their values
+        public List<string> achClaimed = new List<string>(); // achievement steps whose reward was taken: "id#step"
         public List<string> friendGifts = new List<string>();   // best friends whose gift in the tower was taken today // ornaments placed on tower floors   // claimed progress-bar gifts, e.g. "2_1" 
         public List<string> clues = new List<string>();
         public int cluesSeen;                   // clues already looked at in the witch's case file (the red badge shows the rest)
@@ -603,7 +606,7 @@ namespace KaraPati
     {
         public static readonly TrList FloorNames = new TrList
             (L.N("Kara Pati'nin Odası"), L.N("Mutfak"), L.N("Kütüphane"), L.N("Yatak Odası"), L.N("Teras"), L.N("Gözlem Odası"));
-        public static readonly int[] FloorPrice = { 0, 500, 1200, 2500, 4500, 8000 };
+        public static readonly int[] FloorPrice = { 0, 300, 800, 1500, 2500, 4000 };
         public static readonly Color[] Wall =
         {
             new Color(0.32f, 0.22f, 0.42f), new Color(0.2f, 0.3f, 0.33f), new Color(0.32f, 0.23f, 0.18f),
@@ -647,9 +650,10 @@ namespace KaraPati
             new[] { 0, 180, 350, 600 },
         };
 
-        /// <summary>Later chapters are fancier and cost more (x1 .. x3.5), rounded to tens.</summary>
+        /// <summary>Later chapters are fancier and cost more (x1 .. x3.5), rounded to tens. Half the base list
+        /// since the economy pass, so a player affords about one ornament per slot each chapter.</summary>
         public static int Price(int chapter, int slot, int variant) =>
-            Mathf.RoundToInt(basePrice[slot][variant] * (1f + 0.5f * chapter) / 10f) * 10;
+            Mathf.RoundToInt(basePrice[slot][variant] * (1f + 0.5f * chapter) * 0.5f / 10f) * 10;
 
         public static string OwnedId(int chapter, int slot, int variant) => chapter + "_" + slot + "_" + variant;
 
@@ -667,8 +671,8 @@ namespace KaraPati
 
         public static string ItemName(string id) => ParseItem(id, out var s, out var v) ? VariantNames[s][v] : id;
 
-        /// <summary>Tower ornaments cost a bit more than the old scene ones, rounded to tens.</summary>
-        public static int TowerPrice(int slot, int variant) => Mathf.RoundToInt(basePrice[slot][variant] * 1.5f / 10f) * 10;
+        /// <summary>Tower ornaments cost a bit more than the old scene ones (half price since the economy pass), rounded to tens.</summary>
+        public static int TowerPrice(int slot, int variant) => Mathf.RoundToInt(basePrice[slot][variant] * 0.75f / 10f) * 10;
         public static string SlotId(int chapter, int slot) => chapter + "_" + slot;
 
         // where each slot sits in each chapter scene (scene is 1020 x 940, centre origin); garlands also get a width
@@ -776,6 +780,47 @@ namespace KaraPati
         }
     }
 
+    /// <summary>
+    /// Achievements: 12 goals, each with bronze / silver / gold steps. Progress is a counter the game keeps (a stat with
+    /// the achievement's id) or is worked out from the save (orders served, best friends, chapters, sticker sets, ornaments).
+    /// Rewards are gold and energy only: Paw Seals drive the story, so achievements don't hand them out.
+    /// </summary>
+    public static class Achievements
+    {
+        public class Def
+        {
+            public string id;
+            public string name, goal;   // goal: {0} = the step's target
+            public int[] steps;
+            public string Name => L.T(name);
+            public string Goal(int target) => L.F(goal, target);
+        }
+
+        public static readonly Def[] All =
+        {
+            new Def { id = "merge",    name = L.N("Birleştirme Ustası"), goal = L.N("{0} kez birleştir"),                   steps = new[] { 100, 1000, 5000 } },
+            new Def { id = "potion",   name = L.N("İksirci"),            goal = L.N("{0} iksir kaynat"),                    steps = new[] { 10, 100, 500 } },
+            new Def { id = "order",    name = L.N("Dükkân Sahibi"),      goal = L.N("{0} sipariş teslim et"),               steps = new[] { 25, 250, 1000 } },
+            new Def { id = "friend",   name = L.N("Can Dostları"),       goal = L.N("{0} müşteriyle Can Dostu ol"),         steps = new[] { 1, 5, 11 } },
+            new Def { id = "train",    name = L.N("Kedi Eğitmeni"),      goal = L.N("Usta'ya {0} yavru eğittir"),           steps = new[] { 5, 25, 100 } },
+            new Def { id = "trip",     name = L.N("Kâşif"),              goal = L.N("Usta'yı {0} kez keşfe gönder"),        steps = new[] { 5, 25, 100 } },
+            new Def { id = "minigame", name = L.N("Oyun Odası"),         goal = L.N("{0} mini oyun oyna"),                  steps = new[] { 10, 50, 200 } },
+            new Def { id = "chapter",  name = L.N("Hikâye Anlatıcısı"),  goal = L.N("{0} bölüm bitir"),                     steps = new[] { 1, 3, 6 } },
+            new Def { id = "kontes",   name = L.N("Gece Kuşu"),          goal = L.N("Yarasa Kontes'e {0} sipariş ver"),     steps = new[] { 1, 10, 50 } },
+            new Def { id = "star",     name = L.N("Yıldız Avcısı"),      goal = L.N("{0} yıldızlı yavruyla karşılaş"),      steps = new[] { 1, 5, 20 } },
+            new Def { id = "decor",    name = L.N("Süsçü"),              goal = L.N("{0} süs al"),                          steps = new[] { 5, 20, 50 } },
+            new Def { id = "sticker",  name = L.N("Koleksiyoncu"),       goal = L.N("{0} etiket setini tamamla"),           steps = new[] { 1, 3, 4 } },
+        };
+
+        public static readonly int[] Gold = { 30, 60, 150 };
+        public static readonly int[] Energy = { 0, 10, 20 };
+        public static readonly TrList StepNames = new TrList(L.N("Bronz Rozet"), L.N("Gümüş Rozet"), L.N("Altın Rozet"));
+
+        public static Def Get(string id) { foreach (var d in All) if (d.id == id) return d; return null; }
+        public static string StepName(int step) => StepNames[Mathf.Clamp(step, 0, 2)];
+        public static string RewardText(int step) => Energy[step] > 0 ? L.F("+{0} altın, +{1} enerji", Gold[step], Energy[step]) : L.F("+{0} altın", Gold[step]);
+    }
+
     public static class MiniGames
     {
         public const int Fare = 0, Yumak = 1, Hafiza = 2, Count = 3;
@@ -820,7 +865,7 @@ namespace KaraPati
 
         public const int MaxStorage = 12;
         public static int XpToNext(int level) => 30 + (level - 1) * 20;
-        public static int MaxEnergy(int level) => Mathf.Min(50, 30 + (level - 1) * 2);
+        public static int MaxEnergy(int level) => Mathf.Min(70, 50 + (level - 1) * 2);   // a full bar is about 1h40m of regen
         public static int StorageSlots(int level) => Mathf.Min(MaxStorage, 3 + level);
         public static int GoldReward(int level) => 15 * level;
     }

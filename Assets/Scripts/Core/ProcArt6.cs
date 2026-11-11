@@ -12,6 +12,38 @@ namespace KaraPati
             p.FillOutlined(q => S.Poly(q - new Vector2(0.55f, 0.58f), S.Star(4, 0.32f, 0.1f)), new Color(1f, 0.92f, 0.5f), 0.04f);
         });
 
+        /// <summary>Gold trophy cup with a star (home screen achievements button).</summary>
+        public static Sprite Trophy => Make("ui_trophy", Size, p =>
+        {
+            var gold = new Color(1f, 0.8f, 0.3f);
+            var dark = new Color(0.85f, 0.58f, 0.18f);
+            // handles first, the cup covers their inner half
+            p.FillOutlined(q => S.U(S.Ring(S.Ellipse(q, new Vector2(-0.55f, 0.35f), new Vector2(0.24f, 0.22f)), 0.06f),
+                                    S.Ring(S.Ellipse(q, new Vector2(0.55f, 0.35f), new Vector2(0.24f, 0.22f)), 0.06f)), gold, 0.04f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.78f), new Vector2(0.42f, 0.1f), 0.05f), dark, 0.05f);
+            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.56f), new Vector2(0.1f, 0.16f), 0.02f), gold, 0.05f);
+            p.FillOutlined(q => S.I(S.Ellipse(q, new Vector2(0f, 0.28f), new Vector2(0.6f, 0.72f)), S.Box(q, new Vector2(0f, 0.05f), new Vector2(0.7f, 0.62f), 0f)), gold, 0.05f);
+            p.Fill(q => S.I(S.Ellipse(q, new Vector2(0.18f, 0.2f), new Vector2(0.38f, 0.55f)), S.Box(q, new Vector2(0.35f, 0.05f), new Vector2(0.3f, 0.6f), 0f)), dark);   // shade on the right
+            p.FillOutlined(q => S.Poly(q - new Vector2(0f, 0.25f), S.Star(5, 0.26f, 0.11f)), new Color(1f, 0.96f, 0.75f), 0.03f);
+        });
+
+        static readonly Color[] MedalColors =
+        {
+            new Color(0.72f, 0.68f, 0.76f), new Color(0.86f, 0.53f, 0.28f), new Color(0.84f, 0.87f, 0.92f), new Color(1f, 0.82f, 0.3f),
+        };
+
+        /// <summary>Achievement medal: 0 = nothing yet (grey), 1 bronze, 2 silver, 3 gold.</summary>
+        public static Sprite Medal(int step) => Make("ui_medal_" + step, Size, p =>
+        {
+            var c = MedalColors[Mathf.Clamp(step, 0, 3)];
+            var ribbon = step > 0 ? new Color(0.85f, 0.32f, 0.38f) : new Color(0.55f, 0.5f, 0.6f);
+            p.FillOutlined(q => S.U(S.Seg(q, new Vector2(-0.36f, 0.88f), new Vector2(-0.12f, 0.2f), 0.13f),
+                                    S.Seg(q, new Vector2(0.36f, 0.88f), new Vector2(0.12f, 0.2f), 0.13f)), ribbon, 0.04f);
+            p.FillOutlined(q => S.Ellipse(q, new Vector2(0f, -0.22f), new Vector2(0.66f, 0.66f)), c, 0.05f);
+            p.Fill(q => S.Ring(S.Ellipse(q, new Vector2(0f, -0.22f), new Vector2(0.5f, 0.5f)), 0.03f), Color.Lerp(c, Color.black, 0.2f));
+            p.FillOutlined(q => S.Poly(q - new Vector2(0f, -0.22f), S.Star(5, 0.3f, 0.13f)), Color.Lerp(c, Color.white, 0.45f), 0.03f);
+        });
+
         /// <summary>Wooden cellar barrel seen from the front, its dark mouth at the top.</summary>
         public static Sprite Barrel => Make("mg_barrel", Size, p =>
         {

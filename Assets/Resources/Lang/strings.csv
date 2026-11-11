@@ -244,6 +244,34 @@ Daha sık malzeme getirir (40 sn).,Brings ingredients more often (40 s).
 Bazen 3. seviye malzeme getirir.,Sometimes brings a level 3 ingredient.
 Keşiften 2 malzeme fazla döner.,Comes back from trips with 2 extra ingredients.
 "35 sn'de bir malzeme, eğitim 2 dakika.","An ingredient every 35 s, training takes 2 minutes."
+Birleştirme Ustası,Merge Master
+{0} kez birleştir,Merge {0} times
+İksirci,Potion Brewer
+{0} iksir kaynat,Brew {0} potions
+Dükkân Sahibi,Shopkeeper
+{0} sipariş teslim et,Deliver {0} orders
+Can Dostları,Best Friends
+{0} müşteriyle Can Dostu ol,Become Best Friends with {0} customers
+Kedi Eğitmeni,Kitten Trainer
+Usta'ya {0} yavru eğittir,Have the Master train {0} kittens
+Kâşif,Explorer
+Usta'yı {0} kez keşfe gönder,Send the Master on {0} expeditions
+Oyun Odası,Game Room
+{0} mini oyun oyna,Play {0} mini games
+Hikâye Anlatıcısı,Storyteller
+{0} bölüm bitir,Finish {0} chapters
+Gece Kuşu,Night Owl
+Yarasa Kontes'e {0} sipariş ver,Deliver {0} orders to the Bat Countess
+Yıldız Avcısı,Star Catcher
+{0} yıldızlı yavruyla karşılaş,Meet {0} star kittens
+Süsçü,Decorator
+{0} süs al,Buy {0} ornaments
+Koleksiyoncu,Collector
+{0} etiket setini tamamla,Complete {0} sticker sets
+Bronz Rozet,Bronze Badge
+Gümüş Rozet,Silver Badge
+Altın Rozet,Gold Badge
+"+{0} altın, +{1} enerji","+{0} gold, +{1} energy"
 Fare Avı,Mouse Hunt
 Yumak Atma,Yarn Toss
 İksir Hafızası,Potion Memory
@@ -370,6 +398,10 @@ Zincirlerimi şıngırdatmadan teşekkür ederim.,"Thank you, and I won't even r
 Bir dahaki sefere kedi maması getiririm!,Next time I'll bring some cat food!
 ...,...
 Seviye {0}!,Level {0}!
+Başarımlar,Achievements
+{0}/{1} rozet,{0}/{1} badges
+Bütün rozetler alındı!,All badges earned!
+Al,Claim
 Etiket Albümü,Sticker Album
 "Tüm setleri tamamla, büyük ödülü kap:",Complete every set and grab the grand prize:
 Büyük ödül alındı,Grand prize claimed
@@ -460,6 +492,8 @@ Can Dostu!,Best Friend!
 {0}dk {1}sn,{0}m {1}s
 "Oyun Odası açıldı! Fare Avı, Yumak Atma ve İksir Hafızası seni bekliyor. Her oyunu günde 2 kez bedava oynarsın, sonrası enerjiyle. Soldaki yeni düğmeye dokun!","The Game Room is open! Mouse Hunt, Yarn Toss and Potion Memory are waiting for you. You can play each game twice a day for free, after that it costs energy. Tap the new button on the left!"
 "Müşterilerinle dost oluyorsun! Sağdaki kalp düğmesi Dostluk Defteri'ni açar, herkesin hikâyesi orada. Bir müşteri Can Dostun olunca her gün kuleye uğrar ve hediye bırakır.","You're making friends with your customers! The heart button on the right opens the Friendship Book, with everyone's story inside. Once a customer becomes your Best Friend, they visit the tower every day and leave a gift."
+Başarım: {0} ({1})!,Achievement: {0} ({1})!
+{0} ({1}): {2},{0} ({1}): {2}
 Can dostların yine kuleye uğrayacak!,Your best friends will visit the tower again!
 Can dostların artık kuleye gelmeyecek. Hediyelerini Dostluk Defteri'nden alabilirsin.,Your best friends won't visit the tower anymore. You can take their gifts from the Friendship Book.
 "Aynı iki eşyayı üst üste sürükle, birleşsinler.",Drag two identical items onto each other to merge them.
@@ -468,7 +502,6 @@ Kazana ve sandığa dokunarak malzeme üret (1 enerji).,Tap the cauldron and the
 "Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!","Drop two ingredients into the purple Alchemy Pot: a potion brews, and ghosts pay a lot for potions!"
 İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!,Drag two kittens onto each other: they become an Apprentice Cat for 2 hours!
 Siparişler Pati Mührü verir; mühürlerle dükkânı onarırsın.,Orders give Paw Seals; use seals to repair the shop.
-{0} sn,{0}s
 dolu,full
 "Seviye {0}: {1}/{2} XP. XP hikâyeden gelir: görevler, bölüm sonları ve gizli ipuçları.","Level {0}: {1}/{2} XP. XP comes from the story: tasks, chapter endings and hidden clues."
 Patlat,Pop
@@ -573,7 +606,6 @@ Enerjin bitti! Biraz bekle ya da altınla al (+).,Out of energy! Wait a bit or b
 {0} enerji için {1} altın gerekiyor.,{0} energy costs {1} gold.
 +{0} enerji! Kazan fokurduyor.,+{0} energy! The cauldron is bubbling.
 "Tekrar hoş geldin, Kara Pati!","Welcome back, Kara Pati!"
-Oyun Odası,Game Room
 Her oyunun günde {0} ücretsiz hakkı var.\nSonrası bir oyun {1} enerji.,"Each game has {0} free plays a day.\nAfter that, a play costs {1} energy."
 Ücretsiz oyunların ödülü daha büyük.\nHaklar her gece yenilenir!,Free plays give bigger rewards.\nThey come back every night!
 Oyna,Play
@@ -670,6 +702,7 @@ Siparişte {0} altın + {1} Pati Mührü. Satarsan {2} altın.,Orders pay {0} go
 Her dokunuş 1 enerji. {0}.,Each tap costs 1 energy. {0}.
 Sonraki seviye {0} altın: {1}.,Next level {0} gold: {1}.
 En üst seviyede!,At the top level!
+{0} sn,{0}s
 Hazır!,Ready!
 Miyav! Bir yavru pencereden masaya zıpladı.,Meow! A kitten jumped through the window onto the table.
 Kapı gıcırdadı... bir yavru masaya hopladı!,The door creaked... a kitten hopped onto the table!

@@ -518,6 +518,7 @@ namespace KaraPati
             Set(to, nd, true);
             Sfx.Play("pop", 0.85f + 0.1f * nd.level);
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
+            GM.AddStat("merge");
             GM.OnBoardChanged();
             return true;
         }
@@ -553,6 +554,7 @@ namespace KaraPati
             FX.Burst(fxLayer, CellPos(to), ProcArt.ChainColor(nd.chain), nd.level >= 4 ? 12 : 7);
             Select(to);
             TrySpawnBubble(to, nd);
+            GM.AddStat("merge");
             if (nd.level == Chains.MaxLevel(nd.chain))
                 GM.Toast(L.F("Harika! {0} - en üst seviye!", nd.Name), UIKit.Orange);
             GM.OnBoardChanged();
@@ -703,6 +705,7 @@ namespace KaraPati
             pot.brewUntil = 0;
             pot.readyNotified = false;
             SpawnFrom(c, e, new ItemData(Chains.Iksir, r != null ? r.id : 1));
+            GM.AddStat("potion");
             Sfx.Play("pop", 1.3f);
             FX.Burst(fxLayer, CellPos(e), ProcArt.PotionColor(r != null ? r.id : 1), 12);
             RefreshView(c);
