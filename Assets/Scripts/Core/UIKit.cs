@@ -85,6 +85,9 @@ namespace KaraPati
             img.color = color;
             img.raycastTarget = false;
             if (sliced) img.type = Image.Type.Sliced;
+            // pictures are never squashed: they keep their proportions inside whatever box they are given.
+            // Plain shapes (panels, circles, light, fog) are meant to stretch. An image that starts empty gets a picture later.
+            else img.preserveAspect = ProcArt.IsPicture(sprite);
             return img;
         }
 

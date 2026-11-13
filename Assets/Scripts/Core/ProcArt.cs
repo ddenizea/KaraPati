@@ -231,6 +231,12 @@ namespace KaraPati
         static Sprite Make(string key, int size, System.Action<Painter> draw, int border = 0)
         {
             if (cache.TryGetValue(key, out var s) && s) return s;
+            // a drawn picture in Resources/Icons with the sprite's key replaces the code drawing (not the stretchable shapes)
+            if (border == 0 && !key.StartsWith("ink_"))
+            {
+                s = LoadArt("Icons/" + key, key);
+                if (s) return s;
+            }
             var p = new Painter(size, size);
             // sprites that are laid exactly over each other must wobble the same way
             string seedKey = key.StartsWith("mg_barrel") ? "mg_barrel" : key;
@@ -245,6 +251,16 @@ namespace KaraPati
             return s;
         }
 
+        /// <summary>False for the plain white shapes the UI stretches and tints (panels, circles, rings, light, fog,
+        /// water, silhouettes); true for every real picture, and for "no sprite yet".</summary>
+        public static bool IsPicture(Sprite s)
+        {
+            if (!s) return true;
+            string n = s.name;
+            return !(n.StartsWith("ui_rounded") || n.StartsWith("ui_circle") || n.StartsWith("ui_frame") || n.StartsWith("ui_gradient") ||
+                     n.StartsWith("ink_") || n == "ui_glow" || n == "ui_fog" || n == "mg_ring" || n == "bush" || n == "pennant" || n == "water");
+        }
+
         /// <summary>Same value on every run and device (string.GetHashCode is not), so a sprite always wobbles the same way.</summary>
         static int StableHash(string s)
         {
@@ -257,8 +273,30 @@ namespace KaraPati
         }
 
         // ---------- UI primitives ----------
-        public static Sprite Rounded => Make("ui_rounded", 64,
-            p => p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.98f, 0.98f), 0.62f), Color.white), 24);
+        /// <summary>The shape of every panel and button: white inside (it takes the Image colour) with a hand-drawn
+        /// brown line, stretched 9-slice. Uses the drawn picture Resources/UI/rounded when there is one.</summary>
+        public static Sprite Rounded
+        {
+            get
+            {
+                if (cache.TryGetValue("ui_rounded", out var have) && have) return have;
+                var art = LoadSliced("UI/rounded", "ui_rounded", 40);
+                return art ? art : Make("ui_rounded", 64,
+                    p => p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.98f, 0.98f), 0.62f), Color.white), 24);
+            }
+        }
+
+        /// <summary>A drawn picture as a stretchable (9-slice) sprite: the outer `border` pixels keep their size.</summary>
+        static Sprite LoadSliced(string path, string key, int border)
+        {
+            var tex = Resources.Load<Texture2D>(path);
+            if (!tex) return null;
+            var s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect, new Vector4(border, border, border, border));
+            s.name = key;
+            cache[key] = s;
+            return s;
+        }
 
         // ---------- outlined flat shapes for the scenes (white inside, so they take the Image colour) ----------
         // The line is a brown-grey that the Image colour darkens: every scene shape gets a darker, warmer edge of its own colour.

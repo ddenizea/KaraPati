@@ -6,7 +6,15 @@ namespace KaraPati
     public static partial class ProcArt
     {
         /// <summary>Home screen button of the Game Room: a yarn ball with a little sparkle.</summary>
-        public static Sprite GameRoomIcon => Item(Chains.Ag, 2);   // the same yarn ball as on the board
+        public static Sprite GameRoomIcon
+        {
+            get
+            {
+                if (cache.TryGetValue("ui_gameroom", out var have) && have) return have;
+                var art = LoadArt("Icons/ui_gameroom", "ui_gameroom");
+                return art ? art : Item(Chains.Ag, 2);   // fallback: the same yarn ball as on the board
+            }
+        }
 
         /// <summary>Gold trophy cup with a star (home screen achievements button).</summary>
         public static Sprite Trophy => Make("ui_trophy", Size, p =>
