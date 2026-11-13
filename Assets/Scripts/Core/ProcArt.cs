@@ -328,6 +328,7 @@ namespace KaraPati
                 case Chains.Kristal: return new Color(0.45f, 0.85f, 1f);
                 case Chains.Ag: return new Color(0.8f, 0.7f, 1f);
                 case Chains.Kedi: return new Color(1f, 0.7f, 0.35f);
+                case Chains.Sihir: return new Color(1f, 0.56f, 0.8f);
                 default: return new Color(1f, 0.85f, 0.4f);
             }
         }
@@ -342,6 +343,7 @@ namespace KaraPati
                 case Chains.Ag: DrawAg(p, level); break;
                 case Chains.Kedi: DrawKedi(p, level); break;
                 case Chains.Kazan: Cauldron(p); break;
+                case Chains.KaraKazan: Cauldron(p); break;
                 case Chains.Sandik: Chest(p); break;
                 case Chains.Simya: SimyaPot(p); break;
                 case Chains.KediEvi: CatHouse(p); break;

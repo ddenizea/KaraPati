@@ -149,8 +149,8 @@ namespace KaraPati
             new Color(1f, 0.85f, 0.3f),    // ışıltı
             new Color(0.35f, 0.25f, 0.5f), // gölge
             new Color(0.75f, 0.9f, 1f),    // ay
-            new Color(0.55f, 1f, 0.85f),   // hayalet
-            new Color(1f, 0.5f, 0.75f),    // yıldız
+            new Color(1f, 0.44f, 0.68f),   // büyü
+            new Color(0.48f, 0.36f, 1f),   // dilek
         };
 
         public static Color PotionColor(int id) => flaskColors[Mathf.Clamp(id - 1, 0, flaskColors.Length - 1)];

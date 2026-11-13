@@ -296,16 +296,24 @@ namespace KaraPati
         void FillGenerator(ItemData d)
         {
             int gl = GM.GeneratorLevel(d.chain);
+            // the two chains at levels 1 and 2, or (Kara Kazan) the magic chain at levels 1 to 3
+            bool kara = d.chain == Chains.KaraKazan;
             string a = d.chain == Chains.Kazan ? Chains.Ot : Chains.Kristal;
             string b = d.chain == Chains.Kazan ? Chains.Mantar : Chains.Ag;
+            var tiles = kara
+                ? new[] { (Chains.Sihir, 1), (Chains.Sihir, 2), (Chains.Sihir, 3) }
+                : new[] { (a, 1), (b, 1), (a, 2), (b, 2) };
             var card = CardBox(300f);
             CardTitle(card, L.F("Üretir  •  Sv. {0}/{1}", gl, Generators.MaxLevel));
-            Tile(card, new Vector2(-300f, -170f), 160f, ProcArt.Item(a, 1), GM.IsDiscovered(a, 1), false, OnTable(a, 1), 1);
-            Tile(card, new Vector2(-100f, -170f), 160f, ProcArt.Item(b, 1), GM.IsDiscovered(b, 1), false, OnTable(b, 1), 1);
-            Tile(card, new Vector2(100f, -170f), 160f, ProcArt.Item(a, 2), GM.IsDiscovered(a, 2), false, OnTable(a, 2), 2);
-            Tile(card, new Vector2(300f, -170f), 160f, ProcArt.Item(b, 2), GM.IsDiscovered(b, 2), false, OnTable(b, 2), 2);
+            for (int i = 0; i < tiles.Length; i++)
+            {
+                var (tc, tl) = tiles[i];
+                float x = (i - (tiles.Length - 1) * 0.5f) * 200f;
+                Tile(card, new Vector2(x, -170f), 160f, ProcArt.Item(tc, tl), GM.IsDiscovered(tc, tl), false, OnTable(tc, tl), tl);
+            }
             y += 20f;
             Line(L.F("Her dokunuş 1 enerji. {0}.", Generators.ChanceText(gl)), 50f);
+            if (kara) Line(L.F("%{0} ihtimalle iki tane birden çıkar.", Mathf.RoundToInt(Generators.KaraKazanDouble * 100f)), 50f);
             Line(gl < Generators.MaxLevel
                 ? L.F("Sonraki seviye {0} altın: {1}.", Generators.UpgradeCost(gl), Generators.ChanceText(gl + 1))
                 : L.T("En üst seviyede!"), 50f);

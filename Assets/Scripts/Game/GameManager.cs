@@ -231,7 +231,7 @@ namespace KaraPati
         Button infoBtn, popBtn;
         readonly HashSet<string> discovered = new HashSet<string>();
         readonly HashSet<string> chapterGifts = new HashSet<string>();
-        int kazanLevel = 1, sandikLevel = 1;
+        int kazanLevel = 1, sandikLevel = 1, karaKazanLevel = 1;
         readonly Dictionary<string, int> inventory = new Dictionary<string, int>();
         readonly List<PlacedSave> placed = new List<PlacedSave>();
         DecorPanel decorPanel;
@@ -721,6 +721,25 @@ namespace KaraPati
             Orders.Refresh();
             ShowInfo(null);
             Tut.Begin();
+            CheckKaraKazan();
+        }
+
+        /// <summary>From level 5 the Kara Kazan joins the table, once. If the table is full it waits for a free cell.</summary>
+        void CheckKaraKazan()
+        {
+            if (Level < Generators.KaraKazanLevel || Seen("got_karakazan") || (Tut != null && Tut.Active)) return;
+            if (Board.FindFirst(d => d.chain == Chains.KaraKazan, out _)) { FirstTime("got_karakazan"); Recipes.MagicOpen = true; return; }
+            if (!Board.NearestEmpty(new Vector2Int(3, 4), out var e))
+            {
+                Toast(L.T("Kara Kazan geldi ama masada yer yok! Bir yer aç, sonra tekrar gel."), UIKit.Orange, 4f);
+                return;
+            }
+            Board.Set(e, new ItemData(Chains.KaraKazan, 1), true);
+            FirstTime("got_karakazan");
+            Recipes.MagicOpen = true;
+            Sfx.Play("gift");
+            ShowDialog(L.T("Kara Pati"), L.T("Kara Kazan masana geldi! Ona dokununca sihir malzemeleri çıkar: kıvılcım, yıldız tozu, ay damlası... Bunlarla iki yeni iksir yapabilirsin, bazı müşteriler de onları ister."));
+            OnBoardChanged();
         }
 
         public void GoHome()
@@ -961,7 +980,7 @@ namespace KaraPati
         }
 
         // ------------------------------------------------------------------ generator upgrades (gold sink)
-        public int GeneratorLevel(string chain) => chain == Chains.Kazan ? kazanLevel : chain == Chains.Sandik ? sandikLevel : 1;
+        public int GeneratorLevel(string chain) => chain == Chains.Kazan ? kazanLevel : chain == Chains.Sandik ? sandikLevel : chain == Chains.KaraKazan ? karaKazanLevel : 1;
 
         public void UpgradeGenerator(string chain)
         {
@@ -969,7 +988,7 @@ namespace KaraPati
             if (lvl >= Generators.MaxLevel) { Toast(L.F("{0} zaten en üst seviyede!", Chains.Name(chain, 1))); return; }
             int price = Generators.UpgradeCost(lvl);
             if (!TrySpendGold(price)) return;
-            if (chain == Chains.Kazan) kazanLevel++; else sandikLevel++;
+            if (chain == Chains.Kazan) kazanLevel++; else if (chain == Chains.Sandik) sandikLevel++; else karaKazanLevel++;
             lvl++;
             Toast(L.F("{0} {1}. seviyeye çıktı! {2}", Chains.Name(chain, 1), lvl, Generators.ChanceText(lvl)), UIKit.Orange, 4f);
             Sfx.Play("levelup", 1.1f);
@@ -1720,7 +1739,7 @@ namespace KaraPati
             {
                 int gl = GeneratorLevel(d.chain);
                 infoTitle.text = d.Name + "  <size=26>(" + L.F("Sv. {0}/{1}", gl, Generators.MaxLevel) + ")</size>";
-                infoDesc.text = (d.chain == Chains.Kazan ? L.T("Kedi otu ve balık çıkarır.") : L.T("Süt ve yün çıkarır.")) + " " + L.T("Dokun: 1 enerji.") + "\n" + Generators.ChanceText(gl);
+                infoDesc.text = (d.chain == Chains.Kazan ? L.T("Kedi otu ve balık çıkarır.") : d.chain == Chains.Sandik ? L.T("Süt ve yün çıkarır.") : L.T("Sihir malzemeleri çıkarır, bazen iki tane birden.")) + " " + L.T("Dokun: 1 enerji.") + "\n" + Generators.ChanceText(gl);
                 actionBtn.gameObject.SetActive(true);
                 if (gl < Generators.MaxLevel)
                 {
@@ -1866,7 +1885,8 @@ namespace KaraPati
                 Energy = Mathf.Max(Energy, MaxEnergy);
                 ShowDialog(L.F("Seviye {0}!", Level),
                     L.F("Tebrikler! Ödül: +{0} altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık {1}, depoda {2} yer var.", g, MaxEnergy, StorageSlots) +
-                    (Level == MiniGames.UnlockLevel ? "\n\n" + L.T("Yeni: Oyun Odası açıldı! Ana ekrandaki yumak düğmesine dokun.") : ""));
+                    (Level == MiniGames.UnlockLevel ? "\n\n" + L.T("Yeni: Oyun Odası açıldı! Ana ekrandaki yumak düğmesine dokun.") : "") +
+                    (Level == Generators.KaraKazanLevel ? "\n\n" + L.T("Yeni: Kara Kazan geldi! Dükkâna girince masanda olacak.") : ""));
             }
             RefreshHud();
             if (levelBadge) Tween.Punch(levelBadge, ups > 0 ? 0.35f : 0.12f, 0.3f);
@@ -2163,7 +2183,7 @@ namespace KaraPati
             Tut.Step = 0;
             discovered.Clear();
             chapterGifts.Clear();
-            kazanLevel = sandikLevel = 1;
+            kazanLevel = sandikLevel = karaKazanLevel = 1;
             towerFloors = 1;
             lastFed = lastWatered = 0;
             inventory.Clear();
@@ -2182,6 +2202,7 @@ namespace KaraPati
             achClaimed.Clear();
             UstaName = "";
             hintsSeen.Clear();
+            Recipes.MagicOpen = false;
             UstaNew = false;
             UstaPlayAt = 0;
             UstaXp = 0;
@@ -2240,6 +2261,7 @@ namespace KaraPati
                 chapterGifts = new List<string>(chapterGifts),
                 kazanLevel = kazanLevel,
                 sandikLevel = sandikLevel,
+                karaKazanLevel = karaKazanLevel,
                 towerFloors = towerFloors,
                 lastFed = lastFed,
                 lastWatered = lastWatered,
@@ -2333,6 +2355,7 @@ namespace KaraPati
                 if (s.chapterGifts != null) foreach (var k in s.chapterGifts) chapterGifts.Add(k);
                 kazanLevel = Mathf.Clamp(s.kazanLevel, 1, Generators.MaxLevel);
                 sandikLevel = Mathf.Clamp(s.sandikLevel, 1, Generators.MaxLevel);
+                karaKazanLevel = Mathf.Clamp(s.karaKazanLevel, 1, Generators.MaxLevel);
                 towerFloors = Mathf.Clamp(s.towerFloors, 1, Tower.Floors);
                 lastFed = s.lastFed;
                 lastWatered = s.lastWatered;
@@ -2395,6 +2418,7 @@ namespace KaraPati
                 UstaXp = s.ustaXp;
                 hintsSeen.Clear();
                 if (s.hints != null) foreach (var h in s.hints) hintsSeen.Add(h);
+                Recipes.MagicOpen = hintsSeen.Contains("got_karakazan");
                 UstaNew = s.ustaNew;
                 UstaPlayAt = s.ustaPlayAt;
                 miniDay = s.miniDay;

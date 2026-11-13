@@ -39,8 +39,23 @@ namespace KaraPati
             var close = UIKit.Btn("Close", panel, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);
             ((RectTransform)close.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-24f, -24f), new Vector2(90f, 90f));
 
-            list = UIKit.Rect("List", panel);
-            UIKit.Stretch(list, 30f, 30f, 160f, 30f);
+            // the recipes scroll: there are more than fit on one page
+            var view = UIKit.Rect("View", panel);
+            UIKit.Stretch(view, 30f, 30f, 160f, 30f);
+            view.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.001f);   // catches drags between rows
+            view.gameObject.AddComponent<RectMask2D>();
+            var sr = view.gameObject.AddComponent<ScrollRect>();
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Elastic;
+            sr.scrollSensitivity = 30f;
+            list = UIKit.Rect("List", view);
+            list.anchorMin = new Vector2(0f, 1f);
+            list.anchorMax = new Vector2(1f, 1f);
+            list.pivot = new Vector2(0.5f, 1f);
+            list.anchoredPosition = Vector2.zero;
+            list.sizeDelta = Vector2.zero;
+            sr.content = list;
             gameObject.SetActive(false);
         }
 
@@ -62,6 +77,8 @@ namespace KaraPati
             count.text = L.F("{0}/{1} tarif açık.", Recipes.UnlockedCount(done), Recipes.All.Length) + " " +
                 (GM.Cats != null && GM.Cats.HasMini ? L.T("Minik Çırak'a 'Yaptır' de!") : L.T("İki malzemeyi kazana sürükle!"));
 
+            list.sizeDelta = new Vector2(0f, Recipes.All.Length * 212f - 16f);
+            list.anchoredPosition = Vector2.zero;
             for (int i = 0; i < Recipes.All.Length; i++)
             {
                 var r = Recipes.All[i];
@@ -86,7 +103,7 @@ namespace KaraPati
                 {
                     var lk = UIKit.Img("Lock", rt, ProcArt.Lock, new Color(1f, 1f, 1f, 0.7f));
                     lk.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(59f, 0f), new Vector2(60f, 60f));
-                    var info = UIKit.Txt("Info", rt, L.F("{0}. bölümde açılır", r.chapter + 1), 30, new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleLeft, false);
+                    var info = UIKit.Txt("Info", rt, r.Magic && !Recipes.MagicOpen ? L.F("{0}. seviyede Kara Kazan ile açılır", Generators.KaraKazanLevel) : L.F("{0}. bölümde açılır", r.chapter + 1), 30, new Color(1f, 1f, 1f, 0.5f), TextAnchor.MiddleLeft, false);
                     info.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(180f, -20f), new Vector2(600f, 50f));
                     info.rectTransform.pivot = new Vector2(0f, 0.5f);
                     continue;
@@ -118,7 +135,7 @@ namespace KaraPati
                 }
 
                 var coin = UIKit.Img("Coin", rt, ProcArt.Coin, Color.white);
-                coin.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-180f, -50f), new Vector2(44f, 44f));
+                coin.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-198f, -50f), new Vector2(44f, 44f));
                 var gold = UIKit.Txt("Gold", rt, r.Gold.ToString(), 32, UIKit.Cream, TextAnchor.MiddleLeft, false);
                 gold.rectTransform.Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-104f, -50f), new Vector2(90f, 44f));
                 var stamp = UIKit.Img("Stamp", rt, ProcArt.Stamp, Color.white);

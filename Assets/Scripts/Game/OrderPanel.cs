@@ -300,6 +300,9 @@ namespace KaraPati
             }
             for (int i = 0; i < count; i++)
                 order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(minLvl, maxLvl + 1) });
+            // with the Kara Kazan on the table some customers want a magic ingredient (and pay extra for it)
+            if (Recipes.MagicOpen && !big && Random.value < Generators.MagicOrderChance)
+                order.reqs[0] = new ReqSave { chain = Chains.Sihir, level = Random.Range(1, Mathf.Min(maxLvl, 4) + 1) };
             return order;
         }
 
@@ -333,6 +336,7 @@ namespace KaraPati
             foreach (var q in o.reqs)
             {
                 if (Chains.IsPotion(q.chain)) { var rc = Recipes.Get(q.level); r += rc != null ? rc.Gold : 10; }
+                else if (q.chain == Chains.Sihir) r += Chains.Value(q.level) * 3 / 2;   // magic pays half as much again
                 else r += Chains.Value(q.level);
             }
             // a well-fed Kara Pati charms the customers
@@ -347,7 +351,7 @@ namespace KaraPati
         static int StampReward(OrderSave o)
         {
             int r = 0;
-            foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 6 ? 3 : q.level >= 4 ? 2 : 1;
+            foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : (q.level >= 6 ? 3 : q.level >= 4 ? 2 : 1) + (q.chain == Chains.Sihir ? 1 : 0);
             if (IsBestFriend(o)) r += 1;   // a best friend tips one extra stamp
             if (o.cust == Customers.NightOwl) r += 2;
             return r;

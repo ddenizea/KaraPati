@@ -20,6 +20,13 @@ Krema,Cream
 Puding,Pudding
 Krema Pastası,Cream Cake
 Yıldız Sütü,Star Milk
+Kıvılcım,Spark
+Yıldız Tozu,Stardust
+Ay Damlası,Moon Drop
+Sihirli Mum,Magic Candle
+Kristal Küre,Crystal Ball
+Büyü Kitabı,Spellbook
+Cadı Şapkası,Witch Hat
 İplik,Thread Spool
 Küçük Yumak,Small Yarn Ball
 Büyük Yumak,Big Yarn Ball
@@ -32,18 +39,20 @@ Yaramaz Yavru,Naughty Kitten
 Usta Kedi,Master Cat
 Bahçe Sepeti,Garden Basket
 Kiler Dolabı,Pantry Cupboard
+Kara Kazan,Black Cauldron
 Uyku İksiri,Sleep Potion
 Işıltı İksiri,Sparkle Potion
 Gölge İksiri,Shadow Potion
 Ay İksiri,Moon Potion
-Hayalet İksiri,Ghost Potion
-Yıldız İksiri,Star Potion
+Büyü İksiri,Spell Potion
+Dilek İksiri,Wish Potion
 Simya Kazanı,Alchemy Pot
 Kedi Evi,Cat House
 Kedi Otları,Catnip
 Balıklar,Fish
 Süt ve Tatlılar,Milk and Sweets
 Yün ve Örgüler,Yarn and Knits
+Sihir Malzemeleri,Magic Ingredients
 İksirler,Potions
 Dükkân Eşyası,Shop Item
 Hayalet Dostlar,Ghost Friends
@@ -55,8 +64,6 @@ Kara Pati,Kara Pati
 Hayalet Kedi,Ghost Cat
 Sivri Şapka,Pointy Hat
 Uçan Süpürge,Flying Broom
-Büyü Kitabı,Spellbook
-Kristal Küre,Crystal Ball
 Eski Kazan,Old Cauldron
 Kayıp Mektup,Lost Letter
 Turuncu Tekir Çırak,Orange Tabby Apprentice
@@ -515,6 +522,8 @@ dolu,full
 "Seviye {0}: {1}/{2} XP. XP hikâyeden gelir: görevler, bölüm sonları ve gizli ipuçları.","Level {0}: {1}/{2} XP. XP comes from the story: tasks, chapter endings and hidden clues."
 Patlat,Pop
 Devam,Continue
+"Kara Kazan geldi ama masada yer yok! Bir yer aç, sonra tekrar gel.","The Black Cauldron is here, but the table is full! Make some room, then come back."
+"Kara Kazan masana geldi! Ona dokununca sihir malzemeleri çıkar: kıvılcım, yıldız tozu, ay damlası... Bunlarla iki yeni iksir yapabilirsin, bazı müşteriler de onları ister.","The Black Cauldron is on your table! Tap it for magic ingredients: sparks, stardust, moon drops... They make two new potions, and some customers ask for them too."
 {0}. kat açıldı: {1}! Burayı süsleyebilirsin.,Floor {0} unlocked: {1}! You can decorate it.
 Mama kabı zaten dolu.,The food bowl is already full.
 Su kabı zaten dolu.,The water bowl is already full.
@@ -569,6 +578,7 @@ Sat  +{0},Sell  +{0}
 Sv. {0}/{1},Lv. {0}/{1}
 Kedi otu ve balık çıkarır.,Gives catnip and fish.
 Süt ve yün çıkarır.,Gives milk and yarn.
+"Sihir malzemeleri çıkarır, bazen iki tane birden.","Gives magic ingredients, sometimes two at once."
 Dokun: 1 enerji.,Tap: 1 energy.
 Yükselt\n{0} altın,Upgrade\n{0} gold
 En üst\nseviye,Top\nlevel
@@ -603,6 +613,7 @@ Bir yavruya ders veriyor. Eğitim bitince yine malzeme getirir.,"Teaching a kitt
 Keşfe\nGönder,Go\nExploring
 "Tebrikler! Ödül: +{0} altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık {1}, depoda {2} yer var.","Congratulations! Reward: +{0} gold, +1 Paw Seal and full energy. Max energy is now {1}, storage has {2} slots."
 Yeni: Oyun Odası açıldı! Ana ekrandaki yumak düğmesine dokun.,New: the Game Room is open! Tap the yarn button on the home screen.
+Yeni: Kara Kazan geldi! Dükkâna girince masanda olacak.,New: the Black Cauldron is here! You will find it on your table in the shop.
 Depoya sadece malzemeler girer.,Only ingredients go into storage.
 Depo dolu! ({0} yer) Seviye atladıkça büyür.,Storage is full! ({0} slots) It grows as you level up.
 {0} depoya kondu.,{0} put in storage.
@@ -709,6 +720,7 @@ Simya Kazanı'nda kaynar: {0}.,Brews in the Alchemy Pot: {0}.
 Siparişte {0} altın + {1} Pati Mührü. Satarsan {2} altın.,Orders pay {0} gold + {1} Paw Seals. Sells for {2} gold.
 Üretir  •  Sv. {0}/{1},Produces  •  Lv. {0}/{1}
 Her dokunuş 1 enerji. {0}.,Each tap costs 1 energy. {0}.
+%{0} ihtimalle iki tane birden çıkar.,{0}% chance to give two at once.
 Sonraki seviye {0} altın: {1}.,Next level {0} gold: {1}.
 En üst seviyede!,At the top level!
 {0} sn,{0}s
@@ -802,7 +814,7 @@ Malzemeler hazır! İksir kaynayınca Yıldızlı Minik Çırak onu da masaya ç
 Yıldızlı Minik Çırak siparişi hazırladı! Şimdi 'Ver'e bas.,The Star Little Apprentice prepared the order! Now press 'Give'.
 Tamam!,Done!
 Minik Çırak {0} bulamadı.,The Little Apprentice couldn't find {0}.
-Yıldızlı Minik Çırak üretecek bir kazan ya da sandık bulamadı.,The Star Little Apprentice couldn't find a cauldron or chest to make things with.
+Yıldızlı Minik Çırak bu malzemeyi çıkaracak bir üretici bulamadı.,The Star Little Apprentice could not find a machine that makes this ingredient.
 "Enerjin bitti, Yıldızlı Minik Çırak durdu.","You're out of energy, so the Star Little Apprentice stopped."
 "Masa dolu, Yıldızlı Minik Çırak yeni malzeme çıkaramıyor. Biraz yer aç, sonra yine 'Hazırla'ya bas.","The table is full, so the Star Little Apprentice can't make new ingredients. Make some room, then press 'Prepare' again."
 Yıldızlı Minik Çırak devam edemedi: masa dolu ya da enerji bitti.,The Star Little Apprentice had to stop: the table is full or you're out of energy.
@@ -839,6 +851,7 @@ Tarif Defteri,Recipe Book
 {0}/{1} tarif açık.,{0}/{1} recipes unlocked.
 Minik Çırak'a 'Yaptır' de!,Tell the Little Apprentice to 'Make' it!
 İki malzemeyi kazana sürükle!,Drag two ingredients into the pot!
+{0}. seviyede Kara Kazan ile açılır,Opens with the Black Cauldron at level {0}
 {0}. bölümde açılır,Unlocks in chapter {0}
 Süre: {0},Time: {0}
 Depo,Storage

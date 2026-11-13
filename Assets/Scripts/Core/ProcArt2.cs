@@ -167,7 +167,7 @@ namespace KaraPati
                 case "c_usta": return Item(Chains.Kedi, 3);
                 case "c_karapati": return KaraPatiHead;
                 case "c_hayaletkedi": return GhostCat;
-                case "w_kazan": return Item(Chains.Kazan, 1);
+                case "w_kazan": return Item(Chains.KaraKazan, 1);
                 default: return WitchItem(id);
             }
         }

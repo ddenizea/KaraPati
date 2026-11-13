@@ -210,7 +210,7 @@ namespace KaraPati
             }
             else if (data.IsWildKitten && !IsDragging)
                 icon.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Sin(t * 3f) * 6f);
-            else if (data.chain == Chains.Kazan)
+            else if (data.chain == Chains.Kazan || data.chain == Chains.KaraKazan)
                 icon.rectTransform.localScale = Vector3.one * (1f + Mathf.Sin(t * 2.5f) * 0.025f);
             if (Chains.IsHouse(data.chain))
             {

@@ -10,7 +10,10 @@ namespace KaraPati
         public const string Kedi = "kedi", Kazan = "kazan", Sandik = "sandik";
         public const string Iksir = "iksir", Simya = "simya";
         public const string KediEvi = "kedievi";   // the kittens' little house on the table
+        public const string KaraKazan = "karakazan";   // third machine: the magic ingredients
+        public const string Sihir = "sihir";            // magic ingredients, only from the Kara Kazan
 
+        /// <summary>The four everyday ingredients (random orders, expeditions, gifts). Magic ones come only from the Kara Kazan.</summary>
         public static readonly string[] Ingredients = { Ot, Mantar, Kristal, Ag };
 
         static readonly Dictionary<string, string[]> names = new Dictionary<string, string[]>
@@ -19,19 +22,21 @@ namespace KaraPati
             { Ot, new[] { L.N("Tohum"), L.N("Filiz"), L.N("Kedi Otu Dalı"), L.N("Kedi Otu Demeti"), L.N("Saksıda Kedi Otu"), L.N("Çiçekli Kedi Otu"), L.N("Ay Işığı Kedi Otu") } },
             { Mantar, new[] { L.N("Hamsi"), L.N("Sardalya"), L.N("Uskumru"), L.N("Somon"), L.N("Balık Sepeti"), L.N("Altın Balık"), L.N("Ay Balığı") } },
             { Kristal, new[] { L.N("Süt Damlası"), L.N("Süt Kasesi"), L.N("Süt Şişesi"), L.N("Krema"), L.N("Puding"), L.N("Krema Pastası"), L.N("Yıldız Sütü") } },
+            { Sihir, new[] { L.N("Kıvılcım"), L.N("Yıldız Tozu"), L.N("Ay Damlası"), L.N("Sihirli Mum"), L.N("Kristal Küre"), L.N("Büyü Kitabı"), L.N("Cadı Şapkası") } },
             { Ag, new[] { L.N("İplik"), L.N("Küçük Yumak"), L.N("Büyük Yumak"), L.N("Yumak Sepeti"), L.N("Örgü Atkı"), L.N("Kedi Kazağı"), L.N("Sihirli Pelerin") } },
             { Kedi, new[] { L.N("Yaramaz Yavru"), L.N("Çırak Kedi"), L.N("Usta Kedi") } },
             { Kazan, new[] { L.N("Bahçe Sepeti") } },
             { Sandik, new[] { L.N("Kiler Dolabı") } },
-            { Iksir, new[] { L.N("Uyku İksiri"), L.N("Işıltı İksiri"), L.N("Gölge İksiri"), L.N("Ay İksiri"), L.N("Hayalet İksiri"), L.N("Yıldız İksiri") } },
+            { KaraKazan, new[] { L.N("Kara Kazan") } },
+            { Iksir, new[] { L.N("Uyku İksiri"), L.N("Işıltı İksiri"), L.N("Gölge İksiri"), L.N("Ay İksiri"), L.N("Büyü İksiri"), L.N("Dilek İksiri") } },
             { Simya, new[] { L.N("Simya Kazanı") } },
             { KediEvi, new[] { L.N("Kedi Evi") } },
         };
 
         public static int MaxLevel(string chain) => names[chain].Length;
         public static string Name(string chain, int level) => L.T(names[chain][Mathf.Clamp(level - 1, 0, names[chain].Length - 1)]);
-        public static bool IsIngredient(string c) => c == Ot || c == Mantar || c == Kristal || c == Ag;
-        public static bool IsGenerator(string c) => c == Kazan || c == Sandik;
+        public static bool IsIngredient(string c) => c == Ot || c == Mantar || c == Kristal || c == Ag || c == Sihir;
+        public static bool IsGenerator(string c) => c == Kazan || c == Sandik || c == KaraKazan;
         public static bool IsPotion(string c) => c == Iksir;
         public static bool IsStation(string c) => c == Simya;
         public static bool IsHouse(string c) => c == KediEvi;
@@ -44,6 +49,7 @@ namespace KaraPati
         {
             if (c == Ot || c == Mantar) return Kazan;
             if (c == Kristal || c == Ag) return Sandik;
+            if (c == Sihir) return KaraKazan;
             if (c == Iksir) return Simya;
             return "";
         }
@@ -56,6 +62,7 @@ namespace KaraPati
                 case Mantar: return L.T("Balıklar");
                 case Kristal: return L.T("Süt ve Tatlılar");
                 case Ag: return L.T("Yün ve Örgüler");
+                case Sihir: return L.T("Sihir Malzemeleri");
                 case Iksir: return L.T("İksirler");
                 default: return L.T("Dükkân Eşyası");
             }
@@ -105,7 +112,9 @@ namespace KaraPati
         public int seconds;
         public int chapter;   // chapter index that unlocks it
         public string Name => Chains.Name(Chains.Iksir, id);
-        public int Gold => 2 * (Chains.Value(aLevel) + Chains.Value(bLevel));
+        public int Gold => 2 * (Worth(aChain, aLevel) + Worth(bChain, bLevel));
+        static int Worth(string chain, int level) => chain == Chains.Sihir ? Chains.Value(level) * 3 / 2 : Chains.Value(level);   // magic pays half as much again
+        public bool Magic => aChain == Chains.Sihir || bChain == Chains.Sihir;
         public bool Uses(string chain, int level) => (chain == aChain && level == aLevel) || (chain == bChain && level == bLevel);
     }
 
@@ -118,14 +127,19 @@ namespace KaraPati
             new Recipe { id = 2, aChain = Chains.Kristal, aLevel = 2, bChain = Chains.Ot, bLevel = 3, seconds = 45, chapter = 0 },
             new Recipe { id = 3, aChain = Chains.Ag, aLevel = 3, bChain = Chains.Mantar, bLevel = 3, seconds = 60, chapter = 1 },
             new Recipe { id = 4, aChain = Chains.Kristal, aLevel = 3, bChain = Chains.Ot, bLevel = 4, seconds = 90, chapter = 2 },
-            new Recipe { id = 5, aChain = Chains.Ag, aLevel = 4, bChain = Chains.Kristal, bLevel = 4, seconds = 120, chapter = 3 },
-            new Recipe { id = 6, aChain = Chains.Kristal, aLevel = 5, bChain = Chains.Mantar, bLevel = 4, seconds = 180, chapter = 4 },
+            // the two magic potions: their chapter AND the Kara Kazan on the table (ids 5 and 6 were the
+            // Ghost and Star potions before; old saves simply see the new potions in their place)
+            new Recipe { id = 5, aChain = Chains.Sihir, aLevel = 2, bChain = Chains.Ot, bLevel = 3, seconds = 120, chapter = 3 },
+            new Recipe { id = 6, aChain = Chains.Sihir, aLevel = 4, bChain = Chains.Kristal, bLevel = 4, seconds = 180, chapter = 4 },
         };
+
+        /// <summary>Set by the game once the Kara Kazan has come: magic recipes and magic orders open.</summary>
+        public static bool MagicOpen;
 
         public const int PotionStamps = 3;
 
         public static Recipe Get(int id) => id >= 1 && id <= All.Length ? All[id - 1] : null;
-        public static bool Unlocked(Recipe r, int tasksDone) => Story.CurrentChapter(tasksDone) >= r.chapter;
+        public static bool Unlocked(Recipe r, int tasksDone) => (!r.Magic || MagicOpen) && Story.CurrentChapter(tasksDone) >= r.chapter;
 
         public static string Key(string chain, int level) => chain + ":" + level;
 
@@ -232,7 +246,7 @@ namespace KaraPati
         public int tutorialStep;
         public List<string> discovered = new List<string>();
         public List<string> chapterGifts = new List<string>();
-        public int kazanLevel, sandikLevel;   // generator upgrades (0 in old saves = level 1)
+        public int kazanLevel, sandikLevel, karaKazanLevel;   // generator upgrades (0 in old saves = level 1)
         public List<string> decorOwned = new List<string>();      // "chapter_slot_variant"
         public List<string> decorSelected = new List<string>();   // "chapter_slot:variant" 
         public int towerFloors;                 // how many tower floors are open (0 in old saves = 1)
@@ -688,10 +702,13 @@ namespace KaraPati
         };
     }
 
-    /// <summary>Gold sink: upgrading the Garden Basket / Pantry makes them drop higher-level ingredients.</summary>
+    /// <summary>Gold sink: upgrading the Garden Basket / Pantry / Kara Kazan makes them drop higher-level ingredients.</summary>
     public static class Generators
     {
         public const int MaxLevel = 5;
+        public const int KaraKazanLevel = 5;   // player level when the Kara Kazan joins the table
+        public const float KaraKazanDouble = 0.15f;   // chance it gives two things at once
+        public const float MagicOrderChance = 0.2f;   // once open, how often a customer wants a magic ingredient
         static readonly int[] cost = { 0, 150, 400, 900, 1800 };   // price to go from level i to i+1
 
         public static int UpgradeCost(int level) => level >= 1 && level < MaxLevel ? cost[level] : 0;

@@ -494,15 +494,23 @@ namespace KaraPati
                 return;
             }
             if (!GM.TrySpendEnergy(1)) return;
-            string chain = gen.chain == Chains.Kazan
-                ? (Random.value < 0.5f ? Chains.Ot : Chains.Mantar)
-                : (Random.value < 0.5f ? Chains.Kristal : Chains.Ag);
             int level = Generators.Roll(GM.GeneratorLevel(gen.chain));
             if (v) Tween.Punch(v.rt, 0.15f, 0.25f);
             Sfx.Play("spawn", level > 1 ? 1.25f : 1f);
-            SpawnFrom(c, e, new ItemData(chain, level));
+            SpawnFrom(c, e, new ItemData(GeneratorDrop(gen.chain), level));
+            // the Kara Kazan sometimes bubbles over: a second thing for free
+            if (gen.chain == Chains.KaraKazan && Random.value < Generators.KaraKazanDouble && NearestEmpty(c, out var e2))
+                SpawnFrom(c, e2, new ItemData(GeneratorDrop(gen.chain), Generators.Roll(GM.GeneratorLevel(gen.chain))));
             GM.OnBoardChanged();
             GM.Tut?.Notify("spawn");
+        }
+
+        /// <summary>Which ingredient a machine gives: Garden Basket catnip/fish, Pantry milk/yarn, Kara Kazan magic.</summary>
+        static string GeneratorDrop(string gen)
+        {
+            if (gen == Chains.Kazan) return Random.value < 0.5f ? Chains.Ot : Chains.Mantar;
+            if (gen == Chains.Sandik) return Random.value < 0.5f ? Chains.Kristal : Chains.Ag;
+            return Chains.Sihir;
         }
 
         /// <summary>The star Mini Apprentice set the item it carried onto its twin at `to`: they merge there.</summary>

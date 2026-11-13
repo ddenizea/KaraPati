@@ -274,9 +274,9 @@ namespace KaraPati
                         plan.phase = 1;
                         return;
                     }
-                    // nothing to merge: make more at the cauldron (herbs, mushrooms) or the chest (crystals, webs)
-                    string gen = s.chain == Chains.Ot || s.chain == Chains.Mantar ? Chains.Kazan : Chains.Sandik;
-                    if (!B.FindFirst(d => d.chain == gen && !d.Locked, out var g)) { DropPlan(L.T("Yıldızlı Minik Çırak üretecek bir kazan ya da sandık bulamadı.")); return; }
+                    // nothing to merge: make more at the machine the ingredient comes from
+                    string gen = Chains.SourceOf(s.chain);
+                    if (!B.FindFirst(d => d.chain == gen && !d.Locked, out var g)) { DropPlan(L.T("Yıldızlı Minik Çırak bu malzemeyi çıkaracak bir üretici bulamadı.")); return; }
                     if (GM.Energy < 1) { DropPlan(L.T("Enerjin bitti, Yıldızlı Minik Çırak durdu.")); return; }
                     if (!B.NearestEmpty(g, out _)) { DropPlan(L.T("Masa dolu, Yıldızlı Minik Çırak yeni malzeme çıkaramıyor. Biraz yer aç, sonra yine 'Hazırla'ya bas.")); return; }
                     plan.target = g;
