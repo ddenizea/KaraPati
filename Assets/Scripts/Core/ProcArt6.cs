@@ -6,11 +6,7 @@ namespace KaraPati
     public static partial class ProcArt
     {
         /// <summary>Home screen button of the Game Room: a yarn ball with a little sparkle.</summary>
-        public static Sprite GameRoomIcon => Make("ui_gameroom", Size, p =>
-        {
-            Yarn(p, 0.78f, new Color(0.95f, 0.5f, 0.62f));
-            p.FillOutlined(q => S.Poly(q - new Vector2(0.55f, 0.58f), S.Star(4, 0.32f, 0.1f)), new Color(1f, 0.92f, 0.5f), 0.04f);
-        });
+        public static Sprite GameRoomIcon => Item(Chains.Ag, 2);   // the same yarn ball as on the board
 
         /// <summary>Gold trophy cup with a star (home screen achievements button).</summary>
         public static Sprite Trophy => Make("ui_trophy", Size, p =>
@@ -110,7 +106,8 @@ namespace KaraPati
         });
 
         /// <summary>Pink yarn ball thrown in Yumak Atma.</summary>
-        public static Sprite YarnBall => Make("mg_yarn", Size, p => Yarn(p, 0.95f, new Color(0.95f, 0.5f, 0.62f)));
+        /// <summary>The yarn ball of the Yarn Toss game: the same small yarn ball as on the board.</summary>
+        public static Sprite YarnBall => Item(Chains.Ag, 2);
 
         /// <summary>White ring (tint it): the spot where the jumping cat can catch the yarn.</summary>
         public static Sprite TargetRing => Make("mg_ring", Size, p => p.Fill(q => S.Ring(S.Circle(q, Vector2.zero, 0.84f), 0.08f), Color.white));

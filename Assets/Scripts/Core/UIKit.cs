@@ -14,15 +14,34 @@ namespace KaraPati
         public static readonly Color Green = new Color(0.42f, 0.78f, 0.38f);
         public static readonly Color Disabled = new Color(0.33f, 0.29f, 0.4f);
 
-        static Font font;
+        // Fonts (Resources/Fonts, both SIL Open Font License): Nunito for texts, Baloo 2 for titles and buttons.
+        // If a file is missing the game falls back to Unity's built-in font.
+        static Font font, titleFont;
+
+        /// <summary>Body text font (Nunito SemiBold).</summary>
         public static Font Font
         {
             get
             {
+                if (!font) font = Resources.Load<Font>("Fonts/Nunito-SemiBold");
                 if (!font) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 return font;
             }
         }
+
+        /// <summary>Title and button font (Baloo 2 Bold): big texts and button labels use it.</summary>
+        public static Font TitleFont
+        {
+            get
+            {
+                if (!titleFont) titleFont = Resources.Load<Font>("Fonts/Baloo2-Bold");
+                if (!titleFont) titleFont = Font;
+                return titleFont;
+            }
+        }
+
+        /// <summary>Texts this big or bigger are titles.</summary>
+        public const int TitleSize = 36;
 
         public static RectTransform Rect(string name, Transform parent)
         {
@@ -85,7 +104,7 @@ namespace KaraPati
         {
             var rt = Rect(name, parent);
             var t = rt.gameObject.AddComponent<Text>();
-            t.font = Font;
+            t.font = size >= TitleSize ? TitleFont : Font;
             t.text = s;
             t.fontSize = size;
             t.color = color;
@@ -115,6 +134,7 @@ namespace KaraPati
             b.onClick.AddListener(() => { Sfx.Play("click"); onClick?.Invoke(); });
             // labels stay light with an outline on coloured buttons; a pale panel-coloured button gets the dark panel text
             var t = Theme.OnLight(img.transform) ? Txt("Label", img.transform, label, fontSize, Cream) : TxtRaw("Label", img.transform, label, fontSize, Cream);
+            t.font = TitleFont;
             Stretch(t.rectTransform, 6, 6, 4, 4);
             return b;
         }
