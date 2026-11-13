@@ -88,6 +88,8 @@ namespace KaraPati
             img.color = color;
             img.raycastTarget = false;
             if (sliced) img.type = Image.Type.Sliced;
+            // stretched panels keep an even hand-drawn line at every size (thin bars switch to a bold version)
+            if (sliced && sprite != null && sprite == ProcArt.Rounded) rt.gameObject.AddComponent<SliceFit>();
             // pictures are never squashed: they keep their proportions inside whatever box they are given.
             // Plain shapes (panels, circles, light, fog) are meant to stretch. An image that starts empty gets a picture later.
             else img.preserveAspect = ProcArt.IsPicture(sprite);

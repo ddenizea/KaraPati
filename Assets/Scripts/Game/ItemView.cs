@@ -66,7 +66,7 @@ namespace KaraPati
             tripChest = UIKit.Img("TripChest", rt, ProcArt.Classic(Chains.Sandik, 1), Color.white);
             tripChest.rectTransform.At(new Vector2(30f, 44f), new Vector2(64f, 64f));
             tripChest.raycastTarget = false;
-            var bang = UIKit.Img("Bang", tripChest.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var bang = UIKit.Img("Bang", tripChest.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             bang.rectTransform.At(new Vector2(24f, 22f), new Vector2(30f, 30f));
             var bt = UIKit.Txt("!", bang.transform, "!", 22, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(bt.rectTransform);

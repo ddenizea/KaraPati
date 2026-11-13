@@ -163,7 +163,7 @@ namespace KaraPati
 
                 if (GM.IsSetClaimable(set))
                 {
-                    var badge = UIKit.Img("Badge", rt, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+                    var badge = UIKit.Img("Badge", rt, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
                     badge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-10f, -10f), new Vector2(56f, 56f));
                     var bt = UIKit.Txt("!", badge.transform, "!", 38, Color.white);
                     UIKit.Stretch(bt.rectTransform);

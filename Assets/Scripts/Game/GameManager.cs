@@ -531,18 +531,19 @@ namespace KaraPati
         void BuildTopBar(RectTransform bar)
         {
             // player level ring
-            var lvBg = UIKit.Img("Level", bar, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f));
+            // a cream hand-drawn disc; the XP ring fills inside its line
+            var lvBg = UIKit.Img("Level", bar, ProcArt.RoundInk, new Color(1f, 0.96f, 0.88f));
             lvBg.raycastTarget = true;
             levelBadge = lvBg.rectTransform;
             levelBadge.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(30f, 0f), new Vector2(100f, 100f));
-            levelRing = UIKit.Img("Ring", lvBg.transform, ProcArt.Circle, new Color(0.35f, 0.75f, 1f));
-            levelRing.rectTransform.sizeDelta = new Vector2(100f, 100f);
+            levelRing = UIKit.Img("Ring", lvBg.transform, ProcArt.Circle, UIKit.Orange);
+            levelRing.rectTransform.sizeDelta = new Vector2(84f, 84f);
             levelRing.type = Image.Type.Filled;
             levelRing.fillMethod = Image.FillMethod.Radial360;
             levelRing.fillOrigin = (int)Image.Origin360.Top;
             levelRing.fillClockwise = true;
-            var lvIn = UIKit.Img("Inner", lvBg.transform, ProcArt.Circle, new Color(0.16f, 0.12f, 0.24f));
-            lvIn.rectTransform.sizeDelta = new Vector2(78f, 78f);
+            var lvIn = UIKit.Img("Inner", lvBg.transform, ProcArt.Circle, new Color(1f, 0.96f, 0.88f));
+            lvIn.rectTransform.sizeDelta = new Vector2(66f, 66f);
             levelText = UIKit.Txt("N", lvBg.transform, "1", 40, UIKit.Cream);
             levelText.fontStyle = FontStyle.Bold;
             UIKit.Stretch(levelText.rectTransform);
@@ -577,7 +578,7 @@ namespace KaraPati
             evIcon.rectTransform.At(new Vector2(0f, 12f), new Vector2(74f, 74f));
             eventTimerText = UIKit.Txt("Timer", ev.transform, "", 20, new Color(1f, 0.9f, 0.6f));
             eventTimerText.rectTransform.At(new Vector2(0f, -36f), new Vector2(120f, 30f));
-            var evB = UIKit.Img("Badge", ev.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var evB = UIKit.Img("Badge", ev.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             evB.rectTransform.At(new Vector2(44f, 40f), new Vector2(38f, 38f));
             var evBt = UIKit.Txt("!", evB.transform, "!", 28, Color.white);
             UIKit.Stretch(evBt.rectTransform);

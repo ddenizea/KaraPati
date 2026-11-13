@@ -286,6 +286,39 @@ namespace KaraPati
             }
         }
 
+        /// <summary>The panel shape with a line about 2.4x as thick, for thin bars (see <see cref="SliceFit"/>).</summary>
+        public static Sprite RoundedBold
+        {
+            get
+            {
+                if (cache.TryGetValue("ui_rounded_bold", out var have) && have) return have;
+                var art = LoadSliced("UI/rounded_bold", "ui_rounded_bold", 40);
+                return art ? art : Rounded;
+            }
+        }
+
+        /// <summary>Hand-drawn circle (white inside, brown line) for round buttons and badges; the plain circle if missing.</summary>
+        public static Sprite RoundInk
+        {
+            get
+            {
+                if (cache.TryGetValue("ui_circle_ink", out var have) && have) return have;
+                var art = LoadArt("UI/circle", "ui_circle_ink");
+                return art ? art : Circle;
+            }
+        }
+
+        /// <summary>Only the hand-drawn rounded outline (empty inside), 9-sliced: the frame around the room scene.</summary>
+        public static Sprite FrameInk
+        {
+            get
+            {
+                if (cache.TryGetValue("ui_frame_ink", out var have) && have) return have;
+                var art = LoadSliced("UI/frame", "ui_frame_ink", 40);
+                return art ? art : Frame;
+            }
+        }
+
         /// <summary>A drawn picture as a stretchable (9-slice) sprite: the outer `border` pixels keep their size.</summary>
         static Sprite LoadSliced(string path, string key, int border)
         {

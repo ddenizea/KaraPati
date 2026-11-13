@@ -222,6 +222,16 @@ namespace KaraPati
             p.Fill(q => S.Ellipse(q, new Vector2(0.35f, -0.12f), new Vector2(0.15f, 0.06f)), new Color(1f, 1f, 1f, 0.5f));
         });
 
+        /// <summary>One outlined flame (orange outside, yellow core) for the fire under the shop cauldron.</summary>
+        public static Sprite Flame => Make("fx_flame", Size, p =>
+        {
+            Sdf outer = q => S.U(S.Circle(q, new Vector2(0f, -0.42f), 0.46f),
+                S.Poly(q, new[] { new Vector2(-0.44f, -0.3f), new Vector2(0.44f, -0.3f), new Vector2(0.05f, 0.92f) }));
+            p.FillOutlined(outer, new Color(1f, 0.56f, 0.18f), 0.05f);
+            p.Fill(q => S.U(S.Circle(q, new Vector2(0f, -0.5f), 0.24f),
+                S.Poly(q, new[] { new Vector2(-0.22f, -0.42f), new Vector2(0.22f, -0.42f), new Vector2(0.03f, 0.25f) })), new Color(1f, 0.88f, 0.35f));
+        });
+
         /// <summary>Little heart for petting.</summary>
         public static Sprite Heart => Make("heart", Size, p =>
             p.FillOutlined(q =>

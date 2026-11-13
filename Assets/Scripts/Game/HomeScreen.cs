@@ -22,7 +22,7 @@ namespace KaraPati
         const float ProgressW = 600f;
         int view = -1;
 
-        RectTransform sceneArea;
+        RectTransform sceneArea, sceneClip;
         readonly RectTransform[] scenes = new RectTransform[Story.Chapters.Length];
         readonly Image[] dims = new Image[Story.Chapters.Length];
         readonly RectTransform[] clueLayers = new RectTransform[Story.Chapters.Length];
@@ -33,6 +33,21 @@ namespace KaraPati
         // shop (chapter 1)
         GameObject webs, dirt, rug, bottles, counterStuff, bed;
         bool shopArt;   // the shop is built from the drawn pictures in Resources/Rooms (false: the old shapes)
+
+        // shop life (drawn shop only): the cauldron bubbles once its fire is lit, and Kara Pati wanders about
+        enum Fx { Bubble, Spark, Steam, Blob, Drop }
+        class Bubble { public Image img; public Fx kind; public float age, life, x, size, phase, rise, vx, vy; }
+        readonly List<Bubble> bubbles = new List<Bubble>();
+        readonly List<Image> flames = new List<Image>();
+        RectTransform bubbleLayer;
+        float nextSteam, nextBlob, nextSplash;
+        float nextBubble;
+        enum CatMode { Sit, Walk, Sleep }
+        CatMode catMode = CatMode.Sit;
+        bool catStarted, shopHasBed, catToBed;
+        float catX, catTargetX, catUntil, catWalkClock;
+        int catFace = 1;
+        const float CatFloorY = -290f, BedX = -330f, BedSleepY = -275f, CatSpeed = 115f;
         Image cauldron, cauldronGlow, lanternA, lanternB, glowA, glowB, plankTop, plankBottom, counterTop, counterBody, karaPati;
 
         // cellar (chapter 2)
@@ -113,6 +128,13 @@ namespace KaraPati
 
             // scenes
             sceneArea = UIKit.Section(root, "Scene", 272f, 940f);
+            // the rooms are clipped to a rounded card and get a hand-drawn frame on top. The clip is a little smaller
+            // than the frame, so its hard (not smoothed) edge falls under the frame's line instead of showing outside it.
+            var clip = UIKit.ImgArt("SceneClip", sceneArea, ProcArt.Rounded, Color.white, true);
+            clip.pixelsPerUnitMultiplier = 0.5f;
+            clip.rectTransform.At(Vector2.zero, new Vector2(1004f, 924f));
+            clip.gameObject.AddComponent<Mask>().showMaskGraphic = false;
+            sceneClip = clip.rectTransform;
             scenes[0] = BuildShop(sceneArea);
             scenes[1] = BuildCellar(sceneArea);
             for (int i = 2; i < scenes.Length; i++)
@@ -122,55 +144,58 @@ namespace KaraPati
                 dims[i] = extra[i].dim;
             }
             for (int i = 0; i < scenes.Length; i++) BuildClues(i);
+            var frame = UIKit.ImgArt("SceneFrame", sceneArea, ProcArt.FrameInk, Color.white, true);
+            frame.pixelsPerUnitMultiplier = 0.5f;
+            frame.rectTransform.At(Vector2.zero, new Vector2(1020f, 940f));
 
             // investigation buttons on top of the scene
-            var caseBtn = RoundButton(sceneArea, "CaseFile", ProcArt.CaseFile, new Vector2(0f, 1f), new Vector2(66f, -60f), () => GM.OpenCaseFile());
-            caseBadge = UIKit.Img("Badge", caseBtn.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var caseBtn = RoundButton(sceneArea, "CaseFile", ProcArt.CaseFile, new Vector2(0f, 1f), new Vector2(100f, -76f), () => GM.OpenCaseFile());
+            caseBadge = UIKit.Img("Badge", caseBtn.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             caseBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             caseBadgeText = UIKit.Txt("N", caseBadge.transform, "0", 26, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(caseBadgeText.rectTransform);
-            RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-66f, -60f), UseEye);
+            RoundButton(sceneArea, "Eye", ProcArt.Eye, new Vector2(1f, 1f), new Vector2(-100f, -76f), UseEye);
             // settings: music and effects as two separate switches, and the language
-            RoundButton(sceneArea, "Settings", ProcArt.Gear, new Vector2(1f, 1f), new Vector2(-66f, -190f), ToggleSettings);
+            RoundButton(sceneArea, "Settings", ProcArt.Gear, new Vector2(1f, 1f), new Vector2(-100f, -200f), ToggleSettings);
             // Friendship Book: every customer, how good friends you are, the story lines they told you
-            var book = RoundButton(sceneArea, "FriendBook", ProcArt.Heart, new Vector2(1f, 1f), new Vector2(-66f, -320f), () => GM.OpenFriendBook());
-            friendBadge = UIKit.Img("Badge", book.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var book = RoundButton(sceneArea, "FriendBook", ProcArt.Heart, new Vector2(1f, 1f), new Vector2(-100f, -324f), () => GM.OpenFriendBook());
+            friendBadge = UIKit.Img("Badge", book.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             friendBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var fbt = UIKit.Txt("!", friendBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(fbt.rectTransform);
             friendNew = NewTag(book.transform);
             // Achievements: "!" while a reward is waiting
-            var trophy = RoundButton(sceneArea, "Achievements", ProcArt.Trophy, new Vector2(1f, 1f), new Vector2(-66f, -450f), () => GM.OpenAchievements());
-            achBadge = UIKit.Img("Badge", trophy.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var trophy = RoundButton(sceneArea, "Achievements", ProcArt.Trophy, new Vector2(1f, 1f), new Vector2(-100f, -448f), () => GM.OpenAchievements());
+            achBadge = UIKit.Img("Badge", trophy.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             achBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var abt = UIKit.Txt("!", achBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(abt.rectTransform);
             BuildSettings();
-            var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(66f, -190f), () => GM.OpenDaily());
-            dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var daily = RoundButton(sceneArea, "Daily", ProcArt.Calendar, new Vector2(0f, 1f), new Vector2(100f, -200f), () => GM.OpenDaily());
+            dailyBadge = UIKit.Img("Badge", daily.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             dailyBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var db = UIKit.Txt("!", dailyBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(db.rectTransform);
             // chapter list (like a map of the story), red dot when a gift chest is waiting
-            var chapters = RoundButton(sceneArea, "Chapters", ProcArt.Classic(Chains.Sandik, 1), new Vector2(0f, 1f), new Vector2(66f, -320f), () => GM.OpenChapters());
-            chaptersBadge = UIKit.Img("Badge", chapters.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            var chapters = RoundButton(sceneArea, "Chapters", ProcArt.Classic(Chains.Sandik, 1), new Vector2(0f, 1f), new Vector2(100f, -324f), () => GM.OpenChapters());
+            chaptersBadge = UIKit.Img("Badge", chapters.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             chaptersBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var cbt = UIKit.Txt("!", chaptersBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(cbt.rectTransform);
             // "Usta Kedim": name and colour of the Master Cat
-            var usta = RoundButton(sceneArea, "UstaKedim", ProcArt.SideCat(3, 4), new Vector2(0f, 1f), new Vector2(66f, -450f), () => GM.OpenUstaPanel());
+            var usta = RoundButton(sceneArea, "UstaKedim", ProcArt.SideCat(3, 4), new Vector2(0f, 1f), new Vector2(100f, -448f), () => GM.OpenUstaPanel());
             ustaIcon = usta.transform.Find("Icon").GetComponent<Image>();
             ustaIcon.rectTransform.sizeDelta = new Vector2(92f, 92f);
-            ustaBadge = UIKit.Img("Badge", usta.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            ustaBadge = UIKit.Img("Badge", usta.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             ustaBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var ubt = UIKit.Txt("!", ustaBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(ubt.rectTransform);
             // Game Room: mini games (opens at level 5; "!" while a free play is waiting)
-            var games = RoundButton(sceneArea, "GameRoom", ProcArt.GameRoomIcon, new Vector2(0f, 1f), new Vector2(66f, -580f), () => GM.OpenGameRoom());
+            var games = RoundButton(sceneArea, "GameRoom", ProcArt.GameRoomIcon, new Vector2(0f, 1f), new Vector2(100f, -572f), () => GM.OpenGameRoom());
             gameIcon = games.transform.Find("Icon").GetComponent<Image>();
             gameLock = UIKit.Img("Lock", games.transform, ProcArt.Lock, Color.white);
             gameLock.rectTransform.At(new Vector2(30f, -30f), new Vector2(46f, 46f));
-            gameBadge = UIKit.Img("Badge", games.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            gameBadge = UIKit.Img("Badge", games.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             gameBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var gbt = UIKit.Txt("!", gameBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(gbt.rectTransform);
@@ -201,7 +226,7 @@ namespace KaraPati
             aLabel.text = L.T("Albüm");
             aLabel.fontSize = 34;
             aLabel.rectTransform.offsetMin = new Vector2(110f, 4f);
-            albumBadge = UIKit.Img("Badge", album.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            albumBadge = UIKit.Img("Badge", album.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             albumBadge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-14f, -14f), new Vector2(46f, 46f));
             var bt = UIKit.Txt("!", albumBadge.transform, "!", 32, Color.white);
             UIKit.Stretch(bt.rectTransform);
@@ -215,7 +240,7 @@ namespace KaraPati
             tLabel.text = L.T("Kule");
             tLabel.fontSize = 34;
             tLabel.rectTransform.offsetMin = new Vector2(100f, 4f);
-            towerBadge = UIKit.Img("Badge", towerBtn.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+            towerBadge = UIKit.Img("Badge", towerBtn.transform, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
             towerBadge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-14f, -14f), new Vector2(46f, 46f));
             var tbt = UIKit.Txt("!", towerBadge.transform, "!", 32, Color.white);
             UIKit.Stretch(tbt.rectTransform);
@@ -224,7 +249,7 @@ namespace KaraPati
             ((RectTransform)play.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(460f, 150f));
             play.Label().fontStyle = FontStyle.Bold;
             play.Label().rectTransform.offsetMin = new Vector2(110f, 4f);
-            var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Classic(Chains.Kazan, 1), Color.white);
+            var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Item(Chains.KaraKazan, 1), Color.white);
             pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 4f), new Vector2(100f, 100f));
         }
 
@@ -244,14 +269,12 @@ namespace KaraPati
 
         Button RoundButton(RectTransform parent, string name, Sprite icon, Vector2 anchor, Vector2 pos, System.Action onClick)
         {
-            var bg = UIKit.Img(name, parent, ProcArt.Circle, new Color(0.1f, 0.07f, 0.15f, 0.85f));
+            // a cream hand-drawn disc that sits fully inside the room
+            var bg = UIKit.Img(name, parent, ProcArt.RoundInk, new Color(1f, 0.96f, 0.88f));
             bg.raycastTarget = true;
-            bg.rectTransform.Anchor(anchor, new Vector2(0.5f, 0.5f)).At(pos, new Vector2(110f, 110f));
-            var ring = UIKit.Img("Ring", bg.transform, ProcArt.Circle, new Color(1f, 0.66f, 0.3f, 0.5f));
-            ring.rectTransform.sizeDelta = new Vector2(118f, 118f);
-            ring.transform.SetAsFirstSibling();
+            bg.rectTransform.Anchor(anchor, new Vector2(0.5f, 0.5f)).At(pos, new Vector2(104f, 104f));
             var ic = UIKit.Img("Icon", bg.transform, icon, Color.white);
-            ic.rectTransform.sizeDelta = new Vector2(74f, 74f);
+            ic.rectTransform.sizeDelta = new Vector2(70f, 70f);
             var b = bg.gameObject.AddComponent<Button>();
             b.onClick.AddListener(() => { Tween.Punch(bg.transform, 0.12f, 0.25f); Sfx.Play("click"); onClick(); });
             return b;
@@ -266,7 +289,7 @@ namespace KaraPati
 
         RectTransform NewScene(string name)
         {
-            return UIKit.Rect(name, sceneArea).At(Vector2.zero, new Vector2(1020f, 940f));
+            return UIKit.Rect(name, sceneClip).At(Vector2.zero, new Vector2(1020f, 940f));
         }
 
         // ------------------------------------------------------------------ chapter 1: shop
@@ -282,8 +305,9 @@ namespace KaraPati
             Part("Room", scene, R("shop_bg"), Color.white, Vector2.zero, new Vector2(1020f, 940f));
 
             // window: the dirty glass is a second picture laid exactly over the clean one
-            Part("Window", scene, R("shop_window"), Color.white, new Vector2(-290f, 190f), new Vector2(280f, 265f));
-            dirt = Part("WindowDirty", scene, R("shop_window_dirty"), Color.white, new Vector2(-290f, 190f), new Vector2(280f, 265f)).gameObject;
+            // (kept clear of the round buttons along the left edge)
+            Part("Window", scene, R("shop_window"), Color.white, new Vector2(-255f, 190f), new Vector2(240f, 227f));
+            dirt = Part("WindowDirty", scene, R("shop_window_dirty"), Color.white, new Vector2(-255f, 190f), new Vector2(240f, 227f)).gameObject;
 
             // two shelves; the bottles stand on their top edge
             plankTop = Part("ShelfTop", scene, R("shop_shelf"), Color.white, new Vector2(250f, 241f), new Vector2(380f, 107f));
@@ -296,17 +320,29 @@ namespace KaraPati
             Part("Book", bottles.transform, ProcArt.WitchItem("w_kitap"), Color.white, new Vector2(330f, 196f), new Vector2(84f, 84f));
 
             // lanterns hang from hooks in the ceiling, between the window and the shelves
-            Part("Hook", scene, R("shop_hook"), Color.white, new Vector2(-95f, 420f), new Vector2(41f, 100f));
+            Part("Hook", scene, R("shop_hook"), Color.white, new Vector2(-75f, 420f), new Vector2(41f, 100f));
             Part("Hook", scene, R("shop_hook"), Color.white, new Vector2(15f, 420f), new Vector2(41f, 100f));
-            glowA = Part("GlowA", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(-95f, 335f), new Vector2(320f, 320f));
+            glowA = Part("GlowA", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(-75f, 335f), new Vector2(320f, 320f));
             glowB = Part("GlowB", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(15f, 335f), new Vector2(320f, 320f));
-            lanternA = Part("LanternA", scene, ProcArt.Lantern(false), Color.white, new Vector2(-95f, 335f), new Vector2(120f, 135f));
+            lanternA = Part("LanternA", scene, ProcArt.Lantern(false), Color.white, new Vector2(-75f, 335f), new Vector2(120f, 135f));
             lanternB = Part("LanternB", scene, ProcArt.Lantern(false), Color.white, new Vector2(15f, 335f), new Vector2(120f, 135f));
 
             rug = UIKit.Rect("Rug", scene).gameObject;
             Part("Rug", rug.transform, R("shop_rug"), Color.white, new Vector2(0f, -345f), new Vector2(520f, 240f));
             cauldronGlow = Part("CauldronGlow", scene, ProcArt.GlowSprite, new Color(1f, 0.5f, 0.8f, 0.45f), new Vector2(0f, -190f), new Vector2(480f, 480f));
+            // a little fire under the pot (shown once it is lit); flames flicker from their base
+            flames.Clear();
+            float[] fx = { -48f, 0f, 48f }, fw = { 56f, 70f, 56f }, fh = { 82f, 104f, 82f };
+            for (int i = 0; i < 3; i++)
+            {
+                var fl = Part("Flame", scene, ProcArt.Flame, Color.white, Vector2.zero, new Vector2(fw[i], fh[i]));
+                fl.rectTransform.pivot = new Vector2(0.5f, 0f);
+                fl.rectTransform.anchoredPosition = new Vector2(fx[i], -385f);   // tips lick the pot from behind
+                fl.gameObject.SetActive(false);
+                flames.Add(fl);
+            }
             cauldron = Part("Cauldron", scene, ProcArt.Item(Chains.KaraKazan, 1), Color.white, new Vector2(0f, -230f), new Vector2(300f, 300f));
+            bubbleLayer = UIKit.Rect("Bubbles", scene).At(Vector2.zero, new Vector2(1020f, 940f));
 
             // the counter's top board is its own picture so it can lie crooked before it is repaired
             counterBody = Part("CounterBody", scene, R("shop_counter"), Color.white, new Vector2(340f, -241f), new Vector2(300f, 138f));
@@ -410,6 +446,7 @@ namespace KaraPati
             catBtn.onClick.AddListener(() =>
             {
                 Tween.Punch(cat.transform, 0.15f, 0.3f);
+                if (shopArt && cat == karaPati && catMode == CatMode.Walk) CatSit(3f);
                 string line = catLines[Random.Range(0, catLines.Length)];
                 if (view >= 0 && view < chapterCatLines.Length && Random.value < 0.6f)
                     line = chapterCatLines[view][Random.Range(0, chapterCatLines[view].Length)];
@@ -591,7 +628,7 @@ namespace KaraPati
             var bg = UIKit.Img("SettingsMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.96f), true);
             bg.raycastTarget = true;
             settings = bg.rectTransform;
-            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 480f));
+            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-170f, -150f), new Vector2(380f, 480f));
             var title = UIKit.Txt("Title", settings, L.T("Ayarlar"), 32, UIKit.Orange, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(340f, 44f));
@@ -726,7 +763,7 @@ namespace KaraPati
             {
                 bool claimed = GM.GiftClaimed(view, g);
                 bool ready = GM.GiftReady(view, g);
-                gifts[g].color = claimed ? new Color(1f, 1f, 1f, 0.55f) : ready ? Color.white : new Color(0.45f, 0.42f, 0.5f, 0.9f);
+                gifts[g].color = claimed ? new Color(1f, 1f, 1f, 0.55f) : ready ? Color.white : new Color(0.82f, 0.78f, 0.74f, 1f);
                 giftChecks[g].gameObject.SetActive(claimed);
                 giftGlows[g].gameObject.SetActive(ready);
                 if (!ready) gifts[g].rectTransform.localScale = Vector3.one;
@@ -815,7 +852,7 @@ namespace KaraPati
             bottles.SetActive(shelves);
 
             bool fire = Done("kazan", done);
-            cauldron.color = fire ? Color.white : new Color(0.5f, 0.5f, 0.56f);
+            cauldron.color = fire || shopArt ? Color.white : new Color(0.5f, 0.5f, 0.56f);   // the drawn pot brews even before its fire
             cauldronGlow.gameObject.SetActive(fire);
 
             rug.SetActive(Done("hali", done));
@@ -834,11 +871,25 @@ namespace KaraPati
 
             bool hasBed = Done("yatak", done);
             bed.SetActive(hasBed);
+            if (shopArt)
+            {
+                // the drawn shop's cat walks about on its own (TickShopCat); here only where it starts
+                shopHasBed = hasBed;
+                if (!catStarted || (!hasBed && catMode == CatMode.Sleep))
+                {
+                    catStarted = true;
+                    catX = BedX;
+                    if (hasBed) CatSleep(); else CatSit(2f);
+                }
+            }
+            else
+            {
             karaPati.sprite = ProcArt.SideCat(0, hasBed ? 5 : 4);
-            karaPati.rectTransform.anchoredPosition = hasBed ? new Vector2(-330f, shopArt ? -275f : -318f) : new Vector2(-330f, -290f);
+            karaPati.rectTransform.anchoredPosition = hasBed ? new Vector2(-330f, -318f) : new Vector2(-330f, -290f);
+            }
 
             int inCh = Mathf.Clamp(done, 0, Story.Chapters[0].tasks.Length);
-            dims[0].color = new Color(0.05f, 0.03f, 0.08f, 0.45f * (1f - inCh / (float)Story.Chapters[0].tasks.Length));
+            dims[0].color = new Color(0.05f, 0.03f, 0.08f, 0.3f * (1f - inCh / (float)Story.Chapters[0].tasks.Length));
         }
 
         void ApplyCellar(int done)
@@ -923,15 +974,17 @@ namespace KaraPati
             FX.Burst(scene, local, UIKit.Orange, 12);
         }
 
+        static Sprite Or(Sprite a, Sprite b) => a ? a : b;
+
         Sprite TaskIcon(string id)
         {
             switch (id)
             {
-                case "ag": return ProcArt.Classic(Chains.Ag, 1);
-                case "pencere": return ProcArt.Moon;
+                case "ag": return Or(ProcArt.Room("shop_web"), ProcArt.Classic(Chains.Ag, 1));
+                case "pencere": return Or(ProcArt.Room("shop_window"), ProcArt.Moon);
                 case "raf": return ProcArt.Bottle(0);
-                case "kazan": return ProcArt.Classic(Chains.Kazan, 1);
-                case "hali": return ProcArt.Classic(Chains.Ag, 4);
+                case "kazan": return ProcArt.Item(Chains.KaraKazan, 1);
+                case "hali": return Or(ProcArt.Room("shop_rug"), ProcArt.Classic(Chains.Ag, 4));
                 case "fener": return ProcArt.Lantern(true);
                 case "tezgah": return ProcArt.WitchItem("w_kure");
                 case "yatak": return ProcArt.SideCat(0, 5);
@@ -1029,6 +1082,214 @@ namespace KaraPati
             }
         }
 
+        // ------------------------------------------------------------------ shop life
+        /// <summary>
+        /// The shop cauldron is always brewing: its surface boils with little blobs, bubbles wobble up and pop, and
+        /// steam drifts off. Lighting its fire (the story task) turns it up: flames flicker under the pot, it rocks and
+        /// heaves, the glow pulses, bubbles come thick and fast with gold stars among them, and drops splash out.
+        /// </summary>
+        void TickCauldron(float dt, float t)
+        {
+            bool lit = cauldronGlow && cauldronGlow.gameObject.activeSelf;
+            const float Surface = -207f;   // the brew line in the pot picture
+            if (cauldron)
+            {
+                float heave = lit ? 0.022f : 0.01f;
+                cauldron.rectTransform.localScale = new Vector3(1f + Mathf.Sin(t * 3.4f) * heave, 1f - Mathf.Sin(t * 3.4f) * heave, 1f);
+                cauldron.rectTransform.localEulerAngles = new Vector3(0f, 0f, lit ? Mathf.Sin(t * 2.1f) * 1.6f : 0f);
+            }
+            if (lit && cauldronGlow)
+                cauldronGlow.color = new Color(1f, 0.5f, 0.8f, 0.42f + Mathf.Sin(t * 2.4f) * 0.12f);
+            for (int i = 0; i < flames.Count; i++)
+            {
+                var fl = flames[i];
+                if (!fl) continue;
+                if (fl.gameObject.activeSelf != lit) fl.gameObject.SetActive(lit);
+                if (!lit) continue;
+                fl.rectTransform.localScale = new Vector3(1f + Mathf.Sin(t * 13f + i * 1.7f) * 0.1f, 1f + Mathf.Sin(t * 17f + i * 2.3f) * 0.2f, 1f);
+                fl.rectTransform.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(t * 9f + i) * 8f);
+            }
+            if (!bubbleLayer) return;
+
+            // blobs swelling and bursting on the brew surface
+            if (t >= nextBlob)
+            {
+                nextBlob = t + (lit ? Random.Range(0.08f, 0.18f) : Random.Range(0.25f, 0.45f));
+                var b = Spawn(Fx.Blob, ProcArt.RoundInk, Random.value < 0.5f ? new Color(1f, 0.55f, 0.82f) : new Color(0.92f, 0.62f, 1f));
+                b.life = Random.Range(0.45f, 0.8f);
+                b.x = Random.Range(-62f, 62f);
+                b.size = Random.Range(18f, 34f);
+            }
+            // bubbles rising out of the pot (and gold stars once it is lit)
+            if (t >= nextBubble)
+            {
+                nextBubble = t + (lit ? Random.Range(0.1f, 0.22f) : Random.Range(0.3f, 0.55f));
+                bool star = lit && Random.value < 0.2f;
+                var b = Spawn(star ? Fx.Spark : Fx.Bubble, star ? ProcArt.Sparkle : ProcArt.RoundInk,
+                    star ? new Color(1f, 0.9f, 0.5f) : Random.value < 0.5f ? new Color(1f, 0.62f, 0.86f) : new Color(0.86f, 0.7f, 1f));
+                b.life = Random.Range(1.4f, 2.3f);
+                b.rise = lit ? Random.Range(190f, 260f) : Random.Range(120f, 180f);
+                b.x = Random.Range(-58f, 58f);
+                b.size = star ? Random.Range(24f, 36f) : Random.Range(16f, lit ? 36f : 28f);
+            }
+            // steam puffs
+            if (t >= nextSteam)
+            {
+                nextSteam = t + (lit ? Random.Range(0.5f, 0.9f) : Random.Range(1.1f, 1.8f));
+                var b = Spawn(Fx.Steam, ProcArt.Circle, new Color(1f, 0.9f, 0.98f, 0.25f));
+                b.life = Random.Range(2.2f, 3.2f);
+                b.rise = Random.Range(240f, 320f);
+                b.x = Random.Range(-45f, 45f);
+                b.size = Random.Range(55f, 90f);
+            }
+            // drops splashing out over the rim
+            if (lit && t >= nextSplash)
+            {
+                nextSplash = t + Random.Range(0.6f, 1.3f);
+                int n = Random.Range(2, 4);
+                float x0 = Random.Range(-40f, 40f);
+                for (int i = 0; i < n; i++)
+                {
+                    var b = Spawn(Fx.Drop, ProcArt.RoundInk, new Color(1f, 0.55f, 0.82f));
+                    b.life = 1.2f;
+                    b.x = x0;
+                    b.rise = Surface;
+                    b.vx = Random.Range(-170f, 170f);
+                    b.vy = Random.Range(260f, 380f);
+                    b.size = Random.Range(12f, 18f);
+                }
+            }
+
+            foreach (var b in bubbles)
+            {
+                if (!b.img.gameObject.activeSelf) continue;
+                b.age += dt;
+                float k = b.age / b.life;
+                var rt = b.img.rectTransform;
+                var c = b.img.color;
+                switch (b.kind)
+                {
+                    case Fx.Blob:
+                        if (k >= 1f) { b.img.gameObject.SetActive(false); continue; }
+                        // a flattened bump that swells up from the surface and bursts
+                        float sw = k < 0.75f ? Mathf.Sin(k / 0.75f * Mathf.PI * 0.5f) : Mathf.Lerp(1f, 1.4f, (k - 0.75f) / 0.25f);
+                        rt.sizeDelta = new Vector2(b.size * sw, b.size * 0.7f * sw);
+                        rt.anchoredPosition = new Vector2(b.x, Surface + b.size * 0.2f * sw);
+                        c.a = k > 0.75f ? Mathf.Lerp(1f, 0f, (k - 0.75f) / 0.25f) : 1f;
+                        break;
+                    case Fx.Drop:
+                        b.vy -= 900f * dt;
+                        b.x += b.vx * dt;
+                        b.rise += b.vy * dt;
+                        // gone once it falls back below the rim
+                        if (k >= 1f || (b.vy < 0f && b.rise < Surface - 10f)) { b.img.gameObject.SetActive(false); continue; }
+                        rt.anchoredPosition = new Vector2(b.x, b.rise);
+                        rt.sizeDelta = new Vector2(b.size, b.size * (1f + Mathf.Abs(b.vy) / 900f));
+                        rt.localEulerAngles = new Vector3(0f, 0f, Mathf.Atan2(b.vy, b.vx) * Mathf.Rad2Deg - 90f);
+                        c.a = 1f;
+                        break;
+                    default:
+                        if (k >= 1f) { b.img.gameObject.SetActive(false); continue; }
+                        bool steam = b.kind == Fx.Steam;
+                        rt.anchoredPosition = new Vector2(b.x + Mathf.Sin(b.age * (steam ? 1.6f : 4f) + b.phase) * (steam ? 24f : 14f), Surface + k * b.rise);
+                        float s = steam ? Mathf.Lerp(0.5f, 1.7f, k)
+                            : k < 0.15f ? Mathf.Lerp(0.3f, 1f, k / 0.15f) : k > 0.85f ? Mathf.Lerp(1f, 1.4f, (k - 0.85f) / 0.15f) : 1f;
+                        rt.sizeDelta = Vector2.one * b.size * s;
+                        if (b.kind == Fx.Spark) rt.localEulerAngles = new Vector3(0f, 0f, b.age * 120f);
+                        c.a = steam ? 0.25f * Mathf.Sin(k * Mathf.PI) : k > 0.75f ? Mathf.Lerp(1f, 0f, (k - 0.75f) / 0.25f) : 1f;
+                        break;
+                }
+                b.img.color = c;
+            }
+        }
+
+        /// <summary>A free effect image from the pool (or a new one), reset and shown.</summary>
+        Bubble Spawn(Fx kind, Sprite sprite, Color color)
+        {
+            var b = bubbles.Find(x => !x.img.gameObject.activeSelf);
+            if (b == null)
+            {
+                b = new Bubble { img = UIKit.ImgArt("Fx", bubbleLayer, sprite, color) };
+                bubbles.Add(b);
+            }
+            b.kind = kind;
+            b.img.sprite = sprite;
+            b.img.color = color;
+            b.age = 0f;
+            b.phase = Random.Range(0f, 6.3f);
+            b.img.rectTransform.localEulerAngles = Vector3.zero;
+            // steam drifts behind the bubbles
+            if (kind == Fx.Steam) b.img.transform.SetAsFirstSibling(); else b.img.transform.SetAsLastSibling();
+            b.img.gameObject.SetActive(true);
+            return b;
+        }
+
+        void CatSit(float seconds)
+        {
+            catMode = CatMode.Sit;
+            catUntil = Time.time + seconds;
+            karaPati.sprite = ProcArt.SideCat(0, 4);
+            karaPati.rectTransform.anchoredPosition = new Vector2(catX, CatFloorY);
+        }
+
+        void CatSleep()
+        {
+            catMode = CatMode.Sleep;
+            catUntil = Time.time + Random.Range(9f, 16f);
+            catX = BedX;
+            catFace = 1;
+            karaPati.sprite = ProcArt.SideCat(0, 5);
+            karaPati.rectTransform.anchoredPosition = new Vector2(BedX, BedSleepY);
+        }
+
+        /// <summary>Kara Pati sits a while, then trots to another spot on the floor; once she has a bed she
+        /// sometimes goes to sleep in it and wakes up again later.</summary>
+        void TickShopCat(float dt, float t)
+        {
+            var rt = karaPati.rectTransform;
+            if (catMode == CatMode.Walk)
+            {
+                catWalkClock += dt;
+                float step = CatSpeed * dt;
+                if (Mathf.Abs(catTargetX - catX) <= step)
+                {
+                    catX = catTargetX;
+                    if (catToBed) CatSleep(); else CatSit(Random.Range(2.5f, 6f));
+                }
+                else
+                {
+                    catX += Mathf.Sign(catTargetX - catX) * step;
+                    karaPati.sprite = ProcArt.SideCat(0, (int)(catWalkClock / 0.13f) % 4);
+                    rt.anchoredPosition = new Vector2(catX, CatFloorY + Mathf.Abs(Mathf.Sin(catWalkClock * 12f)) * 4f);
+                }
+            }
+            else if (Time.time >= catUntil)
+            {
+                if (catMode == CatMode.Sleep)
+                {
+                    // wakes up and sits beside the bed first
+                    rt.localScale = Vector3.one;
+                    catX = BedX + 40f;
+                    CatSit(2f);
+                }
+                else
+                {
+                    catToBed = shopHasBed && Random.value < 0.3f;
+                    catTargetX = catToBed ? BedX : Random.Range(-400f, 400f);
+                    if (!catToBed && Mathf.Abs(catTargetX - catX) < 140f)
+                        catTargetX = Mathf.Clamp(catX + (catX < 0f ? 1f : -1f) * Random.Range(160f, 360f), -400f, 400f);
+                    catFace = catTargetX >= catX ? 1 : -1;
+                    catWalkClock = 0f;
+                    catMode = CatMode.Walk;
+                }
+            }
+
+            // the drawings face right; walking left turns the picture round (scale is left free for the tap bounce)
+            rt.localEulerAngles = new Vector3(0f, catMode == CatMode.Sleep || catFace > 0 ? 0f : 180f, 0f);
+            // a sleeping cat breathes
+            if (catMode == CatMode.Sleep) rt.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
+        }
+
         void Update()
         {
             float t = Time.time;
@@ -1048,8 +1309,14 @@ namespace KaraPati
             float pulse = 1f + Mathf.Sin(t * 4f) * 0.08f;
             if (gameNew && gameNew.gameObject.activeSelf) gameNew.localScale = Vector3.one * pulse;
             if (friendNew && friendNew.gameObject.activeSelf) friendNew.localScale = Vector3.one * pulse;
-            if (karaPati && GM != null && Story.IsDone("yatak", GM.TasksDone))
+            if (!shopArt && karaPati && GM != null && Story.IsDone("yatak", GM.TasksDone))
                 karaPati.rectTransform.localScale = new Vector3(1f, 1f + Mathf.Sin(t * 2f) * 0.02f, 1f);
+
+            if (shopArt && view == 0 && karaPati && karaPati.gameObject.activeInHierarchy)
+            {
+                TickCauldron(Time.deltaTime, t);
+                TickShopCat(Time.deltaTime, t);
+            }
 
             if (view >= 0 && view < extra.Length && extra[view] != null) extra[view].tick?.Invoke(t);
 

@@ -241,7 +241,7 @@ namespace KaraPati
 
             if (here && GM.FriendHasNew(c))
             {
-                var badge = UIKit.Img("Badge", rt, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
+                var badge = UIKit.Img("Badge", rt, ProcArt.RoundInk, new Color(0.9f, 0.3f, 0.3f));
                 badge.raycastTarget = false;
                 badge.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-24f, -24f), new Vector2(44f, 44f));
                 var bt = UIKit.Txt("!", badge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
