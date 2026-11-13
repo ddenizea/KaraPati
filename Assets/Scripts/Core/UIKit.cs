@@ -14,26 +14,29 @@ namespace KaraPati
         public static readonly Color Green = new Color(0.42f, 0.78f, 0.38f);
         public static readonly Color Disabled = new Color(0.33f, 0.29f, 0.4f);
 
-        // Fonts (Resources/Fonts, both SIL Open Font License): Nunito for texts, Baloo 2 for titles and buttons.
-        // If a file is missing the game falls back to Unity's built-in font.
+        // Fonts (Resources/Fonts, SIL Open Font License): Sour Gummy, a soft rounded face that suits the crayon art,
+        // Medium for texts and Bold for titles and buttons. If a file is missing the game falls back to the fonts it
+        // used before (Nunito, Baloo 2) and then to Unity's built-in font.
         static Font font, titleFont;
 
-        /// <summary>Body text font (Nunito SemiBold).</summary>
+        /// <summary>Body text font (Sour Gummy Medium).</summary>
         public static Font Font
         {
             get
             {
+                if (!font) font = Resources.Load<Font>("Fonts/SourGummy-Medium");
                 if (!font) font = Resources.Load<Font>("Fonts/Nunito-SemiBold");
                 if (!font) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 return font;
             }
         }
 
-        /// <summary>Title and button font (Baloo 2 Bold): big texts and button labels use it.</summary>
+        /// <summary>Title and button font (Sour Gummy Bold): big texts and button labels use it.</summary>
         public static Font TitleFont
         {
             get
             {
+                if (!titleFont) titleFont = Resources.Load<Font>("Fonts/SourGummy-Bold");
                 if (!titleFont) titleFont = Resources.Load<Font>("Fonts/Baloo2-Bold");
                 if (!titleFont) titleFont = Font;
                 return titleFont;
