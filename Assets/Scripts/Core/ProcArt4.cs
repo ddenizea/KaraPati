@@ -8,7 +8,7 @@ namespace KaraPati
         public static Sprite FullMoon => Make("full_moon", Size, p =>
         {
             p.Glow(Vector2.zero, 1f, new Color(1f, 0.95f, 0.7f, 0.35f));
-            p.Fill(q => S.Circle(q, Vector2.zero, 0.7f), new Color(1f, 0.96f, 0.78f));
+            p.FillOutlined(q => S.Circle(q, Vector2.zero, 0.74f), new Color(1f, 0.96f, 0.78f), 0.05f);
             var crater = new Color(0.9f, 0.85f, 0.65f);
             p.Fill(q => S.Circle(q, new Vector2(-0.25f, 0.2f), 0.14f), crater);
             p.Fill(q => S.Circle(q, new Vector2(0.2f, -0.18f), 0.1f), crater);

@@ -12,8 +12,8 @@ namespace KaraPati
             p.Fill(q => S.Ellipse(q, new Vector2(0.05f, 0.05f), new Vector2(0.08f, 0.1f)), new Color(0.88f, 0.84f, 0.72f));
             p.Fill(q => S.Seg(q, new Vector2(0f, 0.1f), new Vector2(0f, 0.22f), 0.02f), new Color(0.15f, 0.1f, 0.1f));
             if (!lit) return;
-            p.Fill(q => S.U(S.Circle(q, new Vector2(0f, 0.36f), 0.11f),
-                S.Poly(q, new[] { new Vector2(-0.1f, 0.38f), new Vector2(0.1f, 0.38f), new Vector2(0f, 0.68f) })), new Color(1f, 0.6f, 0.2f));
+            p.FillOutlined(q => S.U(S.Circle(q, new Vector2(0f, 0.36f), 0.11f),
+                S.Poly(q, new[] { new Vector2(-0.1f, 0.38f), new Vector2(0.1f, 0.38f), new Vector2(0f, 0.68f) })), new Color(1f, 0.6f, 0.2f), 0.03f);
             p.Fill(q => S.Ellipse(q, new Vector2(0f, 0.38f), new Vector2(0.05f, 0.1f)), new Color(1f, 0.95f, 0.6f));
         });
 

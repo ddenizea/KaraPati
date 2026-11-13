@@ -24,7 +24,7 @@ namespace KaraPati
 
         public bool Cozy;
         public float WobbleSeed;
-        const float Wobble = 0.011f;
+        const float Wobble = 0.016f;
 
         Vector2 Warp(Vector2 p)
         {
@@ -67,7 +67,17 @@ namespace KaraPati
 
         public void FillOutlined(Sdf f, Color c, float ow = 0.05f)
         {
-            if (Cozy) ow = ProcArt.LineW;
+            if (Cozy)
+            {
+                // one bold line everywhere (a finer one for tiny details), pressed a little harder here and there
+                // like a felt-tip pen; fills are never see-through
+                float line = ow < 0.04f ? ProcArt.LineW * 0.72f : ProcArt.LineW;
+                float s = WobbleSeed;
+                if (c.a < 1f) c = new Color(Mathf.Lerp(1f, c.r, c.a), Mathf.Lerp(1f, c.g, c.a), Mathf.Lerp(1f, c.b, c.a), 1f);
+                Fill(p => f(p) - line * (1f + 0.16f * Mathf.Sin(p.x * 4.7f + p.y * 3.3f + s)), ProcArt.Outline);
+                Fill(f, c);
+                return;
+            }
             Fill(p => f(p) - ow, ProcArt.Outline);
             Fill(f, c);
         }
@@ -142,9 +152,12 @@ namespace KaraPati
 
         public static float Ellipse(Vector2 p, Vector2 c, Vector2 r)
         {
+            // close to a true distance near the edge, so the line keeps its width even around flat ellipses
             var q = p - c;
-            q.x /= r.x; q.y /= r.y;
-            return (q.magnitude - 1f) * Mathf.Min(r.x, r.y);
+            float k0 = new Vector2(q.x / r.x, q.y / r.y).magnitude;
+            float k1 = new Vector2(q.x / (r.x * r.x), q.y / (r.y * r.y)).magnitude;
+            if (k1 < 1e-5f) return -Mathf.Min(r.x, r.y);
+            return k0 * (k0 - 1f) / k1;
         }
 
         public static float Box(Vector2 p, Vector2 c, Vector2 half, float rad)
@@ -210,7 +223,7 @@ namespace KaraPati
     public static partial class ProcArt
     {
         public static readonly Color Outline = new Color(0.29f, 0.165f, 0.094f, 1f);   // warm brown felt-tip line
-        public const float LineW = 0.048f;                                             // the one line width of the cozy art
+        public const float LineW = 0.056f;                                             // the one line width of the cozy art
         const int Size = 160;
 
         static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
@@ -219,7 +232,9 @@ namespace KaraPati
         {
             if (cache.TryGetValue(key, out var s) && s) return s;
             var p = new Painter(size, size);
-            if (IsCozy(key)) { p.Cozy = true; p.WobbleSeed = (key.GetHashCode() & 1023) * 0.37f; }
+            // sprites that are laid exactly over each other must wobble the same way
+            string seedKey = key.StartsWith("mg_barrel") ? "mg_barrel" : key;
+            if (IsCozy(key)) { p.Cozy = true; p.WobbleSeed = (StableHash(seedKey) & 1023) * 0.37f; }
             draw(p);
             var tex = p.ToTexture();
             tex.name = key;
@@ -230,9 +245,57 @@ namespace KaraPati
             return s;
         }
 
+        /// <summary>Same value on every run and device (string.GetHashCode is not), so a sprite always wobbles the same way.</summary>
+        static int StableHash(string s)
+        {
+            unchecked
+            {
+                int h = 23;
+                foreach (char ch in s) h = h * 31 + ch;
+                return h;
+            }
+        }
+
         // ---------- UI primitives ----------
         public static Sprite Rounded => Make("ui_rounded", 64,
             p => p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.98f, 0.98f), 0.62f), Color.white), 24);
+
+        // ---------- outlined flat shapes for the scenes (white inside, so they take the Image colour) ----------
+        // The line is a brown-grey that the Image colour darkens: every scene shape gets a darker, warmer edge of its own colour.
+        static readonly Color InkTint = new Color(0.5f, 0.36f, 0.28f);
+        const float InkUnits = 4f;   // line width in canvas units, close to the line of the sprites
+
+        /// <summary>Rounded panel with a line, 9-sliced like <see cref="Rounded"/>.</summary>
+        public static Sprite InkRounded => Make("ui_rounded_ink", 64, p =>
+        {
+            p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.98f, 0.98f), 0.62f), InkTint);
+            p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.855f, 0.855f), 0.495f), Color.white);
+        }, 24);
+
+        /// <summary>Line width as a share of the half-size, in steps, so shapes of similar size share one texture.</summary>
+        static float InkShare(float extent) => Mathf.Round(Mathf.Clamp(2f * InkUnits / Mathf.Max(1f, Mathf.Abs(extent)), 0.03f, 0.36f) * 50f) / 50f;
+
+        /// <summary>Hand-drawn ellipse with an even line for an image of this size (the plain circle would stretch its line).</summary>
+        public static Sprite InkCircle(Vector2 size)
+        {
+            float tx = InkShare(size.x), ty = InkShare(size.y);
+            return Make("ink_circle_" + tx + "_" + ty, 128, p =>
+            {
+                p.Fill(q => S.Ellipse(q, Vector2.zero, new Vector2(0.94f, 0.94f)), InkTint);
+                p.Fill(q => S.Ellipse(q, Vector2.zero, new Vector2(0.94f - tx, 0.94f - ty)), Color.white);
+            });
+        }
+
+        /// <summary>Hand-drawn soft box (the stretched, not sliced, <see cref="Rounded"/>) with an even line.</summary>
+        public static Sprite InkBlob(Vector2 size)
+        {
+            float tx = InkShare(size.x), ty = InkShare(size.y);
+            return Make("ink_blob_" + tx + "_" + ty, 128, p =>
+            {
+                p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.94f, 0.94f), 0.6f), InkTint);
+                p.Fill(q => S.Box(q, Vector2.zero, new Vector2(0.94f - tx, 0.94f - ty), Mathf.Max(0.08f, 0.6f - Mathf.Max(tx, ty))), Color.white);
+            });
+        }
 
         public static Sprite Frame => Make("ui_frame", 64,
             p => p.Fill(q => S.Ring(S.Box(q, Vector2.zero, new Vector2(0.9f, 0.9f), 0.55f), 0.08f), Color.white), 24);
@@ -265,7 +328,7 @@ namespace KaraPati
 
         public static Sprite Check => Make("ui_check", Size, p =>
         {
-            p.Fill(q => S.Circle(q, Vector2.zero, 0.95f), new Color(0.3f, 0.72f, 0.35f));
+            p.FillOutlined(q => S.Circle(q, Vector2.zero, 0.88f), new Color(0.3f, 0.72f, 0.35f), 0.05f);
             p.Fill(q => S.U(S.Seg(q, new Vector2(-0.45f, 0f), new Vector2(-0.12f, -0.35f), 0.12f),
                 S.Seg(q, new Vector2(-0.12f, -0.35f), new Vector2(0.48f, 0.38f), 0.12f)), Color.white);
         });
@@ -363,13 +426,13 @@ namespace KaraPati
                 return d;
             }, c, s), col, 0.05f);
             if (!face) return;
-            var dark = new Color(0.15f, 0.1f, 0.22f);
-            p.Fill(S.Xf(q => S.U(S.Ellipse(q, new Vector2(-0.22f, 0.22f), new Vector2(0.09f, 0.13f)),
-                S.Ellipse(q, new Vector2(0.22f, 0.22f), new Vector2(0.09f, 0.13f))), c, s), dark);
-            p.Fill(S.Xf(q => S.U(S.Circle(q, new Vector2(-0.19f, 0.27f), 0.03f), S.Circle(q, new Vector2(0.25f, 0.27f), 0.03f)), c, s), Color.white);
-            p.Fill(S.Xf(q => S.Ellipse(q, new Vector2(0f, -0.05f), new Vector2(0.09f, 0.07f)), c, s), dark);
-            p.Fill(S.Xf(q => S.U(S.Circle(q, new Vector2(-0.38f, 0.02f), 0.08f), S.Circle(q, new Vector2(0.38f, 0.02f), 0.08f)), c, s),
-                new Color(1f, 0.6f, 0.7f, 0.5f));
+            // dot eyes and a tiny open mouth
+            var dark = Outline;
+            p.Fill(S.Xf(q => S.U(S.Ellipse(q, new Vector2(-0.2f, 0.2f), new Vector2(0.06f, 0.08f)),
+                S.Ellipse(q, new Vector2(0.2f, 0.2f), new Vector2(0.06f, 0.08f))), c, s), dark);
+            p.Fill(S.Xf(q => S.Ellipse(q, new Vector2(0f, 0.02f), new Vector2(0.055f, 0.045f)), c, s), dark);
+            p.Fill(S.Xf(q => S.U(S.Ellipse(q, new Vector2(-0.38f, 0.04f), new Vector2(0.08f, 0.05f)), S.Ellipse(q, new Vector2(0.38f, 0.04f), new Vector2(0.08f, 0.05f))), c, s),
+                new Color(1f, 0.6f, 0.62f, 0.45f));
         }
 
     }

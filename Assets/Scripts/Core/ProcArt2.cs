@@ -12,11 +12,32 @@ namespace KaraPati
             if (level <= 0) color = KittenColors.Gece;
             else if (color < 0 || color > KittenColors.Gece) color = KittenColors.Legacy(level);
             int c = color;
-            return Make("sidecat_" + level + "_" + frame + "_" + c, Size, p =>
+            string key = "sidecat_" + level + "_" + frame + "_" + c;
+            int hat = level <= 1 ? 0 : level == 2 ? 1 : level == 3 ? 2 : 3;   // 4 = Mini Apprentice: a little red cap
+
+            // Cats have drawn pictures (Resources/Cats); the code drawing below is only the fallback.
+            // Kara Pati: karapati_<pose>. Other coats: cat<colour>_<pose>_<hat>. A night-black master is Kara Pati's twin.
+            if (cache.TryGetValue(key, out var have) && have) return have;
+            string pose = CatPose(frame);
+            Sprite art = null;
+            if (level <= 0 || (c == KittenColors.Gece && hat == 2)) art = LoadArt("Cats/karapati_" + pose, key);
+            else if (c != KittenColors.Gece) art = LoadArt("Cats/cat" + c + "_" + pose + "_" + hat, key);
+            if (art) return art;
+
+            return Make(key, Size, p => DrawSideCat(p, catFur[c], catEye[c], catPattern[c], hat, frame));
+        }
+
+        /// <summary>Which drawn picture a cat frame uses: the walk cycle alternates a step and a standing pose.</summary>
+        static string CatPose(int frame)
+        {
+            switch (frame)
             {
-                int hat = level <= 1 ? 0 : level == 2 ? 1 : level == 3 ? 2 : 3;   // 4 = Mini Apprentice: a little red cap
-                DrawSideCat(p, catFur[c], catEye[c], catPattern[c], hat, frame);
-            });
+                case 0: return "walk1";
+                case 2: return "walk2";
+                case 4: return "sit";
+                case 5: return "sleep";
+                default: return "stand";
+            }
         }
 
         // ---------- portraits ----------
@@ -26,13 +47,14 @@ namespace KaraPati
             var p = new Painter(size, size);
             if (layer != 2)
             {
-                p.VerticalGradient(new Color(0.16f, 0.08f, 0.26f), new Color(0.38f, 0.2f, 0.52f));
-                p.Glow(new Vector2(0f, -0.1f), 0.95f, new Color(1f, 0.6f, 0.25f, 0.55f));
-                p.Fill(q => S.Circle(q, new Vector2(0.58f, 0.6f), 0.2f), new Color(1f, 0.95f, 0.75f));
-                p.Fill(q => S.Circle(q, new Vector2(0.66f, 0.66f), 0.17f), new Color(0.3f, 0.16f, 0.44f));
-                p.Fill(q => S.Poly(q - new Vector2(-0.3f, 0.8f), S.Star(4, 0.07f, 0.02f)), new Color(1f, 1f, 0.85f, 0.9f));
-                p.Fill(q => S.Poly(q - new Vector2(-0.68f, 0.45f), S.Star(4, 0.06f, 0.02f)), new Color(1f, 1f, 0.85f, 0.8f));
+                // flat night sky, a big pale moon behind the cat, two little stars
+                var sky = new Color(0.3f, 0.26f, 0.5f);
+                p.VerticalGradient(sky, sky);
+                p.Fill(q => S.Circle(q, new Vector2(0f, -0.08f), 0.72f), new Color(1f, 0.93f, 0.7f));
+                p.Fill(q => S.Poly(q - new Vector2(-0.72f, 0.74f), S.Star(4, 0.11f, 0.04f)), new Color(1f, 0.95f, 0.78f));
+                p.Fill(q => S.Poly(q - new Vector2(0.76f, 0.62f), S.Star(4, 0.08f, 0.03f)), new Color(1f, 0.95f, 0.78f));
             }
+            p.Cozy = true; p.WobbleSeed = 1.3f;
             if (layer == 0) CatHead(p, new Vector2(0f, -0.2f), 0.72f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 2);
             // adaptive icons are cropped to the centre ~66%, so the cat is drawn smaller there
             else if (layer == 2) CatHead(p, new Vector2(0f, -0.14f), 0.5f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 2);
@@ -41,8 +63,16 @@ namespace KaraPati
             return tex;
         }
 
-        public static Sprite KaraPatiHead => Make("karapati_head", Size, p =>
-            CatHead(p, new Vector2(0f, -0.05f), 0.95f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 0));
+        public static Sprite KaraPatiHead
+        {
+            get
+            {
+                if (cache.TryGetValue("karapati_head", out var have) && have) return have;
+                var art = LoadArt("Cats/karapati_head", "karapati_head");
+                return art ? art : Make("karapati_head", Size, p =>
+                    CatHead(p, new Vector2(0f, -0.05f), 0.95f, catFur[KittenColors.Gece], catEye[KittenColors.Gece], false, false, 0));
+            }
+        }
 
         public static Sprite GhostCat => Make("ghostcat", Size, p =>
         {
@@ -83,7 +113,7 @@ namespace KaraPati
         public static Sprite GlowSprite => Make("ui_glow", Size, p => p.Glow(Vector2.zero, 1f, Color.white));
 
         public static Sprite Moon => Make("moon", Size, p =>
-            p.Fill(q => S.Sub(S.Circle(q, Vector2.zero, 0.8f), S.Circle(q, new Vector2(0.38f, 0.26f), 0.68f)), new Color(1f, 0.95f, 0.7f)));
+            p.FillOutlined(q => S.Sub(S.Circle(q, Vector2.zero, 0.8f), S.Circle(q, new Vector2(0.38f, 0.26f), 0.68f)), new Color(1f, 0.95f, 0.7f), 0.05f));
 
         static readonly Color[] potionColors =
         {

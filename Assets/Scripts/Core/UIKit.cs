@@ -88,6 +88,18 @@ namespace KaraPati
             return img;
         }
 
+        /// <summary>A flat shape of a scene (wall, rug, shelf, cushion...). Solid ones get the same hand-drawn brown line
+        /// as the sprites; see-through ones (shadows, light, grime) and hair-thin strips stay plain.</summary>
+        public static Image ScenePart(string name, Transform parent, Sprite sprite, Color color, Vector2 size, bool sliced = false)
+        {
+            if (sprite != null && color.a >= 0.95f && Mathf.Min(Mathf.Abs(size.x), Mathf.Abs(size.y)) >= 12f)
+            {
+                if (sprite == ProcArt.Rounded) sprite = sliced ? ProcArt.InkRounded : ProcArt.InkBlob(size);
+                else if (sprite == ProcArt.Circle) sprite = ProcArt.InkCircle(size);
+            }
+            return ImgArt(name, parent, sprite, color, sliced);
+        }
+
         public static Text Txt(string name, Transform parent, string s, int size, Color color,
             TextAnchor align = TextAnchor.MiddleCenter, bool outline = true)
         {

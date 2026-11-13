@@ -10,9 +10,12 @@ namespace KaraPati
     /// </summary>
     public static partial class ProcArt
     {
+        /// <summary>Every picture is drawn the cozy way. Only the plain white shapes that the UI stretches or tints
+        /// (panels, rings, soft light, fog, silhouettes) keep their clean edges.</summary>
         static bool IsCozy(string key) =>
-            key.StartsWith("item_") || key.StartsWith("classic_") || key.StartsWith("sidecat_") || key.StartsWith("backstir_") ||
-            key == "karapati_head" || key == "sleepcat" || key == "ui_crate" || key == "mg_yarn";
+            !(key.StartsWith("ui_rounded") || key == "ui_frame" || key == "ui_circle" || key.StartsWith("ui_gradient") || key == "ui_sparkle" ||
+              key == "ui_glow" || key == "ui_fog" || key == "magic_circle" || key == "paw_print" || key == "bush" || key == "pennant" ||
+              key == "mg_ring" || key == "bubble" || key == "water");
 
         static readonly Color Ink = new Color(0.29f, 0.165f, 0.094f);
         static readonly Color SparkCol = new Color(1f, 0.83f, 0.3f);

@@ -10,8 +10,8 @@ namespace KaraPati
     public static partial class ProcArt
     {
         const int PortraitSize = 192;
-        static readonly Color Dark = new Color(0.16f, 0.1f, 0.2f);
-        static readonly Color Cheek = new Color(1f, 0.5f, 0.62f, 0.55f);
+        static readonly Color Dark = Outline;
+        static readonly Color Cheek = new Color(1f, 0.56f, 0.6f, 0.42f);
         static readonly Color Gold = new Color(1f, 0.8f, 0.28f);
 
         /// <summary>Portrait of a customer; full = with its signature items.</summary>
@@ -143,12 +143,9 @@ namespace KaraPati
         }
 
         // ---------------------------------------------------------------- little helpers
-        static void DrawEye(Painter p, Vector2 c, float r)
-        {
-            p.FillOutlined(q => S.Ellipse(q, c, new Vector2(r, r * 1.15f)), Color.white, 0.025f);
-            p.Fill(q => S.Ellipse(q, c + new Vector2(0.01f, -0.015f), new Vector2(r * 0.56f, r * 0.68f)), Dark);
-            p.Fill(q => S.Circle(q, c + new Vector2(-r * 0.18f, r * 0.32f), r * 0.24f), Color.white);
-        }
+        /// <summary>A plain dot eye: no white, no shine. light = a pale dot, for dark faces.</summary>
+        static void DrawEye(Painter p, Vector2 c, float r, bool light = false) =>
+            p.Fill(q => S.Ellipse(q, c, new Vector2(r * 0.48f, r * 0.6f)), light ? new Color(1f, 0.96f, 0.88f) : Dark);
 
         /// <summary>The lower half of a ring: a smile.</summary>
         static void Smile(Painter p, Vector2 c, float r, float th, Color col) =>
@@ -205,9 +202,9 @@ namespace KaraPati
                 p.FillOutlined(q => S.U(S.Circle(q, V(-0.33f, 0.89f), 0.06f), S.Circle(q, V(0.33f, 0.89f), 0.06f)), Gold, 0.025f);
             }
             p.FillOutlined(q => S.Circle(q, V(0f, 0.28f), 0.38f), head, 0.04f);
-            DrawEye(p, V(-0.14f, 0.31f), 0.11f);
-            DrawEye(p, V(0.14f, 0.31f), 0.11f);
-            Smile(p, V(0f, 0.17f), 0.1f, 0.02f, Color.white);
+            DrawEye(p, V(-0.14f, 0.31f), 0.11f, true);
+            DrawEye(p, V(0.14f, 0.31f), 0.11f, true);
+            Smile(p, V(0f, 0.19f), 0.08f, 0.018f, new Color(1f, 0.96f, 0.88f));
             Cheeks(p, V(-0.26f, 0.15f), V(0.26f, 0.15f), 0.07f);
             if (!full) return;
             var hat = new Color(0.5f, 0.28f, 0.65f);
@@ -370,8 +367,8 @@ namespace KaraPati
             p.FillOutlined(q => S.U(S.Poly(q, new[] { V(-0.26f, 0.3f), V(-0.34f, 0.74f), V(-0.06f, 0.44f) }), S.Poly(q, new[] { V(0.26f, 0.3f), V(0.34f, 0.74f), V(0.06f, 0.44f) })), fur, 0.035f);
             p.Fill(q => S.U(S.Poly(q, new[] { V(-0.24f, 0.38f), V(-0.29f, 0.64f), V(-0.12f, 0.45f) }), S.Poly(q, new[] { V(0.24f, 0.38f), V(0.29f, 0.64f), V(0.12f, 0.45f) })), inner);
             p.FillOutlined(q => S.Circle(q, V(0f, 0.2f), 0.3f), fur, 0.04f);
-            DrawEye(p, V(-0.11f, 0.24f), 0.085f);
-            DrawEye(p, V(0.11f, 0.24f), 0.085f);
+            DrawEye(p, V(-0.11f, 0.24f), 0.085f, true);
+            DrawEye(p, V(0.11f, 0.24f), 0.085f, true);
             p.Fill(q => S.Ellipse(q, V(0f, 0.12f), V(0.04f, 0.025f)), inner);
             Smile(p, V(0f, 0.08f), 0.07f, 0.015f, Dark);
             // two tiny fangs
