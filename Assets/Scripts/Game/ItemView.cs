@@ -63,7 +63,7 @@ namespace KaraPati
             potExtra.rectTransform.At(new Vector2(40f, 40f), new Vector2(60f, 60f));
             potExtra.raycastTarget = false;
             // cat house: the Master's chest on the roof when it is back from an expedition
-            tripChest = UIKit.Img("TripChest", rt, ProcArt.Item(Chains.Sandik, 1), Color.white);
+            tripChest = UIKit.Img("TripChest", rt, ProcArt.Classic(Chains.Sandik, 1), Color.white);
             tripChest.rectTransform.At(new Vector2(30f, 44f), new Vector2(64f, 64f));
             tripChest.raycastTarget = false;
             var bang = UIKit.Img("Bang", tripChest.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));

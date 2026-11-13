@@ -255,6 +255,9 @@ namespace KaraPati
             int maxLvl = Mathf.Clamp(2 + served / 3, 2, 5);
             int minLvl = Mathf.Max(1, maxLvl - 2);
             int count = (served >= 2 && Random.value < 0.45f) ? 2 : 1;
+            // a seasoned shop sometimes gets a big single wish (level 6); level 7 is only for the collection
+            bool big = served >= 24 && Random.value < 0.15f;
+            if (big) { count = 1; minLvl = maxLvl = 6; }
 
             // only customers that already visit at the player's level, and not one already waiting
             var used = new HashSet<string>();
@@ -284,7 +287,7 @@ namespace KaraPati
                     foreach (var r in Recipes.All) if (Recipes.Unlocked(r, GM.TasksDone)) open.Add(r.id);
                     order.reqs.Add(new ReqSave { chain = Chains.Iksir, level = open[Random.Range(0, open.Count)] });
                 }
-                order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(4, 6) });
+                order.reqs.Add(new ReqSave { chain = Chains.RandomIngredient(), level = Random.Range(4, served >= 24 ? 7 : 6) });
                 return order;
             }
             // sometimes a ghost wants a potion instead (only recipes the player has unlocked)
@@ -344,7 +347,7 @@ namespace KaraPati
         static int StampReward(OrderSave o)
         {
             int r = 0;
-            foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 4 ? 2 : 1;
+            foreach (var q in o.reqs) r += Chains.IsPotion(q.chain) ? Recipes.PotionStamps : q.level >= 6 ? 3 : q.level >= 4 ? 2 : 1;
             if (IsBestFriend(o)) r += 1;   // a best friend tips one extra stamp
             if (o.cust == Customers.NightOwl) r += 2;
             return r;

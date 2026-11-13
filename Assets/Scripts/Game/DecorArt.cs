@@ -21,8 +21,8 @@ namespace KaraPati
             switch (slot)
             {
                 case 0: return variant == 1 ? ProcArt.Pennant : variant == 2 ? ProcArt.Pumpkin : ProcArt.Sparkle;
-                case 1: return variant == 1 ? ProcArt.Item(Chains.Ot, 5) : variant == 2 ? ProcArt.Item(Chains.Mantar, 5) : ProcArt.Item(Chains.Kristal, 5);
-                case 2: return variant == 1 ? ProcArt.PawPrint : variant == 2 ? ProcArt.Item(Chains.Ag, 3) : ProcArt.Crate;
+                case 1: return variant == 1 ? ProcArt.Classic(Chains.Ot, 5) : variant == 2 ? ProcArt.Classic(Chains.Mantar, 5) : ProcArt.Classic(Chains.Kristal, 5);
+                case 2: return variant == 1 ? ProcArt.PawPrint : variant == 2 ? ProcArt.Classic(Chains.Ag, 3) : ProcArt.Crate;
                 default: return variant == 1 ? ProcArt.Candle(true) : variant == 2 ? ProcArt.Lantern(true) : ProcArt.WitchItem("w_kure");
             }
         }
@@ -96,14 +96,14 @@ namespace KaraPati
 
         static void Plant(RectTransform g, int v)
         {
-            if (v == 1) { P("Glow", g, ProcArt.GlowSprite, new Color(0.9f, 1f, 0.7f, 0.35f), new Vector2(0f, 60f), new Vector2(170f, 170f)); Pot(g, new Color(0.62f, 0.36f, 0.24f)); P("Flower", g, ProcArt.Item(Chains.Ot, 5), Color.white, new Vector2(0f, 62f), new Vector2(120f, 120f)); }
-            else if (v == 2) { Pot(g, new Color(0.35f, 0.3f, 0.5f)); P("Shroom", g, ProcArt.Item(Chains.Mantar, 5), Color.white, new Vector2(0f, 58f), new Vector2(116f, 116f)); P("Shroom", g, ProcArt.Item(Chains.Mantar, 2), Color.white, new Vector2(-40f, 26f), new Vector2(56f, 56f)); }
+            if (v == 1) { P("Glow", g, ProcArt.GlowSprite, new Color(0.9f, 1f, 0.7f, 0.35f), new Vector2(0f, 60f), new Vector2(170f, 170f)); Pot(g, new Color(0.62f, 0.36f, 0.24f)); P("Flower", g, ProcArt.Classic(Chains.Ot, 5), Color.white, new Vector2(0f, 62f), new Vector2(120f, 120f)); }
+            else if (v == 2) { Pot(g, new Color(0.35f, 0.3f, 0.5f)); P("Shroom", g, ProcArt.Classic(Chains.Mantar, 5), Color.white, new Vector2(0f, 58f), new Vector2(116f, 116f)); P("Shroom", g, ProcArt.Classic(Chains.Mantar, 2), Color.white, new Vector2(-40f, 26f), new Vector2(56f, 56f)); }
             else
             {
                 P("Glow", g, ProcArt.GlowSprite, new Color(0.5f, 0.85f, 1f, 0.45f), new Vector2(0f, 40f), new Vector2(190f, 190f));
                 P("Stone", g, ProcArt.Rounded, new Color(0.4f, 0.38f, 0.48f), new Vector2(0f, -36f), new Vector2(110f, 40f), true);
-                P("Crystal", g, ProcArt.Item(Chains.Kristal, 5), Color.white, new Vector2(0f, 30f), new Vector2(110f, 110f));
-                P("Crystal", g, ProcArt.Item(Chains.Kristal, 3), Color.white, new Vector2(42f, -4f), new Vector2(56f, 56f));
+                P("Crystal", g, ProcArt.Classic(Chains.Kristal, 5), Color.white, new Vector2(0f, 30f), new Vector2(110f, 110f));
+                P("Crystal", g, ProcArt.Classic(Chains.Kristal, 3), Color.white, new Vector2(42f, -4f), new Vector2(56f, 56f));
             }
         }
 
@@ -119,8 +119,8 @@ namespace KaraPati
             else if (v == 2)
             {
                 P("Basket", g, ProcArt.Rounded, new Color(0.7f, 0.5f, 0.3f), new Vector2(0f, -22f), new Vector2(120f, 60f), true);
-                P("Yarn", g, ProcArt.Item(Chains.Ag, 3), Color.white, new Vector2(-18f, 14f), new Vector2(80f, 80f));
-                P("Yarn", g, ProcArt.Item(Chains.Ag, 2), Color.white, new Vector2(30f, 8f), new Vector2(60f, 60f));
+                P("Yarn", g, ProcArt.Classic(Chains.Ag, 3), Color.white, new Vector2(-18f, 14f), new Vector2(80f, 80f));
+                P("Yarn", g, ProcArt.Classic(Chains.Ag, 2), Color.white, new Vector2(30f, 8f), new Vector2(60f, 60f));
                 P("Rim", g, ProcArt.Rounded, new Color(0.82f, 0.6f, 0.38f), new Vector2(0f, -2f), new Vector2(128f, 14f), true);
             }
             else

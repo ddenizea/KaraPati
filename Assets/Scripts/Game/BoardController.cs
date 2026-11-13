@@ -41,17 +41,17 @@ namespace KaraPati
             catcher.color = new Color(0, 0, 0, 0);
 
             // the wooden table the grid sits on
-            var table = UIKit.Img("Table", area, ProcArt.Rounded, new Color(0.36f, 0.23f, 0.17f), true);
+            var table = UIKit.Img("Table", area, ProcArt.Rounded, new Color(0.56f, 0.36f, 0.22f), true);
             table.rectTransform.At(new Vector2(0f, -6f), new Vector2(Cols * CS + 56f, Rows * CS + 56f));
-            var tableTop = UIKit.Img("TableTop", area, ProcArt.Rounded, new Color(0.47f, 0.31f, 0.22f), true);
+            var tableTop = UIKit.Img("TableTop", area, ProcArt.Rounded, new Color(0.74f, 0.52f, 0.31f), true);
             tableTop.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 40f, Rows * CS + 40f));
-            var cloth = UIKit.Img("Cloth", area, ProcArt.Rounded, new Color(0.2f, 0.13f, 0.27f, 0.97f), true);
+            var cloth = UIKit.Img("Cloth", area, ProcArt.Rounded, new Color(0.88f, 0.76f, 0.55f), true);
             cloth.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 14f, Rows * CS + 14f));
 
             grid = UIKit.Rect("Grid", area).At(Vector2.zero, new Vector2(Cols * CS, Rows * CS));
 
-            var cA = new Color(0.29f, 0.21f, 0.4f);
-            var cB = new Color(0.25f, 0.18f, 0.35f);
+            var cA = new Color(0.98f, 0.93f, 0.8f);    // cream cells (cozy board)
+            var cB = new Color(0.94f, 0.87f, 0.71f);
             for (int r = 1; r < Rows; r++)
             for (int c = 0; c < Cols; c++)
             {
@@ -74,19 +74,19 @@ namespace KaraPati
         {
             // a wooden shelf across the top row, with a darker front edge
             var mid = CellPos(Cols / 2, 0);
-            var plank = UIKit.Img("Counter", grid, ProcArt.Rounded, new Color(0.5f, 0.33f, 0.22f), true);
+            var plank = UIKit.Img("Counter", grid, ProcArt.Rounded, new Color(0.8f, 0.57f, 0.34f), true);
             plank.rectTransform.At(mid + new Vector2(0f, -6f), new Vector2(Cols * CS - 6f, CS - 14f));
-            var edge = UIKit.Img("CounterEdge", grid, ProcArt.Rounded, new Color(0.36f, 0.22f, 0.15f), true);
+            var edge = UIKit.Img("CounterEdge", grid, ProcArt.Rounded, new Color(0.6f, 0.38f, 0.22f), true);
             edge.rectTransform.At(mid + new Vector2(0f, -CS / 2f + 10f), new Vector2(Cols * CS - 6f, 22f));
             for (int i = 0; i < 6; i++)   // a few wood grain lines
             {
-                var g = UIKit.Img("Grain", grid, ProcArt.Rounded, new Color(0.44f, 0.29f, 0.19f), true);
+                var g = UIKit.Img("Grain", grid, ProcArt.Rounded, new Color(0.7f, 0.48f, 0.28f), true);
                 g.rectTransform.At(mid + new Vector2(-420f + i * 170f, 18f - (i % 2) * 34f), new Vector2(120f, 6f));
             }
             // round mats under the pot and the house, and the Master's cushion
             foreach (var c in new[] { PotCell, HouseCell })
             {
-                var mat = UIKit.Img("Mat", grid, ProcArt.Circle, new Color(0.3f, 0.19f, 0.13f, 0.6f));
+                var mat = UIKit.Img("Mat", grid, ProcArt.Circle, new Color(0.55f, 0.36f, 0.22f, 0.35f));
                 mat.rectTransform.At(CellPos(c) + new Vector2(0f, -44f), new Vector2(124f, 34f));
             }
             var cush = UIKit.Img("Cushion", grid, ProcArt.Circle, new Color(0.55f, 0.35f, 0.78f));

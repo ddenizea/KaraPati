@@ -205,6 +205,15 @@ namespace KaraPati.EditorTools
         const string SaveKey = "karapati_save_v1", BackupKey = "karapati_save_v1_backup";
         const string BackupFile = "UserSettings/karapati_kayit_yedegi.json";
 
+        [MenuItem("KaraPati/Çizim Önizleme Kaydet")]
+        static void SaveArtPreview()
+        {
+            var t = ProcArt.PreviewSheet();
+            File.WriteAllBytes("Library/KaraPatiPreview.png", t.EncodeToPNG());
+            Object.DestroyImmediate(t);
+            Debug.Log("KaraPati: çizim önizlemesi kaydedildi -> Library/KaraPatiPreview.png");
+        }
+
         [MenuItem("KaraPati/Kayıt/Kaydı Dosyaya Yedekle")]
         static void BackupSaveToFile()
         {

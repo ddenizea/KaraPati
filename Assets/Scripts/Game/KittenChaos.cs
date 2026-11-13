@@ -1351,7 +1351,7 @@ namespace KaraPati
             m.homed = true;   // then it walks back to its cushion
             m.cd = MasterCd;
             // ...and its chest pops open on top of the house
-            var chest = UIKit.Img("TripChest", layer, ProcArt.Item(Chains.Sandik, 1), Color.white);
+            var chest = UIKit.Img("TripChest", layer, ProcArt.Classic(Chains.Sandik, 1), Color.white);
             chest.raycastTarget = false;
             var crt = chest.rectTransform;
             crt.At(origin + new Vector2(0f, 40f), new Vector2(110f, 110f));

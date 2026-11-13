@@ -103,7 +103,7 @@ namespace KaraPati
             // weeds
             var weeds = Group("Weeds", r);
             var wp = new[] { new Vector2(-260f, -260f), new Vector2(-120f, -420f), new Vector2(150f, -240f), new Vector2(250f, -420f), new Vector2(-380f, -330f), new Vector2(420f, -300f), new Vector2(60f, -420f) };
-            foreach (var w in wp) P("Weed", weeds, ProcArt.Item(Chains.Ot, 2), new Color(0.35f, 0.5f, 0.3f), w, new Vector2(110f, 110f));
+            foreach (var w in wp) P("Weed", weeds, ProcArt.Classic(Chains.Ot, 2), new Color(0.35f, 0.5f, 0.3f), w, new Vector2(110f, 110f));
 
             // fountain + water
             var fountain = P("Fountain", r, ProcArt.Fountain, Color.white, new Vector2(0f, -150f), new Vector2(260f, 260f));
@@ -115,7 +115,7 @@ namespace KaraPati
             // flower bed
             P("Bed", r, ProcArt.Rounded, new Color(0.3f, 0.2f, 0.14f), new Vector2(340f, -370f), new Vector2(300f, 80f), true);
             var flowers = Group("Flowers", r);
-            for (int i = 0; i < 4; i++) P("MoonFlower", flowers, ProcArt.Item(Chains.Ot, 5), Color.white, new Vector2(240f + i * 68f, -330f + (i % 2) * 20f), new Vector2(100f, 100f));
+            for (int i = 0; i < 4; i++) P("MoonFlower", flowers, ProcArt.Classic(Chains.Ot, 5), Color.white, new Vector2(240f + i * 68f, -330f + (i % 2) * 20f), new Vector2(100f, 100f));
 
             // scarecrow
             var crow = P("Scarecrow", r, ProcArt.Scarecrow, Color.white, new Vector2(-210f, -130f), new Vector2(260f, 260f));
@@ -173,8 +173,8 @@ namespace KaraPati
             cs.targets["b_cicek"] = flowers.GetChild(1); cs.targets["b_korkuluk"] = hat.transform; cs.targets["b_bal"] = pumpkins.GetChild(1);
             cs.targets["b_fener"] = lanterns[1].transform; cs.targets["b_kadran"] = dial.transform;
 
-            cs.icons["b_kapi"] = ProcArt.Lock; cs.icons["b_ot"] = ProcArt.Item(Chains.Ot, 2); cs.icons["b_cesme"] = ProcArt.Fountain;
-            cs.icons["b_cicek"] = ProcArt.Item(Chains.Ot, 5); cs.icons["b_korkuluk"] = ProcArt.Scarecrow; cs.icons["b_bal"] = ProcArt.Pumpkin;
+            cs.icons["b_kapi"] = ProcArt.Lock; cs.icons["b_ot"] = ProcArt.Classic(Chains.Ot, 2); cs.icons["b_cesme"] = ProcArt.Fountain;
+            cs.icons["b_cicek"] = ProcArt.Classic(Chains.Ot, 5); cs.icons["b_korkuluk"] = ProcArt.Scarecrow; cs.icons["b_bal"] = ProcArt.Pumpkin;
             cs.icons["b_fener"] = ProcArt.Lantern(true); cs.icons["b_kadran"] = ProcArt.FullMoon;
 
             cs.tick = t =>
@@ -251,7 +251,7 @@ namespace KaraPati
             P("Counter", stall, ProcArt.Rounded, wood, new Vector2(330f, -300f), new Vector2(220f, 80f), true);
             P("Goods", stall, ProcArt.Pumpkin, Color.white, new Vector2(280f, -240f), new Vector2(70f, 70f));
             P("Goods", stall, ProcArt.Bottle(2), Color.white, new Vector2(350f, -240f), new Vector2(60f, 60f));
-            P("Goods", stall, ProcArt.Item(Chains.Mantar, 2), Color.white, new Vector2(400f, -240f), new Vector2(60f, 60f));
+            P("Goods", stall, ProcArt.Classic(Chains.Mantar, 2), Color.white, new Vector2(400f, -240f), new Vector2(60f, 60f));
 
             // fountain
             var fountain = P("Fountain", r, ProcArt.Fountain, Color.white, new Vector2(0f, -240f), new Vector2(230f, 230f));
@@ -356,7 +356,7 @@ namespace KaraPati
             var ballGlow = P("BallGlow", r, ProcArt.GlowSprite, new Color(0.6f, 0.8f, 1f, 0.6f), new Vector2(-200f, -150f), new Vector2(220f, 220f));
             var ball = P("Ball", r, ProcArt.WitchItem("w_kure"), Color.white, new Vector2(-200f, -150f), new Vector2(120f, 120f));
             var potGlow = P("PotGlow", r, ProcArt.GlowSprite, new Color(0.75f, 0.45f, 1f, 0.6f), new Vector2(40f, -260f), new Vector2(300f, 300f));
-            var pot = P("Cauldron", r, ProcArt.Item(Chains.Kazan, 1), Color.white, new Vector2(40f, -290f), new Vector2(200f, 200f));
+            var pot = P("Cauldron", r, ProcArt.Classic(Chains.Kazan, 1), Color.white, new Vector2(40f, -290f), new Vector2(200f, 200f));
             var portalGlow = P("PortalGlow", r, ProcArt.GlowSprite, new Color(0.8f, 0.4f, 1f, 0.6f), new Vector2(0f, -410f), new Vector2(620f, 220f));
             var portal = P("Portal", r, ProcArt.MagicCircle, new Color(0.6f, 0.6f, 0.65f, 0.3f), new Vector2(0f, -415f), new Vector2(460f, 120f));
 
@@ -387,7 +387,7 @@ namespace KaraPati
             cs.targets["t_pencere"] = r.Find("WinMoon"); cs.targets["t_gecit"] = portal.transform;
 
             cs.icons["t_merdiven"] = ProcArt.WitchItem("w_supurge"); cs.icons["t_kitap"] = ProcArt.WitchItem("w_kitap"); cs.icons["t_harita"] = ProcArt.Sparkle;
-            cs.icons["t_teleskop"] = ProcArt.Telescope; cs.icons["t_kure"] = ProcArt.WitchItem("w_kure"); cs.icons["t_kazan"] = ProcArt.Item(Chains.Kazan, 1);
+            cs.icons["t_teleskop"] = ProcArt.Telescope; cs.icons["t_kure"] = ProcArt.WitchItem("w_kure"); cs.icons["t_kazan"] = ProcArt.Classic(Chains.Kazan, 1);
             cs.icons["t_pencere"] = ProcArt.FullMoon; cs.icons["t_gecit"] = ProcArt.MagicCircle;
 
             cs.tick = t =>
@@ -429,7 +429,7 @@ namespace KaraPati
             // crystal bridge
             var crystals = new List<Image>();
             for (int i = 0; i < 7; i++)
-                crystals.Add(P("Crystal", r, ProcArt.Item(Chains.Kristal, 3), Color.white, new Vector2(-420f + i * 85f, -110f), new Vector2(90f, 90f), false, 90f));
+                crystals.Add(P("Crystal", r, ProcArt.Classic(Chains.Kristal, 3), Color.white, new Vector2(-420f + i * 85f, -110f), new Vector2(90f, 90f), false, 90f));
 
             // star lanterns
             var lamps = new List<Image>();
@@ -452,7 +452,7 @@ namespace KaraPati
             var cushion = P("Cushion", r, ProcArt.Circle, new Color(0.95f, 0.55f, 0.65f), new Vector2(340f, -270f), new Vector2(250f, 70f));
             var golge = P("Golge", r, ProcArt.SideCat(0, 4), new Color(0.5f, 0.38f, 0.7f), new Vector2(340f, -170f), new Vector2(300f, 300f));
             golge.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
-            var yarn = P("Yarn", r, ProcArt.Item(Chains.Ag, 3), Color.white, new Vector2(200f, -330f), new Vector2(90f, 90f));
+            var yarn = P("Yarn", r, ProcArt.Classic(Chains.Ag, 3), Color.white, new Vector2(200f, -330f), new Vector2(90f, 90f));
 
             Cat(cs, hook, new Vector2(-430f, -390f));
 
@@ -486,8 +486,8 @@ namespace KaraPati
             cs.targets["d_yol"] = paws[3].transform; cs.targets["d_yastik"] = cushion.transform; cs.targets["d_yumak"] = yarn.transform;
             cs.targets["d_kafes"] = witch.transform; cs.targets["d_eve"] = exitRing.transform;
 
-            cs.icons["d_kopru"] = ProcArt.Item(Chains.Kristal, 3); cs.icons["d_fener"] = ProcArt.Lantern(true); cs.icons["d_ayna"] = ProcArt.Mirror(true);
-            cs.icons["d_yol"] = ProcArt.PawPrint; cs.icons["d_yastik"] = ProcArt.SideCat(0, 5); cs.icons["d_yumak"] = ProcArt.Item(Chains.Ag, 3);
+            cs.icons["d_kopru"] = ProcArt.Classic(Chains.Kristal, 3); cs.icons["d_fener"] = ProcArt.Lantern(true); cs.icons["d_ayna"] = ProcArt.Mirror(true);
+            cs.icons["d_yol"] = ProcArt.PawPrint; cs.icons["d_yastik"] = ProcArt.SideCat(0, 5); cs.icons["d_yumak"] = ProcArt.Classic(Chains.Ag, 3);
             cs.icons["d_kafes"] = ProcArt.Cage; cs.icons["d_eve"] = ProcArt.Witch;
 
             cs.tick = t =>

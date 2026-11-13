@@ -138,7 +138,7 @@ namespace KaraPati
                 for (int g = 0; g < ChapterGifts.At.Length; g++)
                 {
                     bool claimed = GM.GiftClaimed(ch, g), ready = GM.GiftReady(ch, g);
-                    var gi = UIKit.Img("Gift", bar.transform, ProcArt.Item(Chains.Sandik, 1),
+                    var gi = UIKit.Img("Gift", bar.transform, ProcArt.Classic(Chains.Sandik, 1),
                         claimed ? new Color(1f, 1f, 1f, 0.5f) : ready ? Color.white : new Color(0.45f, 0.42f, 0.5f));
                     gi.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(BarW * ChapterGifts.At[g], 4f), new Vector2(ready ? 66f : 54f, ready ? 66f : 54f));
                     if (claimed)

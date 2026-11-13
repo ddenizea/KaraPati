@@ -1,29 +1,37 @@
 ﻿tr,en
-Yaprak,Leaf
-Ot Demeti,Herb Bundle
-Adaçayı Destesi,Sage Bunch
-Büyülü Ot,Magic Herb
-Ay Çiçeği,Moonflower
-Mantar,Mushroom
-Benekli Mantar,Spotted Mushroom
-Mantar Kümesi,Mushroom Cluster
-Parlayan Mantar,Glowing Mushroom
-Peri Mantarı,Fairy Mushroom
-Kum Tanesi,Grain of Sand
-Çakıl Taşı,Pebble
-Kristal,Crystal
-Ay Taşı,Moonstone
-Yıldız Taşı,Starstone
-Örümcek Ağı,Spider Web
-İplik Yumağı,Ball of Thread
-İpek Yumak,Silk Yarn
-Gölge Kumaşı,Shadow Cloth
-Hayalet Şal,Ghost Shawl
+Tohum,Seed
+Filiz,Sprout
+Kedi Otu Dalı,Catnip Sprig
+Kedi Otu Demeti,Catnip Bouquet
+Saksıda Kedi Otu,Potted Catnip
+Çiçekli Kedi Otu,Blooming Catnip
+Ay Işığı Kedi Otu,Moonlight Catnip
+Hamsi,Anchovy
+Sardalya,Sardine
+Uskumru,Mackerel
+Somon,Salmon
+Balık Sepeti,Fish Basket
+Altın Balık,Goldfish
+Ay Balığı,Moonfish
+Süt Damlası,Milk Drop
+Süt Kasesi,Milk Bowl
+Süt Şişesi,Milk Bottle
+Krema,Cream
+Puding,Pudding
+Krema Pastası,Cream Cake
+Yıldız Sütü,Star Milk
+İplik,Thread Spool
+Küçük Yumak,Small Yarn Ball
+Büyük Yumak,Big Yarn Ball
+Yumak Sepeti,Yarn Basket
+Örgü Atkı,Knitted Scarf
+Kedi Kazağı,Cat Sweater
+Sihirli Pelerin,Magic Cape
 Yaramaz Yavru,Naughty Kitten
 Çırak Kedi,Apprentice Cat
 Usta Kedi,Master Cat
-Kazan,Cauldron
-Eski Sandık,Old Chest
+Bahçe Sepeti,Garden Basket
+Kiler Dolabı,Pantry Cupboard
 Uyku İksiri,Sleep Potion
 Işıltı İksiri,Sparkle Potion
 Gölge İksiri,Shadow Potion
@@ -32,10 +40,10 @@ Hayalet İksiri,Ghost Potion
 Yıldız İksiri,Star Potion
 Simya Kazanı,Alchemy Pot
 Kedi Evi,Cat House
-Otlar,Herbs
-Mantarlar,Mushrooms
-Taşlar ve Kristaller,Stones and Crystals
-Ağlar ve Kumaşlar,Webs and Cloth
+Kedi Otları,Catnip
+Balıklar,Fish
+Süt ve Tatlılar,Milk and Sweets
+Yün ve Örgüler,Yarn and Knits
 İksirler,Potions
 Dükkân Eşyası,Shop Item
 Hayalet Dostlar,Ghost Friends
@@ -228,9 +236,10 @@ Yok,None
 Bayraklar,Flags
 Balkabakları,Pumpkins
 Yıldızlar,Stars
+Ay Çiçeği,Moonflower
+Peri Mantarı,Fairy Mushroom
 Kristal Küme,Crystal Cluster
 Minder,Cushion
-Yumak Sepeti,Yarn Basket
 Kedi Kulesi,Cat Tree
 Mumlar,Candles
 Fener,Lantern
@@ -497,7 +506,7 @@ Başarım: {0} ({1})!,Achievement: {0} ({1})!
 Can dostların yine kuleye uğrayacak!,Your best friends will visit the tower again!
 Can dostların artık kuleye gelmeyecek. Hediyelerini Dostluk Defteri'nden alabilirsin.,Your best friends won't visit the tower anymore. You can take their gifts from the Friendship Book.
 "Aynı iki eşyayı üst üste sürükle, birleşsinler.",Drag two identical items onto each other to merge them.
-Kazana ve sandığa dokunarak malzeme üret (1 enerji).,Tap the cauldron and the chest to make ingredients (1 energy).
+Bahçe Sepeti'ne ve Kiler Dolabı'na dokunarak malzeme üret (1 enerji).,Tap the Garden Basket and the Pantry Cupboard to make ingredients (1 energy).
 "Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas.","Gather what the ghosts want on the table, then press 'Give'."
 "Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!","Drop two ingredients into the purple Alchemy Pot: a potion brews, and ghosts pay a lot for potions!"
 İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!,Drag two kittens onto each other: they become an Apprentice Cat for 2 hours!
@@ -558,8 +567,8 @@ Tarifler,Recipes
 Hayaletler bu iksiri sipariş eder: {0} altın + {1} mühür!,Ghosts order this potion: {0} gold + {1} seals!
 Sat  +{0},Sell  +{0}
 Sv. {0}/{1},Lv. {0}/{1}
-Ot ve mantar üretir.,Makes herbs and mushrooms.
-Kristal ve örümcek ağı üretir.,Makes crystals and spider webs.
+Kedi otu ve balık çıkarır.,Gives catnip and fish.
+Süt ve yün çıkarır.,Gives milk and yarn.
 Dokun: 1 enerji.,Tap: 1 energy.
 Yükselt\n{0} altın,Upgrade\n{0} gold
 En üst\nseviye,Top\nlevel
@@ -862,9 +871,9 @@ Tamam,Done
 Geç,Skip
 Harika! Artık dükkânı yönetmeye hazırsın. Bol iksirli günler!,Wonderful! You're ready to run the shop. May your days be full of potions!
 Rehber kapandı. İpuçları alttaki panelde.,Guide closed. Tips are in the panel at the bottom.
-Kazana dokun: ot ve mantar üretir. Her dokunuş 1 enerji.,Tap the cauldron: it makes herbs and mushrooms. Each tap costs 1 energy.
+Bahçe Sepeti'ne dokun: kedi otu ve balık çıkar. Her dokunuş 1 enerji.,Tap the Garden Basket: out come catnip and fish. Each tap costs 1 energy.
 "Aynı iki malzemeyi üst üste sürükle, birleşsinler!",Drag two identical ingredients onto each other to merge them!
-Aynı iki malzeme lazım. Kazana dokunmaya devam et.,You need two of the same ingredient. Keep tapping the cauldron.
+Aynı iki malzeme lazım. Bahçe Sepeti'ne dokunmaya devam et.,You need two of the same. Keep tapping the Garden Basket.
 "Hayaletin istediği masada! 'Ver'e bas, altın ve Pati Mührü kazan.",What the ghost wants is on the table! Press 'Give' to earn gold and a Paw Seal.
 Hayaletlerin istediklerini birleştirerek yap. Hazır olunca 'Ver' yeşil yanar.,"Merge items to make what the ghosts want. When it's ready, 'Give' lights up green."
 Bu malzemeyi mor Simya Kazanı'na sürükle: iksir kaynar!,Drag this ingredient into the purple Alchemy Pot: a potion brews!

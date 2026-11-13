@@ -15,13 +15,14 @@ namespace KaraPati
 
         static readonly Dictionary<string, string[]> names = new Dictionary<string, string[]>
         {
-            { Ot, new[] { L.N("Yaprak"), L.N("Ot Demeti"), L.N("Adaçayı Destesi"), L.N("Büyülü Ot"), L.N("Ay Çiçeği") } },
-            { Mantar, new[] { L.N("Mantar"), L.N("Benekli Mantar"), L.N("Mantar Kümesi"), L.N("Parlayan Mantar"), L.N("Peri Mantarı") } },
-            { Kristal, new[] { L.N("Kum Tanesi"), L.N("Çakıl Taşı"), L.N("Kristal"), L.N("Ay Taşı"), L.N("Yıldız Taşı") } },
-            { Ag, new[] { L.N("Örümcek Ağı"), L.N("İplik Yumağı"), L.N("İpek Yumak"), L.N("Gölge Kumaşı"), L.N("Hayalet Şal") } },
+            // ids stay the old ones (ot / mantar / kristal / ag) so saves keep working; the items are new
+            { Ot, new[] { L.N("Tohum"), L.N("Filiz"), L.N("Kedi Otu Dalı"), L.N("Kedi Otu Demeti"), L.N("Saksıda Kedi Otu"), L.N("Çiçekli Kedi Otu"), L.N("Ay Işığı Kedi Otu") } },
+            { Mantar, new[] { L.N("Hamsi"), L.N("Sardalya"), L.N("Uskumru"), L.N("Somon"), L.N("Balık Sepeti"), L.N("Altın Balık"), L.N("Ay Balığı") } },
+            { Kristal, new[] { L.N("Süt Damlası"), L.N("Süt Kasesi"), L.N("Süt Şişesi"), L.N("Krema"), L.N("Puding"), L.N("Krema Pastası"), L.N("Yıldız Sütü") } },
+            { Ag, new[] { L.N("İplik"), L.N("Küçük Yumak"), L.N("Büyük Yumak"), L.N("Yumak Sepeti"), L.N("Örgü Atkı"), L.N("Kedi Kazağı"), L.N("Sihirli Pelerin") } },
             { Kedi, new[] { L.N("Yaramaz Yavru"), L.N("Çırak Kedi"), L.N("Usta Kedi") } },
-            { Kazan, new[] { L.N("Kazan") } },
-            { Sandik, new[] { L.N("Eski Sandık") } },
+            { Kazan, new[] { L.N("Bahçe Sepeti") } },
+            { Sandik, new[] { L.N("Kiler Dolabı") } },
             { Iksir, new[] { L.N("Uyku İksiri"), L.N("Işıltı İksiri"), L.N("Gölge İksiri"), L.N("Ay İksiri"), L.N("Hayalet İksiri"), L.N("Yıldız İksiri") } },
             { Simya, new[] { L.N("Simya Kazanı") } },
             { KediEvi, new[] { L.N("Kedi Evi") } },
@@ -51,10 +52,10 @@ namespace KaraPati
         {
             switch (c)
             {
-                case Ot: return L.T("Otlar");
-                case Mantar: return L.T("Mantarlar");
-                case Kristal: return L.T("Taşlar ve Kristaller");
-                case Ag: return L.T("Ağlar ve Kumaşlar");
+                case Ot: return L.T("Kedi Otları");
+                case Mantar: return L.T("Balıklar");
+                case Kristal: return L.T("Süt ve Tatlılar");
+                case Ag: return L.T("Yün ve Örgüler");
                 case Iksir: return L.T("İksirler");
                 default: return L.T("Dükkân Eşyası");
             }
@@ -687,7 +688,7 @@ namespace KaraPati
         };
     }
 
-    /// <summary>Gold sink: upgrading the Kazan / Sandık makes them drop higher-level ingredients.</summary>
+    /// <summary>Gold sink: upgrading the Garden Basket / Pantry makes them drop higher-level ingredients.</summary>
     public static class Generators
     {
         public const int MaxLevel = 5;

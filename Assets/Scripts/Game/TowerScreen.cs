@@ -150,8 +150,8 @@ namespace KaraPati
             var cover = UIKit.Rect("Locked", f).At(Vector2.zero, new Vector2(FloorW, FloorH));
             var dark = P("Dark", cover, ProcArt.Rounded, new Color(0.04f, 0.02f, 0.07f, 0.9f), Vector2.zero, new Vector2(FloorW, FloorH), true);
             dark.raycastTarget = true;
-            P("Web", cover, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.35f), new Vector2(-420f, 300f), new Vector2(170f, 170f));
-            P("Web", cover, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(420f, 300f), new Vector2(150f, 150f));
+            P("Web", cover, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.35f), new Vector2(-420f, 300f), new Vector2(170f, 170f));
+            P("Web", cover, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(420f, 300f), new Vector2(150f, 150f));
             P("Lock", cover, ProcArt.Lock, Color.white, new Vector2(0f, 120f), new Vector2(120f, 120f));
             var lt = UIKit.Txt("Name", cover, L.F("{0}. Kat: {1}", i + 1, Tower.FloorNames[i]), 40, UIKit.Cream);
             lt.fontStyle = FontStyle.Bold;
@@ -171,7 +171,7 @@ namespace KaraPati
             switch (i)
             {
                 case 1: // kitchen
-                    P("Cauldron", f, ProcArt.Item(Chains.Kazan, 1), Color.white, new Vector2(-330f, floorY + 30f), new Vector2(220f, 220f));
+                    P("Cauldron", f, ProcArt.Classic(Chains.Kazan, 1), Color.white, new Vector2(-330f, floorY + 30f), new Vector2(220f, 220f));
                     P("Shelf", f, ProcArt.Rounded, new Color(0.4f, 0.27f, 0.18f), new Vector2(150f, 150f), new Vector2(300f, 22f), true);
                     for (int b = 0; b < 4; b++) P("Jar", f, ProcArt.Bottle(b), Color.white, new Vector2(40f + b * 75f, 200f), new Vector2(70f, 70f));
                     break;

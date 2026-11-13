@@ -140,11 +140,11 @@ namespace KaraPati
             {
                 case 1:
                     if (B.FindFirst(d => d.chain == Chains.Kazan, out var k)) target = B.ViewRect(k);
-                    msg = L.T("Kazana dokun: ot ve mantar üretir. Her dokunuş 1 enerji.");
+                    msg = L.T("Bahçe Sepeti'ne dokun: kedi otu ve balık çıkar. Her dokunuş 1 enerji.");
                     break;
                 case 2:
                     if (B.FindPair(out var a, out var b)) { dragFrom = B.ViewRect(a); target = B.ViewRect(b); msg = L.T("Aynı iki malzemeyi üst üste sürükle, birleşsinler!"); }
-                    else { if (B.FindFirst(d => d.chain == Chains.Kazan, out var k2)) target = B.ViewRect(k2); msg = L.T("Aynı iki malzeme lazım. Kazana dokunmaya devam et."); }
+                    else { if (B.FindFirst(d => d.chain == Chains.Kazan, out var k2)) target = B.ViewRect(k2); msg = L.T("Aynı iki malzeme lazım. Bahçe Sepeti'ne dokunmaya devam et."); }
                     break;
                 case 3:
                     target = GM.Orders.ReadyGiveButton();

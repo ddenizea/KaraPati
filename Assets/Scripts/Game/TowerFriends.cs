@@ -73,7 +73,7 @@ namespace KaraPati
                     hangs = c.id == Customers.NightOwl,
                 };
                 if (v.hangs) v.x = floor % 2 == 0 ? 250f : -250f;   // away from the floor's name plaque
-                var giftImg = UIKit.Img("Gift", rt, ProcArt.Item(Chains.Sandik, 1), Color.white);
+                var giftImg = UIKit.Img("Gift", rt, ProcArt.Classic(Chains.Sandik, 1), Color.white);
                 giftImg.raycastTarget = false;
                 v.gift = giftImg.rectTransform;
                 v.gift.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 10f), new Vector2(80f, 80f));

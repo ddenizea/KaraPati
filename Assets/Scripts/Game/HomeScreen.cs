@@ -93,7 +93,7 @@ namespace KaraPati
                 float x = 6f + ProgressW * ChapterGifts.At[g];
                 giftGlows[g] = UIKit.Img("GiftGlow", barBg.transform, ProcArt.GlowSprite, new Color(1f, 0.85f, 0.4f, 0.7f));
                 giftGlows[g].rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(x, 4f), new Vector2(130f, 130f));
-                gifts[g] = UIKit.Img("Gift", barBg.transform, ProcArt.Item(Chains.Sandik, 1), Color.white);
+                gifts[g] = UIKit.Img("Gift", barBg.transform, ProcArt.Classic(Chains.Sandik, 1), Color.white);
                 gifts[g].rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0.5f, 0.5f)).At(new Vector2(x, 4f), new Vector2(70f, 70f));
                 gifts[g].raycastTarget = true;
                 var gb = gifts[g].gameObject.AddComponent<Button>();
@@ -151,7 +151,7 @@ namespace KaraPati
             var db = UIKit.Txt("!", dailyBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(db.rectTransform);
             // chapter list (like a map of the story), red dot when a gift chest is waiting
-            var chapters = RoundButton(sceneArea, "Chapters", ProcArt.Item(Chains.Sandik, 1), new Vector2(0f, 1f), new Vector2(66f, -320f), () => GM.OpenChapters());
+            var chapters = RoundButton(sceneArea, "Chapters", ProcArt.Classic(Chains.Sandik, 1), new Vector2(0f, 1f), new Vector2(66f, -320f), () => GM.OpenChapters());
             chaptersBadge = UIKit.Img("Badge", chapters.transform, ProcArt.Circle, new Color(0.9f, 0.3f, 0.3f));
             chaptersBadge.rectTransform.At(new Vector2(36f, 36f), new Vector2(44f, 44f));
             var cbt = UIKit.Txt("!", chaptersBadge.transform, "!", 30, Color.white, TextAnchor.MiddleCenter, false);
@@ -223,7 +223,7 @@ namespace KaraPati
             ((RectTransform)play.transform).Anchor(new Vector2(1f, 0.5f), new Vector2(1f, 0.5f)).At(new Vector2(-30f, 0f), new Vector2(460f, 150f));
             play.Label().fontStyle = FontStyle.Bold;
             play.Label().rectTransform.offsetMin = new Vector2(110f, 4f);
-            var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Item(Chains.Kazan, 1), Color.white);
+            var pIcon = UIKit.Img("Icon", play.transform, ProcArt.Classic(Chains.Kazan, 1), Color.white);
             pIcon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 4f), new Vector2(100f, 100f));
         }
 
@@ -315,7 +315,7 @@ namespace KaraPati
             Part("RugMid", rug.transform, ProcArt.Circle, new Color(0.8f, 0.4f, 0.42f), new Vector2(0f, -365f), new Vector2(540f, 130f));
             Part("RugIn", rug.transform, ProcArt.Circle, new Color(0.6f, 0.2f, 0.3f), new Vector2(0f, -365f), new Vector2(300f, 70f));
             cauldronGlow = Part("CauldronGlow", scene, ProcArt.GlowSprite, new Color(0.4f, 1f, 0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(480f, 480f));
-            cauldron = Part("Cauldron", scene, ProcArt.Item(Chains.Kazan, 1), Color.white, new Vector2(0f, -230f), new Vector2(300f, 300f));
+            cauldron = Part("Cauldron", scene, ProcArt.Classic(Chains.Kazan, 1), Color.white, new Vector2(0f, -230f), new Vector2(300f, 300f));
 
             counterBody = Part("CounterBody", scene, ProcArt.Rounded, new Color(0.42f, 0.28f, 0.2f), new Vector2(340f, -255f), new Vector2(260f, 180f), true);
             counterTop = Part("CounterTop", scene, ProcArt.Rounded, wood, new Vector2(340f, -155f), new Vector2(310f, 32f), true);
@@ -324,10 +324,10 @@ namespace KaraPati
             Part("Letter", counterStuff.transform, ProcArt.WitchItem("w_mektup"), Color.white, new Vector2(400f, -118f), new Vector2(70f, 70f));
 
             webs = UIKit.Rect("Webs", scene).gameObject;
-            Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(-430f, 390f), new Vector2(200f, 200f));
-            Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(430f, 390f), new Vector2(200f, 200f));
-            Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(-30f, 420f), new Vector2(130f, 130f));
-            Part("Web", webs.transform, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(420f, -100f), new Vector2(120f, 120f));
+            Part("Web", webs.transform, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(-430f, 390f), new Vector2(200f, 200f));
+            Part("Web", webs.transform, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.85f), new Vector2(430f, 390f), new Vector2(200f, 200f));
+            Part("Web", webs.transform, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(-30f, 420f), new Vector2(130f, 130f));
+            Part("Web", webs.transform, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.7f), new Vector2(420f, -100f), new Vector2(120f, 120f));
 
             bed = UIKit.Rect("Bed", scene).gameObject;
             Part("BedBase", bed.transform, ProcArt.Circle, new Color(0.7f, 0.25f, 0.3f), new Vector2(-330f, -350f), new Vector2(280f, 120f));
@@ -425,7 +425,7 @@ namespace KaraPati
 
             // chained chest (centre)
             chestGlow = Part("ChestGlow", scene, ProcArt.GlowSprite, new Color(1f, 0.85f, 0.4f, 0.55f), new Vector2(-110f, -220f), new Vector2(320f, 320f));
-            chest = Part("Chest", scene, ProcArt.Item(Chains.Sandik, 1), Color.white, new Vector2(-110f, -230f), new Vector2(190f, 190f));
+            chest = Part("Chest", scene, ProcArt.Classic(Chains.Sandik, 1), Color.white, new Vector2(-110f, -230f), new Vector2(190f, 190f));
             chains = UIKit.Rect("Chains", scene).gameObject;
             var ch1 = Part("ChainA", chains.transform, ProcArt.Chain, Color.white, new Vector2(-110f, -235f), new Vector2(200f, 60f));
             ch1.rectTransform.localEulerAngles = new Vector3(0f, 0f, 35f);
@@ -443,8 +443,8 @@ namespace KaraPati
             }
 
             // a few permanent cobwebs for the mood
-            Part("Web", scene, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.3f), new Vector2(250f, 420f), new Vector2(150f, 150f));
-            Part("Web", scene, ProcArt.Item(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(-250f, 420f), new Vector2(120f, 120f));
+            Part("Web", scene, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.3f), new Vector2(250f, 420f), new Vector2(150f, 150f));
+            Part("Web", scene, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(-250f, 420f), new Vector2(120f, 120f));
 
             cellarCat = Part("KaraPati", scene, ProcArt.SideCat(0, 4), Color.white, new Vector2(-260f, -150f), new Vector2(150f, 150f));
             MakeCatTappable(cellarCat);
@@ -850,11 +850,11 @@ namespace KaraPati
         {
             switch (id)
             {
-                case "ag": return ProcArt.Item(Chains.Ag, 1);
+                case "ag": return ProcArt.Classic(Chains.Ag, 1);
                 case "pencere": return ProcArt.Moon;
                 case "raf": return ProcArt.Bottle(0);
-                case "kazan": return ProcArt.Item(Chains.Kazan, 1);
-                case "hali": return ProcArt.Item(Chains.Ag, 4);
+                case "kazan": return ProcArt.Classic(Chains.Kazan, 1);
+                case "hali": return ProcArt.Classic(Chains.Ag, 4);
                 case "fener": return ProcArt.Lantern(true);
                 case "tezgah": return ProcArt.WitchItem("w_kure");
                 case "yatak": return ProcArt.SideCat(0, 5);

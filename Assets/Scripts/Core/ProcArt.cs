@@ -18,30 +18,63 @@ namespace KaraPati
             px = new Color[w * h];
         }
 
+        /// <summary>Hand-drawn look (the cozy board art): shapes wobble a little like a felt-tip line,
+        /// every outline has the same width, and soft glows are left out (flat colours only).</summary>
+        public Color[] Pixels => px;
+
+        public bool Cozy;
+        public float WobbleSeed;
+        const float Wobble = 0.011f;
+
+        Vector2 Warp(Vector2 p)
+        {
+            if (!Cozy) return p;
+            float s = WobbleSeed;
+            return new Vector2(
+                p.x + (Mathf.Sin(p.y * 7.3f + s) + Mathf.Sin(p.x * 5.1f + p.y * 3.7f + s * 1.7f)) * 0.5f * Wobble,
+                p.y + (Mathf.Sin(p.x * 6.9f + s * 2.3f) + Mathf.Sin(p.x * 4.3f - p.y * 6.1f + s * 0.6f)) * 0.5f * Wobble);
+        }
+
+        /// <summary>Fills a shape. Works in 8x8 blocks: a block far outside is skipped, one deep inside is painted
+        /// without testing every pixel, so bigger sprites stay cheap.</summary>
         public void Fill(Sdf f, Color c, float soft = 1f)
         {
+            const int B = 8;
             float pix = 2f / w;
             float edge = pix * soft;
-            for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
+            float reach = pix * B * 0.75f + (Cozy ? Wobble * 2f : 0f);
+            for (int by = 0; by < h; by += B)
+            for (int bx = 0; bx < w; bx += B)
             {
-                var p = new Vector2((x + 0.5f) / w * 2f - 1f, (y + 0.5f) / h * 2f - 1f);
-                float d = f(p);
-                if (d > edge) continue;
-                float cov = Mathf.Clamp01(0.5f - d / edge);
-                if (cov <= 0f) continue;
-                Blend(x, y, c, cov);
+                var bc = new Vector2((bx + B * 0.5f) / w * 2f - 1f, (by + B * 0.5f) / h * 2f - 1f);
+                float bd = f(Warp(bc));
+                if (bd > edge + reach) continue;
+                bool inside = bd < -(edge + reach);
+                int y1 = Mathf.Min(by + B, h), x1 = Mathf.Min(bx + B, w);
+                for (int y = by; y < y1; y++)
+                for (int x = bx; x < x1; x++)
+                {
+                    if (inside) { Blend(x, y, c, 1f); continue; }
+                    var p = new Vector2((x + 0.5f) / w * 2f - 1f, (y + 0.5f) / h * 2f - 1f);
+                    float d = f(Warp(p));
+                    if (d > edge) continue;
+                    float cov = Mathf.Clamp01(0.5f - d / edge);
+                    if (cov <= 0f) continue;
+                    Blend(x, y, c, cov);
+                }
             }
         }
 
         public void FillOutlined(Sdf f, Color c, float ow = 0.05f)
         {
+            if (Cozy) ow = ProcArt.LineW;
             Fill(p => f(p) - ow, ProcArt.Outline);
             Fill(f, c);
         }
 
         public void Glow(Vector2 c, float r, Color col)
         {
+            if (Cozy) return;   // flat colours only
             for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
@@ -176,8 +209,9 @@ namespace KaraPati
     /// <summary>All placeholder sprites, generated once and cached.</summary>
     public static partial class ProcArt
     {
-        public static readonly Color Outline = new Color(0.12f, 0.07f, 0.19f, 1f);
-        const int Size = 128;
+        public static readonly Color Outline = new Color(0.29f, 0.165f, 0.094f, 1f);   // warm brown felt-tip line
+        public const float LineW = 0.048f;                                             // the one line width of the cozy art
+        const int Size = 160;
 
         static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
 
@@ -185,6 +219,7 @@ namespace KaraPati
         {
             if (cache.TryGetValue(key, out var s) && s) return s;
             var p = new Painter(size, size);
+            if (IsCozy(key)) { p.Cozy = true; p.WobbleSeed = (key.GetHashCode() & 1023) * 0.37f; }
             draw(p);
             var tex = p.ToTexture();
             tex.name = key;
@@ -254,8 +289,35 @@ namespace KaraPati
         });
 
         // ---------- Items ----------
-        public static Sprite Item(string chain, int level) =>
-            Make("item_" + chain + "_" + level, Size, p => DrawItem(p, chain, level));
+        /// <summary>Board item picture. Uses the hand-drawn art in Resources/Items ("chain_level.png") when there is one,
+        /// otherwise falls back to the procedural drawing (cats, and anything not drawn yet).</summary>
+        public static Sprite Item(string chain, int level)
+        {
+            string key = "item_" + chain + "_" + level;
+            if (cache.TryGetValue(key, out var s) && s) return s;
+            s = LoadArt("Items/" + chain + "_" + level, key);
+            return s ? s : Make(key, Size, p => DrawItem(p, chain, level));
+        }
+
+        /// <summary>The procedural version of an item, for screens that keep the old look for now
+        /// (the cauldron and chest on the home screen, gift chests, decorations).</summary>
+        public static Sprite Classic(string chain, int level) =>
+            Make("classic_" + chain + "_" + level, Size, p => DrawItem(p, chain, level));
+
+        static Sprite LoadArt(string path, string key)
+        {
+            var s = Resources.Load<Sprite>(path);
+            if (!s)
+            {
+                // imported as a plain texture (import settings not applied yet): wrap it ourselves
+                var tex = Resources.Load<Texture2D>(path);
+                if (!tex) return null;
+                s = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+            }
+            s.name = key;
+            cache[key] = s;
+            return s;
+        }
 
         public static Color ChainColor(string chain)
         {
@@ -287,305 +349,6 @@ namespace KaraPati
             }
         }
 
-        static void Sparkles(Painter p, int count, Color c)
-        {
-            var pos = new[] { new Vector2(0.72f, 0.7f), new Vector2(-0.74f, 0.55f), new Vector2(0.68f, -0.72f) };
-            var sc = new[] { 0.2f, 0.15f, 0.13f };
-            for (int i = 0; i < Mathf.Min(count, pos.Length); i++)
-            {
-                var c0 = pos[i]; var s0 = sc[i];
-                p.Fill(S.Xf(q => S.Poly(q, S.Star(4, 1f, 0.25f)), c0, s0), c);
-            }
-        }
-
-        // --- herb chain ---
-        static void Leaf(Painter p, Vector2 c, float s, float deg, Color body, Color vein)
-        {
-            Sdf leaf = q => S.I(S.Circle(q, new Vector2(-0.55f, 0f), 1f), S.Circle(q, new Vector2(0.55f, 0f), 1f));
-            Sdf stem = q => S.Seg(q, new Vector2(0f, -0.75f), new Vector2(0f, -1.1f), 0.07f);
-            Sdf rib = q => S.Seg(q, new Vector2(0f, -0.75f), new Vector2(0f, 0.65f), 0.05f);
-            p.FillOutlined(S.Xf(stem, c, s, deg), vein, 0.04f);
-            p.FillOutlined(S.Xf(leaf, c, s, deg), body, 0.05f);
-            p.Fill(S.Xf(rib, c, s, deg), vein);
-        }
-
-        static void DrawOt(Painter p, int level)
-        {
-            var g = new Color(0.47f, 0.8f, 0.36f); var gv = new Color(0.25f, 0.52f, 0.2f);
-            switch (level)
-            {
-                case 1: Leaf(p, new Vector2(0f, 0f), 0.72f, -25f, g, gv); break;
-                case 2:
-                    Leaf(p, new Vector2(-0.24f, 0.02f), 0.6f, 25f, g, gv);
-                    Leaf(p, new Vector2(0.24f, 0.02f), 0.6f, -25f, g, gv);
-                    break;
-                case 3:
-                case 4:
-                {
-                    bool magic = level == 4;
-                    if (magic) p.Glow(Vector2.zero, 1f, new Color(0.3f, 1f, 0.85f, 0.55f));
-                    var body = magic ? new Color(0.35f, 0.92f, 0.78f) : new Color(0.6f, 0.78f, 0.55f);
-                    var vein = magic ? new Color(0.1f, 0.5f, 0.45f) : new Color(0.32f, 0.5f, 0.3f);
-                    Leaf(p, new Vector2(-0.3f, 0.02f), 0.56f, 32f, body, vein);
-                    Leaf(p, new Vector2(0.3f, 0.02f), 0.56f, -32f, body, vein);
-                    Leaf(p, new Vector2(0f, 0.12f), 0.6f, 0f, body, vein);
-                    p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.52f), new Vector2(0.24f, 0.09f), 0.05f),
-                        new Color(0.62f, 0.36f, 0.82f), 0.04f);
-                    if (magic) Sparkles(p, 2, new Color(0.8f, 1f, 0.95f));
-                    break;
-                }
-                default:
-                {
-                    p.Glow(Vector2.zero, 1f, new Color(1f, 0.9f, 0.45f, 0.55f));
-                    Leaf(p, new Vector2(-0.42f, -0.45f), 0.38f, 50f, g, gv);
-                    Leaf(p, new Vector2(0.42f, -0.45f), 0.38f, -50f, g, gv);
-                    for (int i = 0; i < 6; i++)
-                    {
-                        float a = i * 60f * Mathf.Deg2Rad;
-                        var pc = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 0.38f + new Vector2(0f, 0.08f);
-                        p.FillOutlined(q => S.Circle(q, pc, 0.3f), new Color(0.98f, 0.95f, 0.82f), 0.04f);
-                    }
-                    p.FillOutlined(q => S.Circle(q, new Vector2(0f, 0.08f), 0.24f), new Color(1f, 0.78f, 0.3f), 0.04f);
-                    Sparkles(p, 3, new Color(1f, 0.97f, 0.7f));
-                    break;
-                }
-            }
-        }
-
-        // --- mushroom chain ---
-        static void Mushroom(Painter p, Vector2 c, float s, Color cap, Color spot, bool spots)
-        {
-            Sdf stem = q => S.Box(q, new Vector2(0f, -0.38f), new Vector2(0.3f, 0.42f), 0.14f);
-            Sdf capS = q => S.I(S.Ellipse(q, Vector2.zero, new Vector2(0.95f, 0.72f)), -(q.y + 0.02f));
-            p.FillOutlined(S.Xf(stem, c, s), new Color(0.96f, 0.9f, 0.78f), 0.05f);
-            p.FillOutlined(S.Xf(capS, c, s), cap, 0.05f);
-            if (!spots) return;
-            p.Fill(S.Xf(q => S.Circle(q, new Vector2(-0.42f, 0.22f), 0.13f), c, s), spot);
-            p.Fill(S.Xf(q => S.Circle(q, new Vector2(0.12f, 0.45f), 0.11f), c, s), spot);
-            p.Fill(S.Xf(q => S.Circle(q, new Vector2(0.48f, 0.15f), 0.1f), c, s), spot);
-        }
-
-        static void DrawMantar(Painter p, int level)
-        {
-            var brown = new Color(0.68f, 0.44f, 0.3f);
-            var red = new Color(0.88f, 0.27f, 0.27f);
-            switch (level)
-            {
-                case 1: Mushroom(p, new Vector2(0f, 0.05f), 0.75f, brown, Color.white, false); break;
-                case 2: Mushroom(p, new Vector2(0f, 0.05f), 0.8f, red, Color.white, true); break;
-                case 3:
-                    Mushroom(p, new Vector2(-0.4f, -0.2f), 0.45f, brown, Color.white, false);
-                    Mushroom(p, new Vector2(0.4f, -0.2f), 0.45f, brown, Color.white, false);
-                    Mushroom(p, new Vector2(0f, 0.12f), 0.58f, red, Color.white, true);
-                    break;
-                case 4:
-                    p.Glow(Vector2.zero, 1f, new Color(0.4f, 0.65f, 1f, 0.55f));
-                    Mushroom(p, new Vector2(0f, 0.05f), 0.82f, new Color(0.38f, 0.62f, 1f), new Color(0.85f, 0.97f, 1f), true);
-                    Sparkles(p, 2, new Color(0.85f, 0.95f, 1f));
-                    break;
-                default:
-                    p.Glow(Vector2.zero, 1f, new Color(0.8f, 0.45f, 1f, 0.6f));
-                    Mushroom(p, new Vector2(0f, 0.05f), 0.88f, new Color(0.72f, 0.42f, 0.95f), new Color(1f, 0.85f, 0.35f), true);
-                    Sparkles(p, 3, new Color(1f, 0.92f, 0.6f));
-                    break;
-            }
-        }
-
-        // --- crystal chain ---
-        static readonly Vector2[] hex =
-        {
-            new Vector2(0f, 1f), new Vector2(0.5f, 0.45f), new Vector2(0.5f, -0.45f),
-            new Vector2(0f, -1f), new Vector2(-0.5f, -0.45f), new Vector2(-0.5f, 0.45f)
-        };
-        static readonly Vector2[] facet =
-        {
-            new Vector2(0f, 1f), new Vector2(0f, -1f), new Vector2(-0.5f, -0.45f), new Vector2(-0.5f, 0.45f)
-        };
-
-        static void Crystal(Painter p, Vector2 c, float s, float deg, Color col)
-        {
-            p.FillOutlined(S.Xf(q => S.Poly(q, hex), c, s, deg), col, 0.05f);
-            p.Fill(S.Xf(q => S.Poly(q, facet), c, s, deg), new Color(1f, 1f, 1f, 0.35f));
-        }
-
-        static void DrawKristal(Painter p, int level)
-        {
-            switch (level)
-            {
-                case 1:
-                {
-                    var sand = new Color(0.92f, 0.8f, 0.55f);
-                    p.FillOutlined(q => S.Circle(q, new Vector2(-0.3f, -0.2f), 0.2f), sand, 0.05f);
-                    p.FillOutlined(q => S.Circle(q, new Vector2(0.27f, -0.25f), 0.17f), sand, 0.05f);
-                    p.FillOutlined(q => S.Circle(q, new Vector2(0f, 0.2f), 0.19f), sand, 0.05f);
-                    break;
-                }
-                case 2:
-                    p.FillOutlined(q => S.Ellipse(q, Vector2.zero, new Vector2(0.7f, 0.5f)), new Color(0.6f, 0.6f, 0.68f), 0.05f);
-                    p.Fill(q => S.Ellipse(q, new Vector2(-0.22f, 0.18f), new Vector2(0.22f, 0.1f)), new Color(0.82f, 0.82f, 0.88f));
-                    break;
-                case 3: Crystal(p, Vector2.zero, 0.8f, 0f, new Color(0.4f, 0.85f, 0.95f)); break;
-                case 4:
-                    p.Glow(Vector2.zero, 1f, new Color(0.8f, 0.7f, 1f, 0.6f));
-                    Crystal(p, new Vector2(-0.42f, -0.22f), 0.45f, 25f, new Color(0.7f, 0.62f, 1f));
-                    Crystal(p, new Vector2(0.42f, -0.22f), 0.45f, -25f, new Color(0.7f, 0.62f, 1f));
-                    Crystal(p, new Vector2(0f, 0.05f), 0.75f, 0f, new Color(0.82f, 0.75f, 1f));
-                    Sparkles(p, 2, Color.white);
-                    break;
-                default:
-                {
-                    p.Glow(Vector2.zero, 1f, new Color(1f, 0.85f, 0.35f, 0.6f));
-                    var big = S.Star(5, 0.85f, 0.38f);
-                    var small = S.Star(5, 0.45f, 0.2f);
-                    p.FillOutlined(q => S.Poly(q, big), new Color(1f, 0.82f, 0.28f), 0.06f);
-                    p.Fill(q => S.Poly(q, small), new Color(1f, 0.95f, 0.65f));
-                    Sparkles(p, 3, Color.white);
-                    break;
-                }
-            }
-        }
-
-        // --- web / fabric chain ---
-        static void DrawAg(Painter p, int level)
-        {
-            switch (level)
-            {
-                case 1:
-                    p.Fill(q =>
-                    {
-                        float d = 9f;
-                        d = S.U(d, S.Ring(S.Circle(q, Vector2.zero, 0.3f), 0.035f));
-                        d = S.U(d, S.Ring(S.Circle(q, Vector2.zero, 0.58f), 0.035f));
-                        d = S.U(d, S.Ring(S.Circle(q, Vector2.zero, 0.86f), 0.035f));
-                        for (int i = 0; i < 8; i++)
-                        {
-                            float a = i * 45f * Mathf.Deg2Rad;
-                            d = S.U(d, S.Seg(q, Vector2.zero, new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 0.9f, 0.03f));
-                        }
-                        return d;
-                    }, new Color(0.9f, 0.9f, 0.97f));
-                    p.FillOutlined(q => S.Circle(q, new Vector2(0.3f, -0.3f), 0.12f), new Color(0.2f, 0.15f, 0.25f), 0.03f);
-                    break;
-                case 2: Yarn(p, 0.62f, new Color(0.78f, 0.72f, 0.88f)); break;
-                case 3: Yarn(p, 0.85f, new Color(0.66f, 0.45f, 0.88f)); break;
-                case 4:
-                    p.Glow(Vector2.zero, 1f, new Color(0.55f, 0.3f, 0.8f, 0.6f));
-                    p.FillOutlined(q => S.Box(q, Vector2.zero, new Vector2(0.75f, 0.58f), 0.12f), new Color(0.36f, 0.22f, 0.52f), 0.05f);
-                    p.Fill(q => S.Poly(q, new[] { new Vector2(0.75f, 0.58f), new Vector2(0.75f, 0f), new Vector2(0.1f, 0.58f) }),
-                        new Color(0.52f, 0.36f, 0.7f));
-                    p.Fill(q => S.Box(q, new Vector2(0f, -0.3f), new Vector2(0.75f, 0.05f), 0f), new Color(0.75f, 0.6f, 0.95f));
-                    Sparkles(p, 2, new Color(0.9f, 0.8f, 1f));
-                    break;
-                default:
-                    p.Glow(Vector2.zero, 1f, new Color(0.7f, 0.9f, 1f, 0.6f));
-                    GhostBody(p, new Vector2(0f, 0f), 0.9f, new Color(0.92f, 0.96f, 1f, 0.95f), false);
-                    p.Fill(q => S.Box(q, new Vector2(0f, -0.1f), new Vector2(0.6f, 0.05f), 0f), new Color(0.6f, 0.8f, 1f));
-                    p.Fill(q => S.Box(q, new Vector2(0f, -0.35f), new Vector2(0.6f, 0.05f), 0f), new Color(0.6f, 0.8f, 1f));
-                    Sparkles(p, 3, Color.white);
-                    break;
-            }
-        }
-
-        static void Yarn(Painter p, float s, Color col)
-        {
-            var dark = col * 0.7f; dark.a = 1f;
-            p.FillOutlined(q => S.Seg(q, new Vector2(0.5f * s, -0.55f * s), new Vector2(0.95f, -0.9f), 0.04f), col, 0.03f);
-            p.FillOutlined(q => S.Circle(q, Vector2.zero, 0.85f * s), col, 0.05f);
-            p.Fill(q =>
-            {
-                float ball = S.Circle(q, Vector2.zero, 0.8f * s);
-                float st = S.Ring(S.Circle(q, new Vector2(0.35f, 0.35f) * s, 0.55f * s), 0.035f);
-                st = S.U(st, S.Ring(S.Circle(q, new Vector2(-0.4f, 0.1f) * s, 0.7f * s), 0.035f));
-                st = S.U(st, S.Ring(S.Circle(q, new Vector2(0.1f, -0.5f) * s, 0.6f * s), 0.035f));
-                return S.I(st, ball);
-            }, dark);
-        }
-
-        // --- cats ---
-        static void DrawKedi(Painter p, int level)
-        {
-            switch (level)
-            {
-                case 1:
-                    CatHead(p, new Vector2(0f, -0.05f), 0.95f, new Color(0.96f, 0.63f, 0.32f), new Color(0.45f, 0.8f, 0.35f), false, true, 0);
-                    break;
-                case 2:
-                    CatHead(p, new Vector2(0f, -0.12f), 0.88f, new Color(0.64f, 0.66f, 0.74f), new Color(0.4f, 0.7f, 1f), false, false, 1);
-                    break;
-                default:
-                    p.Glow(Vector2.zero, 1f, new Color(0.7f, 0.4f, 1f, 0.55f));
-                    CatHead(p, new Vector2(0f, -0.14f), 0.86f, new Color(0.2f, 0.15f, 0.26f), new Color(1f, 0.85f, 0.2f), false, false, 2);
-                    Sparkles(p, 2, new Color(1f, 0.95f, 0.6f));
-                    break;
-            }
-        }
-
-        static void CatHead(Painter p, Vector2 c, float s, Color fur, Color eye, bool sleeping, bool stripes, int hat)
-        {
-            var earL = new[] { new Vector2(-0.64f, 0.06f), new Vector2(-0.5f, 0.82f), new Vector2(-0.06f, 0.42f) };
-            var earR = new[] { new Vector2(0.64f, 0.06f), new Vector2(0.5f, 0.82f), new Vector2(0.06f, 0.42f) };
-            var inL = new[] { new Vector2(-0.5f, 0.22f), new Vector2(-0.46f, 0.64f), new Vector2(-0.22f, 0.42f) };
-            var inR = new[] { new Vector2(0.5f, 0.22f), new Vector2(0.46f, 0.64f), new Vector2(0.22f, 0.42f) };
-            var pink = new Color(1f, 0.62f, 0.68f);
-            var dark = new Color(0.12f, 0.08f, 0.15f);
-            var furDark = new Color(fur.r * 0.7f, fur.g * 0.65f, fur.b * 0.65f);
-            bool blackCat = fur.r < 0.3f;
-
-            p.FillOutlined(S.Xf(q => S.U(S.Circle(q, new Vector2(0f, -0.1f), 0.62f), S.U(S.Poly(q, earL), S.Poly(q, earR))), c, s), fur, 0.05f);
-            p.Fill(S.Xf(q => S.U(S.Poly(q, inL), S.Poly(q, inR)), c, s), blackCat ? new Color(0.5f, 0.3f, 0.45f) : pink);
-
-            if (stripes)
-                p.Fill(S.Xf(q => S.U(S.Seg(q, new Vector2(0f, 0.44f), new Vector2(0f, 0.28f), 0.04f),
-                    S.U(S.Seg(q, new Vector2(-0.16f, 0.42f), new Vector2(-0.13f, 0.28f), 0.035f),
-                        S.Seg(q, new Vector2(0.16f, 0.42f), new Vector2(0.13f, 0.28f), 0.035f))), c, s), furDark);
-
-            // cheeks
-            p.Fill(S.Xf(q => S.U(S.Circle(q, new Vector2(-0.38f, -0.26f), 0.09f), S.Circle(q, new Vector2(0.38f, -0.26f), 0.09f)), c, s),
-                new Color(1f, 0.55f, 0.6f, blackCat ? 0.35f : 0.45f));
-
-            if (sleeping)
-            {
-                p.Fill(S.Xf(q => S.U(S.Seg(q, new Vector2(-0.36f, -0.06f), new Vector2(-0.14f, -0.1f), 0.035f),
-                    S.Seg(q, new Vector2(0.36f, -0.06f), new Vector2(0.14f, -0.1f), 0.035f)), c, s), dark);
-            }
-            else
-            {
-                p.Fill(S.Xf(q => S.U(S.Circle(q, new Vector2(-0.24f, -0.04f), 0.12f), S.Circle(q, new Vector2(0.24f, -0.04f), 0.12f)), c, s), eye);
-                p.Fill(S.Xf(q => S.U(S.Ellipse(q, new Vector2(-0.24f, -0.04f), new Vector2(0.045f, 0.1f)),
-                    S.Ellipse(q, new Vector2(0.24f, -0.04f), new Vector2(0.045f, 0.1f))), c, s), dark);
-                p.Fill(S.Xf(q => S.U(S.Circle(q, new Vector2(-0.2f, 0.01f), 0.035f), S.Circle(q, new Vector2(0.28f, 0.01f), 0.035f)), c, s), Color.white);
-            }
-
-            var nose = new[] { new Vector2(-0.07f, -0.2f), new Vector2(0.07f, -0.2f), new Vector2(0f, -0.28f) };
-            p.Fill(S.Xf(q => S.Poly(q, nose), c, s), pink);
-            p.Fill(S.Xf(q => S.U(S.Seg(q, new Vector2(0f, -0.28f), new Vector2(-0.08f, -0.35f), 0.022f),
-                S.Seg(q, new Vector2(0f, -0.28f), new Vector2(0.08f, -0.35f), 0.022f)), c, s), blackCat ? new Color(0.6f, 0.5f, 0.6f) : dark);
-
-            var whisk = blackCat ? new Color(0.75f, 0.7f, 0.8f) : new Color(1f, 1f, 1f, 0.9f);
-            p.Fill(S.Xf(q =>
-            {
-                float d = S.Seg(q, new Vector2(0.32f, -0.22f), new Vector2(0.78f, -0.15f), 0.015f);
-                d = S.U(d, S.Seg(q, new Vector2(0.32f, -0.28f), new Vector2(0.78f, -0.34f), 0.015f));
-                d = S.U(d, S.Seg(q, new Vector2(-0.32f, -0.22f), new Vector2(-0.78f, -0.15f), 0.015f));
-                d = S.U(d, S.Seg(q, new Vector2(-0.32f, -0.28f), new Vector2(-0.78f, -0.34f), 0.015f));
-                return d;
-            }, c, s), whisk);
-
-            if (hat == 1)
-            {
-                var cone = new[] { new Vector2(-0.28f, 0.46f), new Vector2(0.3f, 0.46f), new Vector2(0.18f, 1.0f) };
-                p.FillOutlined(S.Xf(q => S.Poly(q, cone), c, s), new Color(0.3f, 0.5f, 0.9f), 0.04f);
-                p.FillOutlined(S.Xf(q => S.Ellipse(q, new Vector2(0f, 0.46f), new Vector2(0.42f, 0.08f)), c, s), new Color(0.25f, 0.4f, 0.8f), 0.04f);
-            }
-            else if (hat == 2)
-            {
-                var cone = new[] { new Vector2(-0.38f, 0.48f), new Vector2(0.38f, 0.48f), new Vector2(0.24f, 1.12f) };
-                p.FillOutlined(S.Xf(q => S.Poly(q, cone), c, s), new Color(0.5f, 0.28f, 0.75f), 0.04f);
-                p.FillOutlined(S.Xf(q => S.Ellipse(q, new Vector2(0f, 0.48f), new Vector2(0.64f, 0.1f)), c, s), new Color(0.42f, 0.22f, 0.65f), 0.04f);
-                p.Fill(S.Xf(q => S.Poly(q, S.Star(5, 0.11f, 0.05f)), c + new Vector2(0.02f, 0.72f) * s, s), new Color(1f, 0.85f, 0.3f));
-            }
-        }
-
         // --- ghosts ---
         static void GhostBody(Painter p, Vector2 c, float s, Color col, bool face)
         {
@@ -607,51 +370,5 @@ namespace KaraPati
                 new Color(1f, 0.6f, 0.7f, 0.5f));
         }
 
-        // --- generators ---
-        static void Cauldron(Painter p)
-        {
-            var iron = new Color(0.25f, 0.22f, 0.3f);
-            p.FillOutlined(q => S.U(S.Box(q, new Vector2(-0.45f, -0.75f), new Vector2(0.08f, 0.15f), 0.04f),
-                S.Box(q, new Vector2(0.45f, -0.75f), new Vector2(0.08f, 0.15f), 0.04f)), iron, 0.04f);
-            p.FillOutlined(q => S.Ellipse(q, new Vector2(0f, -0.18f), new Vector2(0.82f, 0.62f)), iron, 0.05f);
-            p.Fill(q => S.Ellipse(q, new Vector2(-0.35f, -0.15f), new Vector2(0.12f, 0.3f)), new Color(0.4f, 0.36f, 0.48f));
-            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.36f), new Vector2(0.86f, 0.11f), 0.09f), new Color(0.34f, 0.3f, 0.4f), 0.05f);
-            p.Fill(q => S.Ellipse(q, new Vector2(0f, 0.38f), new Vector2(0.72f, 0.07f)), new Color(0.45f, 0.95f, 0.45f));
-            var bub = new Color(0.6f, 1f, 0.55f);
-            p.FillOutlined(q => S.Circle(q, new Vector2(-0.25f, 0.6f), 0.13f), bub, 0.035f);
-            p.FillOutlined(q => S.Circle(q, new Vector2(0.15f, 0.74f), 0.1f), bub, 0.035f);
-            p.FillOutlined(q => S.Circle(q, new Vector2(0.38f, 0.55f), 0.07f), bub, 0.035f);
-        }
-
-        /// <summary>A little wooden cat house: pointed roof with a round attic window, and a round door.</summary>
-        static void CatHouse(Painter p)
-        {
-            var wall = new Color(0.86f, 0.62f, 0.4f);
-            var roof = new Color(0.62f, 0.3f, 0.36f);
-            var dark = new Color(0.16f, 0.1f, 0.18f);
-            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.3f), new Vector2(0.62f, 0.5f), 0.08f), wall, 0.05f);
-            // planks
-            p.Fill(q => S.U(S.Box(q, new Vector2(0f, -0.08f), new Vector2(0.56f, 0.012f), 0f), S.Box(q, new Vector2(0f, -0.52f), new Vector2(0.56f, 0.012f), 0f)), new Color(0.72f, 0.5f, 0.32f));
-            p.FillOutlined(q => S.Poly(q, new[] { new Vector2(-0.82f, 0.12f), new Vector2(0f, 0.86f), new Vector2(0.82f, 0.12f) }), roof, 0.05f);
-            // round door
-            p.FillOutlined(q => S.U(S.Circle(q, new Vector2(0f, -0.38f), 0.28f), S.Box(q, new Vector2(0f, -0.62f), new Vector2(0.28f, 0.24f), 0f)), dark, 0.04f);
-            // round attic window in the gable (the first kitten looks out of it)
-            var cream = new Color(1f, 0.92f, 0.82f);
-            p.Fill(q => S.Circle(q, new Vector2(0f, 0.38f), 0.2f), cream);
-            p.Fill(q => S.Circle(q, new Vector2(0f, 0.38f), 0.15f), dark);
-        }
-
-        static void Chest(Painter p)
-        {
-            var wood = new Color(0.62f, 0.4f, 0.25f);
-            var woodL = new Color(0.74f, 0.5f, 0.32f);
-            var gold = new Color(1f, 0.8f, 0.3f);
-            p.FillOutlined(q => S.Box(q, new Vector2(0f, -0.28f), new Vector2(0.8f, 0.45f), 0.1f), wood, 0.05f);
-            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.3f), new Vector2(0.82f, 0.26f), 0.18f), woodL, 0.05f);
-            p.Fill(q => S.U(S.Box(q, new Vector2(-0.5f, -0.05f), new Vector2(0.06f, 0.62f), 0f),
-                S.Box(q, new Vector2(0.5f, -0.05f), new Vector2(0.06f, 0.62f), 0f)), gold);
-            p.FillOutlined(q => S.Box(q, new Vector2(0f, 0.05f), new Vector2(0.13f, 0.17f), 0.04f), gold, 0.04f);
-            p.Fill(q => S.Circle(q, new Vector2(0f, 0.06f), 0.045f), Outline);
-        }
     }
 }

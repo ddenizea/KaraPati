@@ -284,7 +284,7 @@ namespace KaraPati
         static readonly TrList tips = new TrList
         (
             L.N("Aynı iki eşyayı üst üste sürükle, birleşsinler."),
-            L.N("Kazana ve sandığa dokunarak malzeme üret (1 enerji)."),
+            L.N("Bahçe Sepeti'ne ve Kiler Dolabı'na dokunarak malzeme üret (1 enerji)."),
             L.N("Hayaletlerin istediklerini masada topla, sonra 'Ver'e bas."),
             L.N("Mor Simya Kazanı'na iki malzeme at: iksir kaynar, hayaletler iksire çok para verir!"),
             L.N("İki yavruyu üst üste sürükle: 2 saatlik bir Çırak Kedi olur!"),
@@ -1720,7 +1720,7 @@ namespace KaraPati
             {
                 int gl = GeneratorLevel(d.chain);
                 infoTitle.text = d.Name + "  <size=26>(" + L.F("Sv. {0}/{1}", gl, Generators.MaxLevel) + ")</size>";
-                infoDesc.text = (d.chain == Chains.Kazan ? L.T("Ot ve mantar üretir.") : L.T("Kristal ve örümcek ağı üretir.")) + " " + L.T("Dokun: 1 enerji.") + "\n" + Generators.ChanceText(gl);
+                infoDesc.text = (d.chain == Chains.Kazan ? L.T("Kedi otu ve balık çıkarır.") : L.T("Süt ve yün çıkarır.")) + " " + L.T("Dokun: 1 enerji.") + "\n" + Generators.ChanceText(gl);
                 actionBtn.gameObject.SetActive(true);
                 if (gl < Generators.MaxLevel)
                 {
@@ -2042,7 +2042,7 @@ namespace KaraPati
             if (want != tripIconColor)
             {
                 tripIconColor = want;
-                tripIcon.sprite = ready ? ProcArt.Item(Chains.Sandik, 1) : ProcArt.SideCat(3, 4, Cats.TripColor);
+                tripIcon.sprite = ready ? ProcArt.Classic(Chains.Sandik, 1) : ProcArt.SideCat(3, 4, Cats.TripColor);
             }
             if (ready)
             {
