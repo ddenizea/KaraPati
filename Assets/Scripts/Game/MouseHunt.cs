@@ -83,7 +83,7 @@ namespace KaraPati
             var say = UIKit.Txt("Say", area, L.T("Pati hazır! Fareler kaçmasın!"), 34, UIKit.Cream, TextAnchor.MiddleLeft);
             say.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0f, 0.5f)).At(new Vector2(-230f, 140f), new Vector2(620f, 60f));
 
-            bigText = UIKit.Txt("Big", area, "", 150, UIKit.Orange);
+            bigText = UIKit.TxtRaw("Big", area, "", 150, UIKit.Orange);
             bigText.fontStyle = FontStyle.Bold;
             bigRt = bigText.rectTransform;
             bigRt.At(new Vector2(0f, 60f), new Vector2(900f, 240f));

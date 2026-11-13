@@ -62,7 +62,7 @@ namespace KaraPati
             UIKit.Stretch(root);
             var bg = root.gameObject.AddComponent<Image>();
             bg.sprite = ProcArt.Gradient;
-            bg.color = new Color(0.85f, 0.8f, 0.95f);
+            bg.color = Theme.Legacy ? new Color(0.85f, 0.8f, 0.95f) : Color.white;
             bg.raycastTarget = true;   // nothing behind the room can be tapped
 
             // same 1080 x 2060 frame as the rest of the game, centred
@@ -166,7 +166,7 @@ namespace KaraPati
                 c.best.text = best > 0 ? L.F("En iyi skor: {0}", best) : L.T("Henüz oynanmadı");
                 int left = GM.MiniFreeLeft(g);
                 c.free.text = left > 0 ? L.F("Bugün {0} ücretsiz hak", left) : L.F("Ücretsiz hak bitti: {0} enerji", MiniGames.EnergyCost);
-                c.free.color = left > 0 ? new Color(0.6f, 0.95f, 0.55f) : UIKit.Cream;
+                c.free.SetInk(left > 0 ? new Color(0.6f, 0.95f, 0.55f) : UIKit.Cream);
             }
         }
 
@@ -175,7 +175,7 @@ namespace KaraPati
         {
             popup = UIKit.Fill(content, "Popup");
             var dim = popup.gameObject.AddComponent<Image>();
-            dim.color = new Color(0.03f, 0.01f, 0.06f, 0.6f);
+            dim.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.6f));
             dim.raycastTarget = true;
 
             var card = UIKit.Img("Card", popup, ProcArt.Rounded, new Color(0.24f, 0.17f, 0.36f, 0.99f), true);
@@ -203,12 +203,12 @@ namespace KaraPati
         {
             popIcon.sprite = Icon(g);
             popTitle.text = title;
-            popBody.text = body;
+            popBody.text = Theme.Rich(body);
             popMainAct = mainAct;
             popSecondAct = secondAct;
             popMain.Label().text = main;
             popMain.interactable = mainEnabled;
-            popMain.GetComponent<Image>().color = mainEnabled ? UIKit.Green : UIKit.Disabled;
+            popMain.GetComponent<Image>().color = Theme.Ui(mainEnabled ? UIKit.Green : UIKit.Disabled);
             bool two = second != null;
             popSecond.gameObject.SetActive(two);
             if (two) popSecond.Label().text = second;

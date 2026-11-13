@@ -53,7 +53,12 @@ namespace KaraPati
             rt.offsetMax = new Vector2(-right, -top);
         }
 
-        public static Image Img(string name, Transform parent, Sprite sprite, Color color, bool sliced = false)
+        /// <summary>A UI image; its colour goes through the theme (purple panel shades become the theme's shades).</summary>
+        public static Image Img(string name, Transform parent, Sprite sprite, Color color, bool sliced = false) =>
+            ImgArt(name, parent, sprite, Theme.Ui(color), sliced);
+
+        /// <summary>An image for a picture (scene, decoration): its colour is used as it is, whatever the theme.</summary>
+        public static Image ImgArt(string name, Transform parent, Sprite sprite, Color color, bool sliced = false)
         {
             var rt = Rect(name, parent);
             var img = rt.gameObject.AddComponent<Image>();
@@ -65,6 +70,17 @@ namespace KaraPati
         }
 
         public static Text Txt(string name, Transform parent, string s, int size, Color color,
+            TextAnchor align = TextAnchor.MiddleCenter, bool outline = true)
+        {
+            // on a light theme panel light text turns dark and loses its outline; on buttons, badges and dark boxes it stays as it was
+            bool onLight = Theme.OnLight(parent);
+            var mapped = Theme.Ink(color, onLight);
+            if (mapped != color) outline = false;
+            return TxtRaw(name, parent, s, size, mapped, align, outline);
+        }
+
+        /// <summary>A text whose colour is used as it is (light text on a dark or coloured box, whatever the theme).</summary>
+        public static Text TxtRaw(string name, Transform parent, string s, int size, Color color,
             TextAnchor align = TextAnchor.MiddleCenter, bool outline = true)
         {
             var rt = Rect(name, parent);
@@ -81,7 +97,7 @@ namespace KaraPati
             if (outline)
             {
                 var o = rt.gameObject.AddComponent<Outline>();
-                o.effectColor = new Color(0.08f, 0.04f, 0.12f, 0.85f);
+                o.effectColor = Theme.Outline;
                 o.effectDistance = new Vector2(2f, -2f);
             }
             return t;
@@ -97,12 +113,16 @@ namespace KaraPati
             colors.disabledColor = new Color(0.75f, 0.75f, 0.75f, 0.8f);
             b.colors = colors;
             b.onClick.AddListener(() => { Sfx.Play("click"); onClick?.Invoke(); });
-            var t = Txt("Label", img.transform, label, fontSize, Cream);
+            // labels stay light with an outline on coloured buttons; a pale panel-coloured button gets the dark panel text
+            var t = Theme.OnLight(img.transform) ? Txt("Label", img.transform, label, fontSize, Cream) : TxtRaw("Label", img.transform, label, fontSize, Cream);
             Stretch(t.rectTransform, 6, 6, 4, 4);
             return b;
         }
 
         public static Text Label(this Button b) => b.GetComponentInChildren<Text>();
+
+        /// <summary>Set a text's colour later on, through the theme like a new text.</summary>
+        public static void SetInk(this Text t, Color c) => t.color = Theme.Ink(c, Theme.OnLight(t.transform.parent));
 
         /// <summary>Full-width horizontal band measured from the top of a parent.</summary>
         public static RectTransform Section(Transform parent, string name, float top, float height)

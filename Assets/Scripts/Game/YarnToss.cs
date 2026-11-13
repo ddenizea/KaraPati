@@ -121,12 +121,12 @@ namespace KaraPati
             var hint = UIKit.Txt("Hint", area, L.T("Halka parlayınca ekrana dokun!"), 32, new Color(1f, 1f, 1f, 0.75f));
             hint.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, 120f), new Vector2(900f, 50f));
 
-            sayText = UIKit.Txt("Say", area, "", 44, UIKit.Orange);
+            sayText = UIKit.TxtRaw("Say", area, "", 44, UIKit.Orange);
             sayText.fontStyle = FontStyle.Bold;
             sayRt = sayText.rectTransform;
             sayRt.sizeDelta = new Vector2(500f, 70f);
 
-            bigText = UIKit.Txt("Big", area, "", 140, UIKit.Orange);
+            bigText = UIKit.TxtRaw("Big", area, "", 140, UIKit.Orange);
             bigText.fontStyle = FontStyle.Bold;
             bigRt = bigText.rectTransform;
             bigRt.At(new Vector2(0f, -160f), new Vector2(900f, 220f));

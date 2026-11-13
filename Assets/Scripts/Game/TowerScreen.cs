@@ -143,7 +143,7 @@ namespace KaraPati
 
             // name plaque
             var plaque = P("Plaque", f, ProcArt.Rounded, new Color(0.15f, 0.1f, 0.2f, 0.85f), new Vector2(i % 2 == 0 ? -300f : 300f, FloorH / 2f - 80f), new Vector2(360f, 64f), true);
-            var name = UIKit.Txt("Name", plaque.transform, L.F("{0}. Kat  •  {1}", i + 1, Tower.FloorNames[i]), 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            var name = UIKit.TxtRaw("Name", plaque.transform, L.F("{0}. Kat  •  {1}", i + 1, Tower.FloorNames[i]), 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(name.rectTransform);
 
             // locked cover
@@ -153,10 +153,10 @@ namespace KaraPati
             P("Web", cover, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.35f), new Vector2(-420f, 300f), new Vector2(170f, 170f));
             P("Web", cover, ProcArt.Classic(Chains.Ag, 1), new Color(1f, 1f, 1f, 0.25f), new Vector2(420f, 300f), new Vector2(150f, 150f));
             P("Lock", cover, ProcArt.Lock, Color.white, new Vector2(0f, 120f), new Vector2(120f, 120f));
-            var lt = UIKit.Txt("Name", cover, L.F("{0}. Kat: {1}", i + 1, Tower.FloorNames[i]), 40, UIKit.Cream);
+            var lt = UIKit.TxtRaw("Name", cover, L.F("{0}. Kat: {1}", i + 1, Tower.FloorNames[i]), 40, UIKit.Cream);
             lt.fontStyle = FontStyle.Bold;
             lt.rectTransform.At(new Vector2(0f, 20f), new Vector2(900f, 60f));
-            lockTexts[i] = UIKit.Txt("Hint", cover, "", 28, new Color(1f, 1f, 1f, 0.7f));
+            lockTexts[i] = UIKit.TxtRaw("Hint", cover, "", 28, new Color(1f, 1f, 1f, 0.7f));
             lockTexts[i].rectTransform.At(new Vector2(0f, -36f), new Vector2(900f, 44f));
             int fi = i;
             unlockBtns[i] = UIKit.Btn("Unlock", cover, "", UIKit.Green, () => OnUnlock(fi), 36);
@@ -240,7 +240,7 @@ namespace KaraPati
             var barBg = P("Bar", panel.transform, ProcArt.Rounded, new Color(0f, 0f, 0f, 0.4f), new Vector2(40f, 14f), new Vector2(300f, 30f), true);
             moodFill = UIKit.Img("Fill", barBg.transform, ProcArt.Rounded, new Color(1f, 0.45f, 0.6f), true);
             moodFill.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(Vector2.zero, new Vector2(300f, 30f));
-            moodText = UIKit.Txt("Text", panel.transform, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            moodText = UIKit.TxtRaw("Text", panel.transform, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             moodText.rectTransform.At(new Vector2(0f, -32f), new Vector2(400f, 36f));
             BuildUstaShelf(f);
         }
@@ -267,7 +267,7 @@ namespace KaraPati
             var b = ustaImg.gameObject.AddComponent<Button>();
             b.transition = Selectable.Transition.None;
             b.onClick.AddListener(TapUsta);
-            ustaLabel = UIKit.Txt("Name", ustaShelf, "", 26, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            ustaLabel = UIKit.TxtRaw("Name", ustaShelf, "", 26, UIKit.Cream, TextAnchor.MiddleCenter, false);
             ustaLabel.fontStyle = FontStyle.Bold;
             ustaLabel.rectTransform.At(ustaHome + new Vector2(0f, -56f), new Vector2(300f, 34f));
             ustaLabel.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.6f);
@@ -375,7 +375,7 @@ namespace KaraPati
             P("Bowl", root, ProcArt.Bowl, tint, new Vector2(0f, -4f), new Vector2(160f, 110f));
             bool water = content == ProcArt.Water;
             fill = P("Fill", root, content, Color.white, water ? new Vector2(0f, 3f) : new Vector2(0f, 22f), water ? new Vector2(112f, 26f) : new Vector2(120f, 70f));
-            label = UIKit.Txt("Label", root, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, true);
+            label = UIKit.TxtRaw("Label", root, "", 24, UIKit.Cream, TextAnchor.MiddleCenter, true);
             label.rectTransform.At(new Vector2(0f, -78f), new Vector2(200f, 34f));
             return root;
         }
@@ -447,7 +447,7 @@ namespace KaraPati
                 if (next)
                 {
                     unlockBtns[i].Label().text = armed ? L.T("Emin misin?") : L.F("Aç: {0} altın", price);
-                    unlockBtns[i].GetComponent<Image>().color = armed ? UIKit.Orange : GM.Gold >= price ? UIKit.Green : UIKit.Disabled;
+                    unlockBtns[i].GetComponent<Image>().color = Theme.Ui(armed ? UIKit.Orange : GM.Gold >= price ? UIKit.Green : UIKit.Disabled);
                 }
             }
             RefreshCare();
@@ -485,8 +485,8 @@ namespace KaraPati
             waterBowlFill.gameObject.SetActive(water > 0.02f);
             foodText.text = food <= 0.02f ? L.T("Mama bitti!") : L.F("Mama %{0}", Mathf.RoundToInt(food * 100f));
             waterText.text = water <= 0.02f ? L.T("Su bitti!") : L.F("Su %{0}", Mathf.RoundToInt(water * 100f));
-            foodText.color = food < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream;
-            waterText.color = water < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream;
+            foodText.SetInk(food < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream);
+            waterText.SetInk(water < Tower.HappyAbove ? new Color(1f, 0.55f, 0.5f) : UIKit.Cream);
 
             float mood = (food + water) / 2f;
             moodFill.rectTransform.sizeDelta = new Vector2(Mathf.Max(24f, 300f * mood), 30f);
@@ -659,7 +659,7 @@ namespace KaraPati
 
         static Image P(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false)
         {
-            var img = UIKit.Img(name, parent, s, c, sliced);
+            var img = UIKit.ImgArt(name, parent, s, c, sliced);
             img.rectTransform.At(pos, size);
             img.raycastTarget = false;
             return img;

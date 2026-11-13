@@ -37,7 +37,7 @@ namespace KaraPati
             paw = pawImg.rectTransform;
             paw.sizeDelta = new Vector2(110f, 110f);
             var shadow = pawImg.gameObject.AddComponent<Outline>();
-            shadow.effectColor = new Color(0.15f, 0.08f, 0.2f, 0.9f);
+            shadow.effectColor = Theme.Outline;
             shadow.effectDistance = new Vector2(4f, -4f);
 
             var bg = UIKit.Img("Bubble", layer, ProcArt.Rounded, new Color(0.98f, 0.94f, 0.86f, 0.97f), true);

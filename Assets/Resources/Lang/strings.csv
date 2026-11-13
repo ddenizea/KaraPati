@@ -414,6 +414,9 @@ Zincirlerimi şıngırdatmadan teşekkür ederim.,"Thank you, and I won't even r
 Bir dahaki sefere kedi maması getiririm!,Next time I'll bring some cat food!
 ...,...
 Seviye {0}!,Level {0}!
+Krem,Cream
+Şeftali,Peach
+Mor,Purple
 Başarımlar,Achievements
 {0}/{1} rozet,{0}/{1} badges
 Bütün rozetler alındı!,All badges earned!
@@ -686,6 +689,7 @@ YENİ,NEW
 "Kara Pati: ""{0}""","Kara Pati: ""{0}"""
 Ayarlar,Settings
 Dil,Language
+Tema,Theme
 Müzik: {0},Music: {0}
 Açık,On
 Kapalı,Off

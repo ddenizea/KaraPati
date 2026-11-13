@@ -31,7 +31,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.75f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.75f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -110,14 +110,14 @@ namespace KaraPati
             if (GM.IsGrandClaimed)
             {
                 grandClaim.Label().text = L.T("Büyük ödül alındı");
-                grandImg.color = UIKit.Disabled;
+                grandImg.color = Theme.Ui(UIKit.Disabled);
                 grandClaim.interactable = false;
             }
             else
             {
                 bool ok = have >= total;
                 grandClaim.Label().text = ok ? L.T("Büyük Ödülü Al!") : L.T("Bütün etiketleri topla");
-                grandImg.color = ok ? UIKit.Orange : UIKit.Disabled;
+                grandImg.color = Theme.Ui(ok ? UIKit.Orange : UIKit.Disabled);
                 grandClaim.interactable = ok;
             }
 
@@ -280,19 +280,19 @@ namespace KaraPati
             if (GM.IsSetClaimed(set))
             {
                 claim.Label().text = L.T("Ödül alındı");
-                claimImg.color = UIKit.Disabled;
+                claimImg.color = Theme.Ui(UIKit.Disabled);
                 claim.interactable = false;
             }
             else if (have >= set.ids.Length)
             {
                 claim.Label().text = L.F("Ödülü Al: {0}", reward);
-                claimImg.color = UIKit.Orange;
+                claimImg.color = Theme.Ui(UIKit.Orange);
                 claim.interactable = true;
             }
             else
             {
                 claim.Label().text = L.F("Seti tamamla: {0}", reward);
-                claimImg.color = UIKit.Disabled;
+                claimImg.color = Theme.Ui(UIKit.Disabled);
                 claim.interactable = false;
             }
         }

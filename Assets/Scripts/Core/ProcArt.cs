@@ -240,8 +240,8 @@ namespace KaraPati
         public static Sprite Circle => Make("ui_circle", Size,
             p => p.Fill(q => S.Circle(q, Vector2.zero, 0.97f), Color.white));
 
-        public static Sprite Gradient => Make("ui_gradient", 64,
-            p => p.VerticalGradient(new Color(0.09f, 0.06f, 0.14f), new Color(0.22f, 0.13f, 0.3f)));
+        public static Sprite Gradient => Make("ui_gradient_" + (int)Theme.Current, 64,
+            p => p.VerticalGradient(Theme.BgBottom, Theme.BgTop));
 
         public static Sprite Sparkle => Make("ui_sparkle", 64,
             p => p.Fill(q => S.Poly(q, S.Star(4, 0.95f, 0.22f)), Color.white));

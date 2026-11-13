@@ -33,7 +33,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.7f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.7f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -58,7 +58,7 @@ namespace KaraPati
             title.resizeTextMaxSize = 56;
             UIKit.Stretch(title.rectTransform, 120f, 120f, 10f, 10f);
             var outline = title.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.15f, 0.08f, 0.2f, 0.8f);
+            outline.effectColor = Theme.Outline;
             outline.effectDistance = new Vector2(2f, -2f);
 
             var close = UIKit.Btn("Close", head.transform, "X", new Color(0.8f, 0.3f, 0.35f), Close, 44);

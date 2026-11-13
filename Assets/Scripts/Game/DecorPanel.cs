@@ -25,7 +25,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.2f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.2f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -134,9 +134,9 @@ namespace KaraPati
             bool on = GM.TowerFriendsOn;
             friendsToggle.gameObject.SetActive(GM.BestFriendsToday(1).Count > 0);   // only once there is a best friend
             friendsToggle.Label().text = on ? L.T("Can dostları kuleye gelsin: Açık") : L.T("Can dostları kuleye gelsin: Kapalı");
-            friendsToggle.GetComponent<Image>().color = on ? UIKit.Green : UIKit.PanelDark;
-            tabInv.GetComponent<Image>().color = shopTab ? UIKit.PanelDark : UIKit.Orange;
-            tabShop.GetComponent<Image>().color = shopTab ? UIKit.Orange : UIKit.PanelDark;
+            friendsToggle.GetComponent<Image>().color = Theme.Ui(on ? UIKit.Green : UIKit.PanelDark);
+            tabInv.GetComponent<Image>().color = Theme.Ui(shopTab ? UIKit.PanelDark : UIKit.Orange);
+            tabShop.GetComponent<Image>().color = Theme.Ui(shopTab ? UIKit.Orange : UIKit.PanelDark);
 
             for (int slot = 0; slot < Decor.Slots; slot++)
             {

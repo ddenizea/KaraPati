@@ -1203,7 +1203,7 @@ namespace KaraPati
             t.fontStyle = FontStyle.Bold;
             t.raycastTarget = false;
             var outline = t.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.1f, 0.05f, 0.15f, 0.9f);
+            outline.effectColor = Theme.Outline;
             outline.effectDistance = new Vector2(2f, -2f);
             var rt = t.rectTransform;
             var start = a.Pos + new Vector2(0f, 80f);

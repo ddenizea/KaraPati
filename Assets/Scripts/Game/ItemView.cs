@@ -45,9 +45,9 @@ namespace KaraPati
             cooldown.fillOrigin = (int)Image.Origin360.Top;
             cooldown.fillClockwise = false;
 
-            badge = UIKit.Img("Badge", rt, ProcArt.Circle, new Color(0.14f, 0.09f, 0.2f, 0.92f));
+            badge = UIKit.ImgArt("Badge", rt, ProcArt.Circle, Theme.Badge);
             badge.rectTransform.At(new Vector2(46f, -46f), new Vector2(40f, 40f));
-            badgeText = UIKit.Txt("Lv", badge.transform, "1", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            badgeText = UIKit.TxtRaw("Lv", badge.transform, "1", 24, UIKit.Cream, TextAnchor.MiddleCenter, false);
             UIKit.Stretch(badgeText.rectTransform);
 
             bubble = UIKit.Img("Bubble", rt, ProcArt.Bubble, Color.white);
@@ -80,7 +80,7 @@ namespace KaraPati
             potTimer.rectTransform.At(new Vector2(0f, -52f), new Vector2(130f, 30f));
             potTimer.raycastTarget = false;
             var sh = potTimer.gameObject.AddComponent<Outline>();
-            sh.effectColor = new Color(0.1f, 0.05f, 0.15f, 0.9f);
+            sh.effectColor = Theme.Outline;
 
             needed = UIKit.Img("Needed", rt, ProcArt.Check, Color.white);
             needed.rectTransform.At(new Vector2(-46f, -46f), new Vector2(38f, 38f));
@@ -118,7 +118,7 @@ namespace KaraPati
             badge.gameObject.SetActive(!gen || machine);
             // machines show their upgrade level instead of an item level
             badgeText.text = machine ? GameManager.I.GeneratorLevel(data.chain).ToString() : data.level.ToString();
-            badge.color = machine ? new Color(0.85f, 0.55f, 0.15f, 0.95f) : new Color(0.14f, 0.09f, 0.2f, 0.92f);
+            badge.color = machine ? new Color(0.85f, 0.55f, 0.15f, 0.95f) : Theme.Badge;
             cooldown.gameObject.SetActive((data.IsKitten && data.level >= 2) || data.Brewing);
             UpdateCooldown();
             RefreshPot();

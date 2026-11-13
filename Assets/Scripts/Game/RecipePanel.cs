@@ -17,7 +17,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.7f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.7f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);

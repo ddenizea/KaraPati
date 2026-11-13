@@ -181,7 +181,7 @@ namespace KaraPati
             if (!show) return;
             // busy: the Mini is working, or the pot is in use and there is nothing else to prepare meanwhile
             bool busy = GM.Cats.MiniBusy || (potionMissing && GM.Cats.PotBusy && !(star && ingredientMissing));
-            card.makeImg.color = busy ? UIKit.Disabled : UIKit.Green;
+            card.makeImg.color = Theme.Ui(busy ? UIKit.Disabled : UIKit.Green);
             card.makeText.text = busy ? L.T("Meşgul") : star ? L.T("Hazırla") : L.T("Yaptır");
         }
 
@@ -425,7 +425,7 @@ namespace KaraPati
                     card.checks[k].gameObject.SetActive(per[k]);
                     card.icons[k].color = per[k] ? Color.white : new Color(1f, 1f, 1f, 0.55f);
                 }
-                card.giveImg.color = ready[i] ? UIKit.Green : UIKit.Disabled;
+                card.giveImg.color = Theme.Ui(ready[i] ? UIKit.Green : UIKit.Disabled);
                 card.give.interactable = ready[i];
                 if (!ready[i]) card.give.transform.localScale = Vector3.one;
             }

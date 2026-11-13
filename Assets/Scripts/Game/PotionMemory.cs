@@ -70,7 +70,7 @@ namespace KaraPati
             endBtn = UIKit.Btn("End", area, L.T("Bitir"), new Color(0.45f, 0.36f, 0.55f), () => { if (running) Finish(); }, 34);
             ((RectTransform)endBtn.transform).Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-30f, -40f), new Vector2(170f, 96f));
 
-            comboText = UIKit.Txt("Combo", area, "", 34, UIKit.Orange);
+            comboText = UIKit.TxtRaw("Combo", area, "", 34, UIKit.Orange);
             comboText.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, -175f), new Vector2(700f, 50f));
 
             var bg = UIKit.Img("Table", area, ProcArt.Rounded, new Color(0.22f, 0.15f, 0.3f, 0.97f), true);
@@ -81,7 +81,7 @@ namespace KaraPati
             var hint = UIKit.Txt("Hint", area, L.T("İki kart çevir, aynılarını bul!"), 32, new Color(1f, 1f, 1f, 0.75f));
             hint.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, 110f), new Vector2(900f, 50f));
 
-            bigText = UIKit.Txt("Big", area, "", 130, UIKit.Orange);
+            bigText = UIKit.TxtRaw("Big", area, "", 130, UIKit.Orange);
             bigText.fontStyle = FontStyle.Bold;
             bigRt = bigText.rectTransform;
             bigRt.At(Vector2.zero, new Vector2(900f, 220f));

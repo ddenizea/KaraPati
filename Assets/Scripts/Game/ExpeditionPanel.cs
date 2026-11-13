@@ -17,7 +17,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.7f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.7f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -97,7 +97,7 @@ namespace KaraPati
         {
             Sfx.Play("page");
             for (int k = 0; k < goImgs.Length; k++)
-                if (goImgs[k]) goImgs[k].color = GM.Energy >= Expeditions.Energy[k] ? UIKit.Green : UIKit.Disabled;
+                if (goImgs[k]) goImgs[k].color = Theme.Ui(GM.Energy >= Expeditions.Energy[k] ? UIKit.Green : UIKit.Disabled);
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             Tween.Pop(panel, 0.3f);

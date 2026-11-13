@@ -258,7 +258,7 @@ namespace KaraPati
 
         static Image Part(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false)
         {
-            var img = UIKit.Img(name, parent, s, c, sliced);
+            var img = UIKit.ImgArt(name, parent, s, c, sliced);
             img.rectTransform.At(pos, size);
             return img;
         }
@@ -522,13 +522,14 @@ namespace KaraPati
         RectTransform settings;
         Button musicBtn, fxBtn;
         readonly Button[] langBtns = new Button[L.Codes.Length];
+        readonly Button[] themeBtns = new Button[Theme.Choices.Length];
 
         void BuildSettings()
         {
             var bg = UIKit.Img("SettingsMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.96f), true);
             bg.raycastTarget = true;
             settings = bg.rectTransform;
-            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 360f));
+            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 480f));
             var title = UIKit.Txt("Title", settings, L.T("Ayarlar"), 32, UIKit.Orange, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(340f, 44f));
@@ -548,6 +549,17 @@ namespace KaraPati
                 ((RectTransform)langBtns[i].transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f))
                     .At(new Vector2(-170f + w * 0.5f + 4f + i * (w + 8f), -254f), new Vector2(w, 66f));
             }
+
+            var themeTitle = UIKit.Txt("Theme", settings, L.T("Tema"), 28, UIKit.Cream, TextAnchor.MiddleCenter, false);
+            themeTitle.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -332f), new Vector2(340f, 40f));
+            for (int i = 0; i < Theme.Choices.Length; i++)
+            {
+                var id = Theme.Choices[i];
+                themeBtns[i] = UIKit.Btn("Theme_" + id, settings, Theme.Name(id), UIKit.Disabled, () => GM.ChangeTheme(id), 28);
+                float w = 340f / Theme.Choices.Length - 8f;
+                ((RectTransform)themeBtns[i].transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f))
+                    .At(new Vector2(-170f + w * 0.5f + 4f + i * (w + 8f), -374f), new Vector2(w, 66f));
+            }
             settings.gameObject.SetActive(false);
         }
 
@@ -561,11 +573,13 @@ namespace KaraPati
         void RefreshSettings()
         {
             musicBtn.Label().text = L.F("Müzik: {0}", Sfx.MusicOn ? L.T("Açık") : L.T("Kapalı"));
-            musicBtn.GetComponent<Image>().color = Sfx.MusicOn ? UIKit.Green : UIKit.Disabled;
+            musicBtn.GetComponent<Image>().color = Theme.Ui(Sfx.MusicOn ? UIKit.Green : UIKit.Disabled);
             fxBtn.Label().text = L.F("Efektler: {0}", Sfx.EffectsOn ? L.T("Açık") : L.T("Kapalı"));
-            fxBtn.GetComponent<Image>().color = Sfx.EffectsOn ? UIKit.Green : UIKit.Disabled;
+            fxBtn.GetComponent<Image>().color = Theme.Ui(Sfx.EffectsOn ? UIKit.Green : UIKit.Disabled);
             for (int i = 0; i < langBtns.Length; i++)
-                langBtns[i].GetComponent<Image>().color = L.Codes[i] == L.Lang ? UIKit.Orange : UIKit.Disabled;
+                langBtns[i].GetComponent<Image>().color = Theme.Ui(L.Codes[i] == L.Lang ? UIKit.Orange : UIKit.Disabled);
+            for (int i = 0; i < themeBtns.Length; i++)
+                themeBtns[i].GetComponent<Image>().color = Theme.Ui(Theme.Choices[i] == Theme.Current ? UIKit.Orange : UIKit.Disabled);
         }
 
         void UseEye()
@@ -611,9 +625,9 @@ namespace KaraPati
             glow.rectTransform.At(new Vector2(0f, 20f), new Vector2(900f, 500f));
             string full = Story.Chapters[ch].name;
             int colon = full.IndexOf(':');
-            var small = UIKit.Txt("Num", curtain.transform, colon > 0 ? full.Substring(0, colon) : "", 44, new Color(1f, 0.96f, 0.88f, 0f));
+            var small = UIKit.TxtRaw("Num", curtain.transform, colon > 0 ? full.Substring(0, colon) : "", 44, new Color(1f, 0.96f, 0.88f, 0f));
             small.rectTransform.At(new Vector2(0f, 90f), new Vector2(900f, 60f));
-            var big = UIKit.Txt("Name", curtain.transform, colon > 0 ? full.Substring(colon + 1).Trim() : full, 76, new Color(1f, 0.66f, 0.3f, 0f));
+            var big = UIKit.TxtRaw("Name", curtain.transform, colon > 0 ? full.Substring(colon + 1).Trim() : full, 76, new Color(1f, 0.66f, 0.3f, 0f));
             big.fontStyle = FontStyle.Bold;
             big.rectTransform.At(new Vector2(0f, 0f), new Vector2(980f, 110f));
             var star = UIKit.Img("Star", curtain.transform, ProcArt.Sparkle, new Color(1f, 0.95f, 0.7f, 0f));
@@ -898,7 +912,7 @@ namespace KaraPati
                 bool current = k == 0;
                 bool affordable = GM.Stamps >= task.cost;
                 var row = Row(k);
-                if (!current) row.GetComponent<Image>().color = new Color(0.13f, 0.09f, 0.19f, 0.6f);
+                if (!current) row.GetComponent<Image>().color = Theme.Legacy ? new Color(0.13f, 0.09f, 0.19f, 0.6f) : Theme.Ui(new Color(0.2f, 0.14f, 0.29f, 0.55f));
 
                 var icon = UIKit.Img("Icon", row, TaskIcon(task.id), current ? Color.white : new Color(1f, 1f, 1f, 0.45f));
                 icon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 0f), new Vector2(94f, 94f));

@@ -41,17 +41,17 @@ namespace KaraPati
             catcher.color = new Color(0, 0, 0, 0);
 
             // the wooden table the grid sits on
-            var table = UIKit.Img("Table", area, ProcArt.Rounded, new Color(0.56f, 0.36f, 0.22f), true);
+            var table = UIKit.Img("Table", area, ProcArt.Rounded, Theme.Table, true);
             table.rectTransform.At(new Vector2(0f, -6f), new Vector2(Cols * CS + 56f, Rows * CS + 56f));
-            var tableTop = UIKit.Img("TableTop", area, ProcArt.Rounded, new Color(0.74f, 0.52f, 0.31f), true);
+            var tableTop = UIKit.Img("TableTop", area, ProcArt.Rounded, Theme.TableTop, true);
             tableTop.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 40f, Rows * CS + 40f));
-            var cloth = UIKit.Img("Cloth", area, ProcArt.Rounded, new Color(0.88f, 0.76f, 0.55f), true);
+            var cloth = UIKit.Img("Cloth", area, ProcArt.Rounded, Theme.Cloth, true);
             cloth.rectTransform.At(Vector2.zero, new Vector2(Cols * CS + 14f, Rows * CS + 14f));
 
             grid = UIKit.Rect("Grid", area).At(Vector2.zero, new Vector2(Cols * CS, Rows * CS));
 
-            var cA = new Color(0.98f, 0.93f, 0.8f);    // cream cells (cozy board)
-            var cB = new Color(0.94f, 0.87f, 0.71f);
+            var cA = Theme.CellA;    // cells in the theme colours
+            var cB = Theme.CellB;
             for (int r = 1; r < Rows; r++)
             for (int c = 0; c < Cols; c++)
             {
@@ -74,28 +74,28 @@ namespace KaraPati
         {
             // a wooden shelf across the top row, with a darker front edge
             var mid = CellPos(Cols / 2, 0);
-            var plank = UIKit.Img("Counter", grid, ProcArt.Rounded, new Color(0.8f, 0.57f, 0.34f), true);
+            var plank = UIKit.Img("Counter", grid, ProcArt.Rounded, Theme.Counter, true);
             plank.rectTransform.At(mid + new Vector2(0f, -6f), new Vector2(Cols * CS - 6f, CS - 14f));
-            var edge = UIKit.Img("CounterEdge", grid, ProcArt.Rounded, new Color(0.6f, 0.38f, 0.22f), true);
+            var edge = UIKit.Img("CounterEdge", grid, ProcArt.Rounded, Theme.CounterEdge, true);
             edge.rectTransform.At(mid + new Vector2(0f, -CS / 2f + 10f), new Vector2(Cols * CS - 6f, 22f));
             for (int i = 0; i < 6; i++)   // a few wood grain lines
             {
-                var g = UIKit.Img("Grain", grid, ProcArt.Rounded, new Color(0.7f, 0.48f, 0.28f), true);
+                var g = UIKit.Img("Grain", grid, ProcArt.Rounded, Theme.Grain, true);
                 g.rectTransform.At(mid + new Vector2(-420f + i * 170f, 18f - (i % 2) * 34f), new Vector2(120f, 6f));
             }
             // round mats under the pot and the house, and the Master's cushion
             foreach (var c in new[] { PotCell, HouseCell })
             {
-                var mat = UIKit.Img("Mat", grid, ProcArt.Circle, new Color(0.55f, 0.36f, 0.22f, 0.35f));
+                var mat = UIKit.ImgArt("Mat", grid, ProcArt.Circle, new Color(0.55f, 0.36f, 0.22f, 0.35f));
                 mat.rectTransform.At(CellPos(c) + new Vector2(0f, -44f), new Vector2(124f, 34f));
             }
-            var cush = UIKit.Img("Cushion", grid, ProcArt.Circle, new Color(0.55f, 0.35f, 0.78f));
+            var cush = UIKit.ImgArt("Cushion", grid, ProcArt.Circle, new Color(0.55f, 0.35f, 0.78f));
             cush.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -34f), new Vector2(128f, 52f));
-            var cushTop = UIKit.Img("CushionTop", grid, ProcArt.Circle, new Color(0.68f, 0.48f, 0.9f));
+            var cushTop = UIKit.ImgArt("CushionTop", grid, ProcArt.Circle, new Color(0.68f, 0.48f, 0.9f));
             cushTop.rectTransform.At(CellPos(CushionCell) + new Vector2(0f, -28f), new Vector2(98f, 32f));
             CushionRect = cush.rectTransform;
             // the Mini Apprentice's toy: a little red ball on a small rug
-            var rug = UIKit.Img("Rug", grid, ProcArt.Circle, new Color(0.85f, 0.55f, 0.3f, 0.7f));
+            var rug = UIKit.ImgArt("Rug", grid, ProcArt.Circle, new Color(0.85f, 0.55f, 0.3f, 0.7f));
             rug.rectTransform.At(ToyPos + new Vector2(20f, -14f), new Vector2(150f, 34f));
             ToyBall = UIKit.Img("ToyBall", grid, ProcArt.ToyBall, Color.white);
             ToyBall.rectTransform.At(ToyPos, new Vector2(46f, 46f));

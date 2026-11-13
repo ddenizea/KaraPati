@@ -25,7 +25,7 @@ namespace KaraPati
             var root = (RectTransform)transform;
             UIKit.Stretch(root);
             var dimImg = root.gameObject.AddComponent<Image>();
-            dimImg.color = new Color(0.03f, 0.01f, 0.06f, 0.7f);
+            dimImg.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.7f));
             var dimBtn = root.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(Close);
@@ -130,7 +130,7 @@ namespace KaraPati
 
             bool full = cols.Length >= KittenChaos.HouseSlots;
             bool canMake = full && !GM.Cats.HasApprentice;
-            makeBtn.GetComponent<Image>().color = canMake ? UIKit.Green : UIKit.Disabled;
+            makeBtn.GetComponent<Image>().color = Theme.Ui(canMake ? UIKit.Green : UIKit.Disabled);
             makeBtn.interactable = canMake;
             hint.text = !full ? L.T("İki yavru toplanınca birleşip Çırak Kedi olurlar.")
                 : GM.Cats.HasApprentice ? L.T("Masada zaten bir Çırak var. O gidince buradan yenisini çıkarırsın.")

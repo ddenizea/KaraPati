@@ -8,7 +8,7 @@ namespace KaraPati
     {
         static Image P(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false)
         {
-            var img = UIKit.Img(name, parent, s, c, sliced);
+            var img = UIKit.ImgArt(name, parent, s, c, sliced);
             img.rectTransform.At(pos, size);
             img.raycastTarget = false;
             return img;

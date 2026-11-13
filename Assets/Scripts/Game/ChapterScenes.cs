@@ -34,7 +34,7 @@ namespace KaraPati
 
         static Image P(string name, Transform parent, Sprite s, Color c, Vector2 pos, Vector2 size, bool sliced = false, float rot = 0f)
         {
-            var img = UIKit.Img(name, parent, s, c, sliced);
+            var img = UIKit.ImgArt(name, parent, s, c, sliced);
             img.rectTransform.At(pos, size);
             if (rot != 0f) img.rectTransform.localEulerAngles = new Vector3(0f, 0f, rot);
             return img;

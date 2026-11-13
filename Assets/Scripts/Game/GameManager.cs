@@ -363,7 +363,7 @@ namespace KaraPati
             var cam = Camera.main;
             if (!cam) return;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.09f, 0.06f, 0.14f);
+            cam.backgroundColor = Theme.Camera;
         }
 
         void EnsureEventSystem()
@@ -399,7 +399,8 @@ namespace KaraPati
             UIKit.Stretch(bg.rectTransform);
             for (int i = 0; i < 14; i++)
             {
-                var s = UIKit.Img("Star", canvasRt, ProcArt.Sparkle, new Color(1f, 0.95f, 0.8f, Random.Range(0.15f, 0.45f)));
+                var st = Theme.Star;
+                var s = UIKit.ImgArt("Star", canvasRt, ProcArt.Sparkle, new Color(st.r, st.g, st.b, st.a * Random.Range(0.5f, 1.5f)));
                 s.rectTransform.anchorMin = s.rectTransform.anchorMax = new Vector2(Random.value, Random.value);
                 float sz = Random.Range(12f, 30f);
                 s.rectTransform.sizeDelta = new Vector2(sz, sz);
@@ -441,7 +442,7 @@ namespace KaraPati
             toastGroup.blocksRaycasts = false;
             var toastBg = UIKit.Img("Bg", toastArea, ProcArt.Rounded, new Color(0.08f, 0.05f, 0.12f, 0.82f), true);
             UIKit.Stretch(toastBg.rectTransform, 30f, 30f, -6f, -6f);
-            toastText = UIKit.Txt("Text", toastArea, "", 29, UIKit.Cream);
+            toastText = UIKit.TxtRaw("Text", toastArea, "", 29, UIKit.Cream);
             UIKit.Stretch(toastText.rectTransform, 50f, 50f);
 
             BuildStickerPopup();
@@ -684,7 +685,7 @@ namespace KaraPati
             UIKit.Stretch(rt);
             dialogRoot = rt.gameObject;
             var dim = rt.gameObject.AddComponent<Image>();
-            dim.color = new Color(0.03f, 0.01f, 0.06f, 0.55f);
+            dim.color = Theme.Ui(new Color(0.03f, 0.01f, 0.06f, 0.55f));
             var dimBtn = rt.gameObject.AddComponent<Button>();
             dimBtn.transition = Selectable.Transition.None;
             dimBtn.onClick.AddListener(CloseDialog);
@@ -1067,6 +1068,22 @@ namespace KaraPati
             Save();
             L.SetLanguage(code);
             Sfx.Play("page");
+            Rebuild();
+        }
+
+        /// <summary>Switch the colour theme: the whole UI is built again in the new colours.</summary>
+        public void ChangeTheme(Theme.Id id)
+        {
+            if (id == Theme.Current) return;
+            Save();
+            Theme.Set(id);
+            Sfx.Play("page");
+            Rebuild();
+        }
+
+        /// <summary>Throw the UI away and build it again (language or theme changed). The game state comes back from the save.</summary>
+        void Rebuild()
+        {
             I = null;
             Destroy(gameObject);
             // a fresh GameManager next frame, once this one (and its canvas) is gone
@@ -1662,7 +1679,7 @@ namespace KaraPati
                 return;
             }
             actionBtn.gameObject.SetActive(false);
-            btnImg.color = UIKit.Orange;
+            btnImg.color = Theme.Ui(UIKit.Orange);
 
             if (d.nap)
             {
@@ -1677,7 +1694,7 @@ namespace KaraPati
                 int price = Bubbles.Price(d.level);
                 actionBtn.gameObject.SetActive(true);
                 actionBtn.Label().text = L.F("Aç\n{0} altın", price);
-                btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
+                btnImg.color = Theme.Ui(Gold >= price ? UIKit.Green : UIKit.Disabled);
                 return;
             }
             if (Chains.IsStation(d.chain))
@@ -1687,7 +1704,7 @@ namespace KaraPati
                 {
                     infoDesc.text = L.F("{0} hazır! Kazana dokun ya da al.", Chains.Name(Chains.Iksir, d.brew));
                     actionBtn.Label().text = L.T("Al!");
-                    btnImg.color = UIKit.Green;
+                    btnImg.color = Theme.Ui(UIKit.Green);
                 }
                 else if (d.Brewing)
                 {
@@ -1696,7 +1713,7 @@ namespace KaraPati
                     int price = Recipes.SkipPrice(left);
                     infoDesc.text = L.F("{0} kaynıyor... {1} sn kaldı.", Chains.Name(Chains.Iksir, d.brew), sec);
                     actionBtn.Label().text = L.F("Hızlandır\n{0} altın", price);
-                    btnImg.color = Gold >= price ? UIKit.Orange : UIKit.Disabled;
+                    btnImg.color = Theme.Ui(Gold >= price ? UIKit.Orange : UIKit.Disabled);
                 }
                 else if (!string.IsNullOrEmpty(d.mix) && Recipes.ParseKey(d.mix, out var mc, out var ml))
                 {
@@ -1723,7 +1740,7 @@ namespace KaraPati
                 {
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = L.T("Çırak Yap");
-                    btnImg.color = UIKit.Green;
+                    btnImg.color = Theme.Ui(UIKit.Green);
                 }
                 return;
             }
@@ -1745,12 +1762,12 @@ namespace KaraPati
                 {
                     int price = Generators.UpgradeCost(gl);
                     actionBtn.Label().text = L.F("Yükselt\n{0} altın", price);
-                    btnImg.color = Gold >= price ? UIKit.Green : UIKit.Disabled;
+                    btnImg.color = Theme.Ui(Gold >= price ? UIKit.Green : UIKit.Disabled);
                 }
                 else
                 {
                     actionBtn.Label().text = L.T("En üst\nseviye");
-                    btnImg.color = UIKit.Disabled;
+                    btnImg.color = Theme.Ui(UIKit.Disabled);
                 }
                 return;
             }
@@ -1774,7 +1791,7 @@ namespace KaraPati
             infoTitle.rectTransform.offsetMax = new Vector2(-196f, -14f);
 
             var btnImg = actionBtn.GetComponent<Image>();
-            btnImg.color = UIKit.Orange;
+            btnImg.color = Theme.Ui(UIKit.Orange);
             actionBtn.gameObject.SetActive(false);
             string colName = KittenColors.Name(a.color);
             switch (a.level)
@@ -1790,7 +1807,7 @@ namespace KaraPati
                     if (a.star)
                     {
                         var sl = TimeSpan.FromTicks(Math.Max(0L, a.starUntil - DateTime.UtcNow.Ticks));
-                        infoTitle.text = "<color=#FFD24D>" + L.T("Yıldızlı Yavru") + "</color>  <size=24>(" + colName + ")</size>";
+                        infoTitle.text = Theme.Rich("<color=#FFD24D>" + L.T("Yıldızlı Yavru") + "</color>  <size=24>(" + colName + ")</size>");
                         infoDesc.text = L.T("Usta'nın üstüne bırak: Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın.")
                             + "\n" + L.F("{0} sonra gidecek.", sl.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)sl.TotalHours, sl.Minutes) : L.F("{0} dk {1} sn", sl.Minutes, sl.Seconds));
                         break;   // no "Sahiplendir": a star kitten is never given away by mistake
@@ -1815,13 +1832,13 @@ namespace KaraPati
                     {
                         actionBtn.gameObject.SetActive(true);
                         actionBtn.Label().text = L.F("Usta Yap\n{0} altın", KittenChaos.PromoteCost);
-                        btnImg.color = Gold >= KittenChaos.PromoteCost ? UIKit.Green : UIKit.Disabled;
+                        btnImg.color = Theme.Ui(Gold >= KittenChaos.PromoteCost ? UIKit.Green : UIKit.Disabled);
                     }
                     break;
                 }
                 case 4:
                 {
-                    infoTitle.text = a.star ? "<color=#FFD24D>" + L.T("Yıldızlı Minik Çırak") + "</color>  <size=24>(" + colName + ")</size>" : L.F("{0} Minik Çırak", colName);
+                    infoTitle.text = Theme.Rich(a.star ? "<color=#FFD24D>" + L.T("Yıldızlı Minik Çırak") + "</color>  <size=24>(" + colName + ")</size>" : L.F("{0} Minik Çırak", colName));
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     infoDesc.text = (Cats.MiniBusy ? Cats.MiniStatus
                         : a.star ? L.T("Siparişlerde 'Hazırla'ya bas: iksiri ve malzemeleriyle siparişi baştan sona kendisi hazırlar.")
@@ -1830,7 +1847,7 @@ namespace KaraPati
                     actionBtn.gameObject.SetActive(true);
                     // while it runs for a recipe: L.T("Vazgeç") drops the job and frees the locked items
                     actionBtn.Label().text = Cats.MiniBusy ? L.T("Vazgeç") : L.T("Tarifler");
-                    btnImg.color = Cats.MiniBusy ? new Color(0.85f, 0.3f, 0.3f) : UIKit.Green;
+                    btnImg.color = Theme.Ui(Cats.MiniBusy ? new Color(0.85f, 0.3f, 0.3f) : UIKit.Green);
                     break;
                 }
                 default:
@@ -1844,7 +1861,7 @@ namespace KaraPati
                                             : L.T("Onu tezgahın sağındaki mor yastığa sürükle: oradan malzeme getirir, yavrulara tıslar.");
                     actionBtn.gameObject.SetActive(true);
                     actionBtn.Label().text = L.T("Keşfe\nGönder");
-                    btnImg.color = UIKit.Green;
+                    btnImg.color = Theme.Ui(UIKit.Green);
                     break;
             }
         }
@@ -2067,14 +2084,14 @@ namespace KaraPati
             if (ready)
             {
                 tripText.text = L.T("Döndü!");
-                tripText.color = new Color(1f, 0.85f, 0.4f);
+                tripText.SetInk(new Color(1f, 0.85f, 0.4f));
                 Tween.Punch(tripBtn, 0.06f, 0.25f);
             }
             else
             {
                 var left = TimeSpan.FromTicks(Math.Max(0L, Cats.TripUntil - DateTime.UtcNow.Ticks));
                 tripText.text = (int)left.TotalHours + ":" + left.Minutes.ToString("00") + ":" + left.Seconds.ToString("00");
-                tripText.color = UIKit.Cream;
+                tripText.SetInk(UIKit.Cream);
             }
         }
 
