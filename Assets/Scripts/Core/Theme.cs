@@ -11,7 +11,7 @@ namespace KaraPati
     /// </summary>
     public static class Theme
     {
-        public enum Id { Krem = 0, Seftali = 1, Mor = 2 }
+        public enum Id { Krem = 0, Seftali = 1, Mor = 2, Gece = 3 }
 
         const string PrefKey = "karapati_theme";
         static bool loaded;
@@ -21,7 +21,7 @@ namespace KaraPati
         {
             get
             {
-                if (!loaded) { current = (Id)Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, (int)Id.Krem), 0, 2); loaded = true; }
+                if (!loaded) { current = (Id)Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, (int)Id.Krem), 0, 3); loaded = true; }
                 return current;
             }
         }
@@ -34,13 +34,26 @@ namespace KaraPati
             PlayerPrefs.Save();
         }
 
-        /// <summary>The themes a player can pick in the settings (the old purple one stays only for comparison).</summary>
-        public static readonly Id[] Choices = { Id.Krem, Id.Seftali };
+        /// <summary>The themes a player can pick in the settings: two light ones, two dark ones.</summary>
+        public static readonly Id[] Choices = { Id.Krem, Id.Seftali, Id.Gece, Id.Mor };
 
-        public static string Name(Id id) => id == Id.Krem ? L.T("Krem") : id == Id.Seftali ? L.T("Şeftali") : L.T("Mor");
+        public static string Name(Id id)
+        {
+            switch (id)
+            {
+                case Id.Krem: return L.T("Krem");
+                case Id.Seftali: return L.T("Şeftali");
+                case Id.Gece: return L.T("Gece");
+                default: return L.T("Mor");
+            }
+        }
 
         /// <summary>The old purple look: every mapping returns the colour it gets.</summary>
         public static bool Legacy => Current == Id.Mor;
+
+        /// <summary>A dark theme: the UI keeps the light texts it was first written with, only the purple shades change
+        /// (the old purple look keeps them too).</summary>
+        public static bool Dark => Current == Id.Mor || Current == Id.Gece;
 
         // ------------------------------------------------------------------ palettes
         class Pal
@@ -85,7 +98,19 @@ namespace KaraPati
             counter = C(0.98f, 0.72f, 0.6f), counterEdge = C(0.8f, 0.5f, 0.42f), grain = C(0.92f, 0.62f, 0.52f),
         };
 
-        static Pal P => Current == Id.Seftali ? seftali : krem;
+        static readonly Pal gece = new Pal
+        {
+            accent2 = C(0.91f, 0.68f, 0.28f),
+            outline = new Color(0.04f, 0.05f, 0.12f, 0.85f),
+            bgTop = C(0.14f, 0.17f, 0.32f), bgBottom = C(0.05f, 0.06f, 0.14f), camera = C(0.05f, 0.06f, 0.14f),
+            star = new Color(1f, 0.95f, 0.8f, 0.35f),
+            table = C(0.24f, 0.18f, 0.15f), tableTop = C(0.34f, 0.26f, 0.21f), cloth = C(0.17f, 0.2f, 0.36f),
+            cellA = C(0.23f, 0.27f, 0.46f), cellB = C(0.19f, 0.22f, 0.39f),
+            counter = C(0.38f, 0.28f, 0.21f), counterEdge = C(0.26f, 0.19f, 0.14f), grain = C(0.32f, 0.23f, 0.17f),
+        };
+
+        static Pal P => Current == Id.Seftali ? seftali : Current == Id.Gece ? gece : krem;
+        const float NightHue = 0.635f;   // the purple panels turn to this blue
         static Color C(float r, float g, float b) => new Color(r, g, b);
 
         // the colours the old purple UI used for these roles
@@ -97,6 +122,7 @@ namespace KaraPati
         public static Color Ui(Color c)
         {
             if (Legacy) return c;
+            if (Current == Id.Gece) return Night(c);
             if (Same(c, oldGreen)) return WithA(P.go, c.a);
             if (Same(c, oldOrange)) return WithA(P.orange, c.a);
             if (Same(c, oldDisabled)) return WithA(P.disabled, c.a);
@@ -111,6 +137,18 @@ namespace KaraPati
             return WithA(Color.Lerp(P.low, P.high, t), c.a);
         }
 
+        /// <summary>Night blue: the purple UI with its shades turned to blue (same lightness, so every contrast it was
+        /// built with stays), strong purple buttons turned gold. Green, orange and teal stay as they were.</summary>
+        static Color Night(Color c)
+        {
+            if (Same(c, oldGreen) || Same(c, oldOrange) || Same(c, oldTeal)) return c;
+            Color.RGBToHSV(c, out float h, out float s, out float v);
+            bool purple = (h >= 0.68f && h <= 0.92f) || (h >= 0.5f && h < 0.68f && s < 0.55f && v < 0.45f);
+            if (!purple && v >= 0.16f) return c;
+            if (v >= 0.52f && s >= 0.45f) return WithA(gece.accent2, c.a);
+            return WithA(Color.HSVToRGB(NightHue, Mathf.Min(1f, s * 1.1f), Mathf.Min(1f, v * 1.05f)), c.a);
+        }
+
         /// <summary>
         /// A text colour from the purple UI. On a light panel, light text turns into the theme's dark text (and orange
         /// titles into its darker title colour); on a coloured or dark background (buttons, badges, toasts) it stays light.
@@ -118,7 +156,7 @@ namespace KaraPati
         /// </summary>
         public static Color Ink(Color c, bool onLight)
         {
-            if (Legacy || !onLight) return c;
+            if (Dark || !onLight) return c;
             if (Same(c, oldOrange)) return WithA(P.title, c.a);
             Color.RGBToHSV(c, out float h, out float s, out float v);
             if (v > 0.7f && s < 0.38f) return WithA(P.text, c.a);   // white / cream / pale lavender
@@ -130,7 +168,7 @@ namespace KaraPati
         /// and not strongly coloured. No image at all counts as the light page background.</summary>
         public static bool OnLight(Transform parent)
         {
-            if (Legacy) return false;
+            if (Dark) return false;
             for (var t = parent; t != null; t = t.parent)
             {
                 var img = t.GetComponent<UnityEngine.UI.Image>();
@@ -146,7 +184,7 @@ namespace KaraPati
         /// shades that read on the light panels.</summary>
         public static string Rich(string text)
         {
-            if (Legacy || string.IsNullOrEmpty(text) || text.IndexOf("<color=#", System.StringComparison.Ordinal) < 0) return text;
+            if (Dark || string.IsNullOrEmpty(text) || text.IndexOf("<color=#", System.StringComparison.Ordinal) < 0) return text;
             return text.Replace("<color=#FFD24D>", "<color=#B07A10>").Replace("<color=#9BF28C>", "<color=#3E8E3A>").Replace("<color=#FF9A8A>", "<color=#C0473A>");
         }
 
@@ -154,10 +192,10 @@ namespace KaraPati
         public static Color Outline => Legacy ? new Color(0.08f, 0.04f, 0.12f, 0.85f) : P.outline;
 
         /// <summary>Level badges on the board items: a small dark circle with a light number.</summary>
-        public static Color Badge => Legacy ? new Color(0.14f, 0.09f, 0.2f, 0.92f) : WithA(P.text, 0.92f);
+        public static Color Badge => Legacy ? new Color(0.14f, 0.09f, 0.2f, 0.92f) : Current == Id.Gece ? new Color(0.09f, 0.11f, 0.22f, 0.92f) : WithA(P.text, 0.92f);
 
         /// <summary>Main dark text colour on panels (for code that sets text colours itself).</summary>
-        public static Color Text => Legacy ? new Color(1f, 0.96f, 0.88f) : P.text;
+        public static Color Text => Dark ? new Color(1f, 0.96f, 0.88f) : P.text;
 
         public static Color BgTop => Legacy ? new Color(0.22f, 0.13f, 0.3f) : P.bgTop;
         public static Color BgBottom => Legacy ? new Color(0.09f, 0.06f, 0.14f) : P.bgBottom;
