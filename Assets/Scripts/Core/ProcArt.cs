@@ -400,6 +400,14 @@ namespace KaraPati
             return s ? s : Make(key, Size, p => DrawItem(p, chain, level));
         }
 
+        /// <summary>A drawn room piece from Resources/Rooms (background or furniture), or null when there is none.</summary>
+        public static Sprite Room(string name)
+        {
+            string key = "room_" + name;
+            if (cache.TryGetValue(key, out var s) && s) return s;
+            return LoadArt("Rooms/" + name, key);
+        }
+
         /// <summary>The procedural version of an item, for screens that keep the old look for now
         /// (the cauldron and chest on the home screen, gift chests, decorations).</summary>
         public static Sprite Classic(string chain, int level) =>

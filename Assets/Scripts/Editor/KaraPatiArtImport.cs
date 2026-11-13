@@ -12,18 +12,20 @@ namespace KaraPati.EditorTools
         const string CatFolder = "Assets/Resources/Cats/";
         const string IconFolder = "Assets/Resources/Icons/";
         const string UiFolder = "Assets/Resources/UI/";   // stretchable button and panel shapes: never compressed
+        const string RoomFolder = "Assets/Resources/Rooms/";   // room backgrounds and furniture: bigger pictures
 
         void OnPreprocessTexture()
         {
             bool ui = assetPath.StartsWith(UiFolder);
-            if (!assetPath.StartsWith(Folder) && !assetPath.StartsWith(CatFolder) && !assetPath.StartsWith(IconFolder) && !ui) return;
+            bool room = assetPath.StartsWith(RoomFolder);
+            if (!assetPath.StartsWith(Folder) && !assetPath.StartsWith(CatFolder) && !assetPath.StartsWith(IconFolder) && !ui && !room) return;
             var ti = (TextureImporter)assetImporter;
             ti.textureType = TextureImporterType.Sprite;
             ti.spriteImportMode = SpriteImportMode.Single;
             ti.spritePixelsPerUnit = 100f;
             ti.mipmapEnabled = false;
             ti.alphaIsTransparency = true;
-            ti.maxTextureSize = 256;
+            ti.maxTextureSize = room ? 1024 : 256;
             ti.textureCompression = ui ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
             if (ui) ti.wrapMode = UnityEngine.TextureWrapMode.Clamp;
         }

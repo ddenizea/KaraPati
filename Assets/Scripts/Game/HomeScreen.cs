@@ -32,6 +32,7 @@ namespace KaraPati
 
         // shop (chapter 1)
         GameObject webs, dirt, rug, bottles, counterStuff, bed;
+        bool shopArt;   // the shop is built from the drawn pictures in Resources/Rooms (false: the old shapes)
         Image cauldron, cauldronGlow, lanternA, lanternB, glowA, glowB, plankTop, plankBottom, counterTop, counterBody, karaPati;
 
         // cellar (chapter 2)
@@ -269,7 +270,68 @@ namespace KaraPati
         }
 
         // ------------------------------------------------------------------ chapter 1: shop
+        /// <summary>The shop from the drawn pictures: one background with the furniture laid on it. The story still
+        /// switches the same pieces (dirty window, crooked shelves, rug, lanterns, counter, cat bed).</summary>
         RectTransform BuildShop(RectTransform area)
+        {
+            if (ProcArt.Room("shop_bg") == null) return BuildShopClassic(area);
+            shopArt = true;
+            var scene = NewScene("Shop");
+            Sprite R(string n) => ProcArt.Room(n);
+
+            Part("Room", scene, R("shop_bg"), Color.white, Vector2.zero, new Vector2(1020f, 940f));
+
+            // window: the dirty glass is a second picture laid exactly over the clean one
+            Part("Window", scene, R("shop_window"), Color.white, new Vector2(-290f, 190f), new Vector2(280f, 265f));
+            dirt = Part("WindowDirty", scene, R("shop_window_dirty"), Color.white, new Vector2(-290f, 190f), new Vector2(280f, 265f)).gameObject;
+
+            // two shelves; the bottles stand on their top edge
+            plankTop = Part("ShelfTop", scene, R("shop_shelf"), Color.white, new Vector2(250f, 241f), new Vector2(380f, 107f));
+            plankBottom = Part("ShelfBottom", scene, R("shop_shelf"), Color.white, new Vector2(250f, 103f), new Vector2(380f, 107f));
+            bottles = UIKit.Rect("Bottles", scene).gameObject;
+            for (int i = 0; i < 4; i++)
+                Part("Bottle", bottles.transform, ProcArt.Bottle(i), Color.white, new Vector2(125f + i * 82f, 332f), new Vector2(80f, 80f));
+            Part("Bottle", bottles.transform, ProcArt.Bottle(4), Color.white, new Vector2(140f, 192f), new Vector2(80f, 80f));
+            Part("Bottle", bottles.transform, ProcArt.Bottle(1), Color.white, new Vector2(220f, 192f), new Vector2(80f, 80f));
+            Part("Book", bottles.transform, ProcArt.WitchItem("w_kitap"), Color.white, new Vector2(330f, 196f), new Vector2(84f, 84f));
+
+            // lanterns hang from hooks in the ceiling, between the window and the shelves
+            Part("Hook", scene, R("shop_hook"), Color.white, new Vector2(-95f, 420f), new Vector2(41f, 100f));
+            Part("Hook", scene, R("shop_hook"), Color.white, new Vector2(15f, 420f), new Vector2(41f, 100f));
+            glowA = Part("GlowA", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(-95f, 335f), new Vector2(320f, 320f));
+            glowB = Part("GlowB", scene, ProcArt.GlowSprite, new Color(1f, 0.8f, 0.4f, 0.45f), new Vector2(15f, 335f), new Vector2(320f, 320f));
+            lanternA = Part("LanternA", scene, ProcArt.Lantern(false), Color.white, new Vector2(-95f, 335f), new Vector2(120f, 135f));
+            lanternB = Part("LanternB", scene, ProcArt.Lantern(false), Color.white, new Vector2(15f, 335f), new Vector2(120f, 135f));
+
+            rug = UIKit.Rect("Rug", scene).gameObject;
+            Part("Rug", rug.transform, R("shop_rug"), Color.white, new Vector2(0f, -345f), new Vector2(520f, 240f));
+            cauldronGlow = Part("CauldronGlow", scene, ProcArt.GlowSprite, new Color(1f, 0.5f, 0.8f, 0.45f), new Vector2(0f, -190f), new Vector2(480f, 480f));
+            cauldron = Part("Cauldron", scene, ProcArt.Item(Chains.KaraKazan, 1), Color.white, new Vector2(0f, -230f), new Vector2(300f, 300f));
+
+            // the counter's top board is its own picture so it can lie crooked before it is repaired
+            counterBody = Part("CounterBody", scene, R("shop_counter"), Color.white, new Vector2(340f, -241f), new Vector2(300f, 138f));
+            counterTop = Part("CounterTop", scene, R("shop_counter_top"), Color.white, new Vector2(340f, -150f), new Vector2(300f, 52f));
+            counterStuff = UIKit.Rect("CounterStuff", scene).gameObject;
+            Part("Ball", counterStuff.transform, ProcArt.WitchItem("w_kure"), Color.white, new Vector2(300f, -79f), new Vector2(100f, 100f));
+            Part("Letter", counterStuff.transform, ProcArt.WitchItem("w_mektup"), Color.white, new Vector2(400f, -104f), new Vector2(70f, 70f));
+
+            // cobwebs in the two top corners (the drawing is a top-right corner web; the left one is mirrored)
+            webs = UIKit.Rect("Webs", scene).gameObject;
+            Part("Web", webs.transform, R("shop_web"), Color.white, new Vector2(410f, 374f), new Vector2(200f, 192f));
+            Part("Web", webs.transform, R("shop_web"), Color.white, new Vector2(-410f, 374f), new Vector2(200f, 192f)).rectTransform.localScale = new Vector3(-1f, 1f, 1f);
+
+            bed = UIKit.Rect("Bed", scene).gameObject;
+            Part("Bed", bed.transform, R("shop_bed"), Color.white, new Vector2(-330f, -355f), new Vector2(250f, 171f));
+            karaPati = Part("KaraPati", scene, ProcArt.SideCat(0, 4), Color.white, new Vector2(-330f, -290f), new Vector2(190f, 190f));
+            MakeCatTappable(karaPati);
+
+            ghostLayer = UIKit.Rect("Ghosts", scene).At(Vector2.zero, scene.sizeDelta);
+            dims[0] = Part("Dust", scene, ProcArt.Rounded, new Color(0.05f, 0.03f, 0.08f, 0.45f), Vector2.zero, new Vector2(1020f, 940f), true);
+            return scene;
+        }
+
+        /// <summary>The shop from plain shapes, used when the drawn room pictures are missing.</summary>
+        RectTransform BuildShopClassic(RectTransform area)
         {
             var scene = NewScene("Shop");
             var wood = new Color(0.45f, 0.3f, 0.2f);
@@ -766,13 +828,14 @@ namespace KaraPati
 
             bool counter = Done("tezgah", done);
             counterTop.rectTransform.localEulerAngles = new Vector3(0, 0, counter ? 0f : 12f);
-            counterBody.color = counter ? new Color(0.42f, 0.28f, 0.2f) : new Color(0.3f, 0.2f, 0.16f);
+            counterBody.color = shopArt ? (counter ? Color.white : new Color(0.72f, 0.7f, 0.7f))
+                : counter ? new Color(0.42f, 0.28f, 0.2f) : new Color(0.3f, 0.2f, 0.16f);
             counterStuff.SetActive(counter);
 
             bool hasBed = Done("yatak", done);
             bed.SetActive(hasBed);
             karaPati.sprite = ProcArt.SideCat(0, hasBed ? 5 : 4);
-            karaPati.rectTransform.anchoredPosition = hasBed ? new Vector2(-330f, -318f) : new Vector2(-330f, -290f);
+            karaPati.rectTransform.anchoredPosition = hasBed ? new Vector2(-330f, shopArt ? -275f : -318f) : new Vector2(-330f, -290f);
 
             int inCh = Mathf.Clamp(done, 0, Story.Chapters[0].tasks.Length);
             dims[0].color = new Color(0.05f, 0.03f, 0.08f, 0.45f * (1f - inCh / (float)Story.Chapters[0].tasks.Length));
@@ -825,7 +888,7 @@ namespace KaraPati
         {
             switch (id)
             {
-                case "pencere": return scenes[0].Find("Moon");
+                case "pencere": return scenes[0].Find("Window") ?? scenes[0].Find("Moon");
                 case "raf": return plankTop.transform;
                 case "kazan": return cauldron.transform;
                 case "hali": return rug.transform.GetChild(0);
