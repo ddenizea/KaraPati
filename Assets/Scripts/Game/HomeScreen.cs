@@ -529,7 +529,7 @@ namespace KaraPati
             var bg = UIKit.Img("SettingsMenu", sceneArea, ProcArt.Rounded, new Color(0.1f, 0.07f, 0.15f, 0.96f), true);
             bg.raycastTarget = true;
             settings = bg.rectTransform;
-            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 480f));
+            settings.Anchor(new Vector2(1f, 1f), new Vector2(1f, 1f)).At(new Vector2(-130f, -150f), new Vector2(380f, 556f));
             var title = UIKit.Txt("Title", settings, L.T("Ayarlar"), 32, UIKit.Orange, TextAnchor.MiddleCenter, false);
             title.fontStyle = FontStyle.Bold;
             title.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(340f, 44f));
@@ -556,9 +556,11 @@ namespace KaraPati
             {
                 var id = Theme.Choices[i];
                 themeBtns[i] = UIKit.Btn("Theme_" + id, settings, Theme.Name(id), UIKit.Disabled, () => GM.ChangeTheme(id), 28);
-                float w = 340f / Theme.Choices.Length - 8f;
+                // two per row: light themes on top, dark ones below
+                const float w = 166f;
+                int col = i % 2, row = i / 2;
                 ((RectTransform)themeBtns[i].transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f))
-                    .At(new Vector2(-170f + w * 0.5f + 4f + i * (w + 8f), -374f), new Vector2(w, 66f));
+                    .At(new Vector2(-170f + w * 0.5f + 4f + col * (w + 8f), -374f - row * 74f), new Vector2(w, 66f));
             }
             settings.gameObject.SetActive(false);
         }
@@ -912,7 +914,7 @@ namespace KaraPati
                 bool current = k == 0;
                 bool affordable = GM.Stamps >= task.cost;
                 var row = Row(k);
-                if (!current) row.GetComponent<Image>().color = Theme.Legacy ? new Color(0.13f, 0.09f, 0.19f, 0.6f) : Theme.Ui(new Color(0.2f, 0.14f, 0.29f, 0.55f));
+                if (!current) row.GetComponent<Image>().color = Theme.Dark ? Theme.Ui(new Color(0.13f, 0.09f, 0.19f, 0.6f)) : Theme.Ui(new Color(0.2f, 0.14f, 0.29f, 0.55f));
 
                 var icon = UIKit.Img("Icon", row, TaskIcon(task.id), current ? Color.white : new Color(1f, 1f, 1f, 0.45f));
                 icon.rectTransform.Anchor(new Vector2(0f, 0.5f), new Vector2(0f, 0.5f)).At(new Vector2(14f, 0f), new Vector2(94f, 94f));
