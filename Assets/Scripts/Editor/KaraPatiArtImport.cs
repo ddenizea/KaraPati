@@ -3,7 +3,7 @@ using UnityEditor;
 namespace KaraPati.EditorTools
 {
     /// <summary>
-    /// Import settings for the hand-drawn pictures in Assets/Resources/Items and Assets/Resources/Cats:
+    /// Import settings for the hand-drawn pictures in Assets/Resources (Items, Cats, Icons, Customers, UI, Rooms):
     /// sprites, no mipmaps, transparent edges kept clean, at most 256 px.
     /// </summary>
     public class KaraPatiArtImport : AssetPostprocessor
@@ -13,12 +13,14 @@ namespace KaraPati.EditorTools
         const string IconFolder = "Assets/Resources/Icons/";
         const string UiFolder = "Assets/Resources/UI/";   // stretchable button and panel shapes: never compressed
         const string RoomFolder = "Assets/Resources/Rooms/";   // room backgrounds and furniture: bigger pictures
+        const string CustomerFolder = "Assets/Resources/Customers/";   // customers' walk / idle / happy frames
 
         void OnPreprocessTexture()
         {
             bool ui = assetPath.StartsWith(UiFolder);
             bool room = assetPath.StartsWith(RoomFolder);
-            if (!assetPath.StartsWith(Folder) && !assetPath.StartsWith(CatFolder) && !assetPath.StartsWith(IconFolder) && !ui && !room) return;
+            if (!assetPath.StartsWith(Folder) && !assetPath.StartsWith(CatFolder) && !assetPath.StartsWith(IconFolder)
+                && !assetPath.StartsWith(CustomerFolder) && !ui && !room) return;
             var ti = (TextureImporter)assetImporter;
             ti.textureType = TextureImporterType.Sprite;
             ti.spriteImportMode = SpriteImportMode.Single;

@@ -228,6 +228,7 @@ namespace KaraPati
         public int homeState;      // Master: 0 = save from before the cushion, 1 = not on its cushion yet, 2 = on its cushion
         public bool star;          // a rare star kitten (or the star Mini Apprentice it became)
         public long starUntil;     // star kitten: leaves at this UTC tick unless the Master trains it
+        public bool butterfly;     // the star kitten is the butterfly kind (a butterfly flutters around it)
     }
 
     [Serializable]

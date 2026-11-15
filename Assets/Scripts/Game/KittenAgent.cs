@@ -25,7 +25,9 @@ namespace KaraPati
         public bool parked;                                     // Mini Apprentice / star kitten: sits at the toy ball on the counter
         public bool star;                                       // rare star kitten (and the star Mini Apprentice it grows into)
         public long starUntil;                                  // star kitten: leaves at this UTC tick unless the Master trains it
+        public bool butterfly;                                  // the star kitten's twin: a butterfly flutters around it instead
         Image starFx;
+        float flutterSeed;   // set in MakeStar (Unity's Random can't run in a field initializer)
         public bool chasing;   // apprentice running after a kitten
         public float runBoost = 1f;   // a scared kitten runs off faster
         public float age;             // seconds on the table (new kittens get a grace period)
@@ -56,15 +58,39 @@ namespace KaraPati
         public bool AtHome => (Pos - sys.CushionPos).sqrMagnitude < 30f * 30f;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }
 
-        /// <summary>A rare star kitten: a golden sparkle twinkles on its back.</summary>
-        public void MakeStar(long until)
+        /// <summary>A rare star kitten: a golden sparkle twinkles on its back. butterfly: the same rare kitten
+        /// (same rules, same "Hazırla" when it grows up), but a little butterfly flutters around it instead.</summary>
+        public void MakeStar(long until, bool butterfly = false)
         {
             star = true;
             starUntil = until;
+            this.butterfly = butterfly;
             if (starFx) return;
-            starFx = UIKit.Img("Star", rt, ProcArt.Sparkle, new Color(1f, 0.85f, 0.3f));
+            flutterSeed = Random.Range(0f, 100f);
+            if (butterfly)
+            {
+                starFx = UIKit.ImgArt("Butterfly", rt, ProcArt.Butterfly, Color.white);
+                starFx.rectTransform.At(new Vector2(40f, 50f), new Vector2(34f, 34f));   // small: the drawn picture is Icons/butterfly
+            }
+            else
+            {
+                starFx = UIKit.Img("Star", rt, ProcArt.Sparkle, new Color(1f, 0.85f, 0.3f));
+                starFx.rectTransform.At(new Vector2(30f, 44f), new Vector2(50f, 50f));
+            }
             starFx.raycastTarget = false;
-            starFx.rectTransform.At(new Vector2(30f, 44f), new Vector2(50f, 50f));
+        }
+
+        /// <summary>The butterfly loops around the cat's head in a lazy figure of eight, flapping and leaning into its turns.</summary>
+        void Flutter()
+        {
+            float t = Time.time + flutterSeed;   // each butterfly on its own beat
+            var at = new Vector2(Mathf.Sin(t * 0.9f) * 48f, 52f + Mathf.Sin(t * 1.8f) * 16f);
+            var vel = new Vector2(Mathf.Cos(t * 0.9f) * 0.9f * 48f, Mathf.Cos(t * 1.8f) * 1.8f * 16f);
+            var fr = starFx.rectTransform;
+            fr.anchoredPosition = at;
+            // wings flap by squashing sideways; a little tilt toward where it flies
+            fr.localScale = new Vector3(0.3f + 0.7f * Mathf.Abs(Mathf.Sin(t * 13f)), 1f, 1f);
+            fr.localEulerAngles = new Vector3(0f, 0f, Mathf.Clamp(-vel.x * 0.35f, -25f, 25f));
         }
 
         /// <summary>New fur colour (the Master's colour can be picked by the player).</summary>
@@ -346,7 +372,8 @@ namespace KaraPati
                     break;
             }
 
-            if (starFx)
+            if (starFx && butterfly) Flutter();
+            else if (starFx)
             {
                 float tw = Mathf.Abs(Mathf.Sin(Time.time * 2.6f));
                 starFx.rectTransform.localScale = Vector3.one * (0.7f + 0.45f * tw);

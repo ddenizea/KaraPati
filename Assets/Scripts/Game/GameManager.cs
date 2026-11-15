@@ -1808,8 +1808,10 @@ namespace KaraPati
                     if (a.star)
                     {
                         var sl = TimeSpan.FromTicks(Math.Max(0L, a.starUntil - DateTime.UtcNow.Ticks));
-                        infoTitle.text = Theme.Rich("<color=#FFD24D>" + L.T("Yıldızlı Yavru") + "</color>  <size=24>(" + colName + ")</size>");
-                        infoDesc.text = L.T("Usta'nın üstüne bırak: Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın.")
+                        infoTitle.text = Theme.Rich((a.butterfly ? "<color=#8FD3FF>" : "<color=#FFD24D>") + KittenChaos.RareKittenName(a.butterfly) + "</color>  <size=24>(" + colName + ")</size>");
+                        infoDesc.text = (a.butterfly
+                            ? L.T("Usta'nın üstüne bırak: Kelebekli Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın.")
+                            : L.T("Usta'nın üstüne bırak: Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükle, orada oynasın."))
                             + "\n" + L.F("{0} sonra gidecek.", sl.TotalHours >= 1.0 ? L.F("{0} sa {1} dk", (int)sl.TotalHours, sl.Minutes) : L.F("{0} dk {1} sn", sl.Minutes, sl.Seconds));
                         break;   // no "Sahiplendir": a star kitten is never given away by mistake
                     }
@@ -1839,7 +1841,7 @@ namespace KaraPati
                 }
                 case 4:
                 {
-                    infoTitle.text = Theme.Rich(a.star ? "<color=#FFD24D>" + L.T("Yıldızlı Minik Çırak") + "</color>  <size=24>(" + colName + ")</size>" : L.F("{0} Minik Çırak", colName));
+                    infoTitle.text = Theme.Rich(a.star ? (a.butterfly ? "<color=#8FD3FF>" : "<color=#FFD24D>") + KittenChaos.RareMiniName(a.butterfly) + "</color>  <size=24>(" + colName + ")</size>" : L.F("{0} Minik Çırak", colName));
                     var left = TimeSpan.FromTicks(Math.Max(0L, a.expires - DateTime.UtcNow.Ticks));
                     infoDesc.text = (Cats.MiniBusy ? Cats.MiniStatus
                         : a.star ? L.T("Siparişlerde 'Hazırla'ya bas: iksiri ve malzemeleriyle siparişi baştan sona kendisi hazırlar.")
