@@ -53,7 +53,6 @@ namespace KaraPati
         public bool IsGone => state == State.Leaving;
         public bool CanAct => state == State.Idle || state == State.Walking;
         public bool Stirring => state == State.Stirring;
-        public bool IsMini => level == 4;
         public bool Training => trainUntil > 0;
         public bool AtHome => (Pos - sys.CushionPos).sqrMagnitude < 30f * 30f;
         public Vector2 Pos { get => rt.anchoredPosition; set => rt.anchoredPosition = value; }

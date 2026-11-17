@@ -15,7 +15,6 @@ namespace KaraPati
         // The top row is the wooden counter: the alchemy pot, the cat house and the Master's cushion live there.
         // Items are only placed on the rows below it (a 7x8 table).
         public static readonly Vector2Int PotCell = new Vector2Int(0, 0), HouseCell = new Vector2Int(3, 0), CushionCell = new Vector2Int(6, 0);
-        public static bool IsCounter(Vector2Int c) => c.y == 0;
         /// <summary>The Mini Apprentice's toy ball sits on the counter between the house and the cushion.</summary>
         public static Vector2 ToyPos => CellPos(4, 0) + new Vector2(-6f, -30f);
         public RectTransform CushionRect { get; private set; }

@@ -1357,7 +1357,6 @@ namespace KaraPati
             if (home) home.RefreshUstaButton();
             if (tower) tower.RefreshUsta();
         }
-        public KittenAgent InfoKitten => infoKitten;
 
         void OpenSelectedInfo()
         {

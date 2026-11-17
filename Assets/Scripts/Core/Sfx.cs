@@ -22,8 +22,6 @@ namespace KaraPati
 
         public static bool EffectsOn { get; private set; } = true;
         public static bool MusicOn { get; private set; } = true;
-        /// <summary>For the speaker icon: 0 = all on, 1 = one of them off, 2 = all off.</summary>
-        public static int Mode => MusicOn && EffectsOn ? 0 : !MusicOn && !EffectsOn ? 2 : 1;
 
         // per-sound loudness so nothing sticks out
         static readonly Dictionary<string, float> volume = new Dictionary<string, float>

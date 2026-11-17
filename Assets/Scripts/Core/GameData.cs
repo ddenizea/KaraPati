@@ -54,19 +54,6 @@ namespace KaraPati
             return "";
         }
 
-        public static string ChainTitle(string c)
-        {
-            switch (c)
-            {
-                case Ot: return L.T("Kedi Otları");
-                case Mantar: return L.T("Balıklar");
-                case Kristal: return L.T("Süt ve Tatlılar");
-                case Ag: return L.T("Yün ve Örgüler");
-                case Sihir: return L.T("Sihir Malzemeleri");
-                case Iksir: return L.T("İksirler");
-                default: return L.T("Dükkân Eşyası");
-            }
-        }
         public static string RandomIngredient() => Ingredients[UnityEngine.Random.Range(0, Ingredients.Length)];
     }
 
@@ -671,8 +658,6 @@ namespace KaraPati
         public static int Price(int chapter, int slot, int variant) =>
             Mathf.RoundToInt(basePrice[slot][variant] * (1f + 0.5f * chapter) * 0.5f / 10f) * 10;
 
-        public static string OwnedId(int chapter, int slot, int variant) => chapter + "_" + slot + "_" + variant;
-
         // ---- free-placement ornaments for the witch's tower ----
         public static string ItemId(int slot, int variant) => "s" + slot + "v" + variant;
 
@@ -689,18 +674,7 @@ namespace KaraPati
 
         /// <summary>Tower ornaments cost a bit more than the old scene ones (half price since the economy pass), rounded to tens.</summary>
         public static int TowerPrice(int slot, int variant) => Mathf.RoundToInt(basePrice[slot][variant] * 0.75f / 10f) * 10;
-        public static string SlotId(int chapter, int slot) => chapter + "_" + slot;
 
-        // where each slot sits in each chapter scene (scene is 1020 x 940, centre origin); garlands also get a width
-        public static readonly Vector3[][] Places =
-        {
-            new[] { new Vector3(100f, 430f, 640f), new Vector3(455f, -395f), new Vector3(215f, -420f), new Vector3(-455f, -80f) },   // shop
-            new[] { new Vector3(60f, 440f, 560f), new Vector3(460f, -400f), new Vector3(-300f, -420f), new Vector3(230f, 40f) },     // cellar
-            new[] { new Vector3(-150f, 330f, 500f), new Vector3(200f, -300f), new Vector3(-320f, -410f), new Vector3(470f, 120f) },  // garden
-            new[] { new Vector3(-320f, 285f, 320f), new Vector3(-160f, -410f), new Vector3(330f, -420f), new Vector3(320f, 330f) },  // town
-            new[] { new Vector3(0f, 440f, 500f), new Vector3(450f, -380f), new Vector3(300f, -420f), new Vector3(-300f, 100f) },     // tower
-            new[] { new Vector3(0f, 440f, 600f), new Vector3(-140f, -430f), new Vector3(60f, -430f), new Vector3(-470f, 180f) },     // realm
-        };
     }
 
     /// <summary>Gold sink: upgrading the Garden Basket / Pantry / Kara Kazan makes them drop higher-level ingredients.</summary>
@@ -1171,18 +1145,5 @@ namespace KaraPati
             L.N("Sis Teyze"), L.N("Kaptan Pus"), L.N("Profesör Uğultu"), L.N("Leydi Ürperti")
         );
 
-        public static readonly TrList Lines = new TrList
-        (
-            L.N("Oh, teşekkürler! Artık rahat uyuyabilirim..."),
-            L.N("Muhteşem! Kedin de çok tatlı bu arada."),
-            L.N("Boo-hoo! Mutluluktan ağlıyorum!"),
-            L.N("Bu iksirle duvarlardan iki kat hızlı geçeceğim!"),
-            L.N("Cadı hanım da tam böyle yapardı... Nereye kayboldu acaba?"),
-            L.N("Miyavlayan dükkân, harika hizmet!"),
-            L.N("Kara Pati! Cadıyı en son mahzende görmüştüm, biliyor muydun?"),
-            L.N("Zincirlerimi şıngırdatmadan teşekkür ederim."),
-            L.N("Cadının süpürgesi hâlâ çatıda duruyor, garip değil mi?"),
-            L.N("Bir dahaki sefere kedi maması getiririm!")
-        );
     }
 }

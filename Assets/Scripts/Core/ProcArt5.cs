@@ -68,16 +68,6 @@ namespace KaraPati
             p.Glow(new Vector2(0.5f, 0.35f), 0.5f, c);
         });
 
-        /// <summary>Apprentice seen from behind, standing on its hind paws and stirring the pot with both front paws.
-        /// frame 0-3 is one round of the spoon.</summary>
-        public static Sprite BackStirCat(int level, int frame, int color)
-        {
-            if (color < 0 || color > KittenColors.Gece) color = KittenColors.Legacy(level);
-            int c = color;
-            int hat = level == 2 ? 1 : level == 3 ? 2 : level == 4 ? 3 : 0;
-            return Make("backstir_" + level + "_" + frame + "_" + c, Size, p => DrawBackStir(p, catFur[c], catPattern[c], hat, frame));
-        }
-
         static void DrawBackStir(Painter p, Color fur, int pattern, int hat, int frame)
         {
             var furDark = new Color(fur.r * 0.72f, fur.g * 0.68f, fur.b * 0.7f);

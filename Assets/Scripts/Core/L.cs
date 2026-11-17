@@ -21,7 +21,6 @@ namespace KaraPati
         static string lang;
 
         public static string Lang { get { Ensure(); return lang; } }
-        public static bool IsTr => Lang == "tr";
 
 #if UNITY_EDITOR
         /// <summary>Texts asked for in a language that has no translation for them yet (editor only, for the test menu).</summary>
