@@ -31,9 +31,11 @@ namespace KaraPati
         const string BackupKey = "karapati_save_v1_backup";   // last save that loaded fine
         const float RefW = 1080f, RefH = 2060f;
 
-        public int Gold { get; private set; }
-        public int Stamps { get; private set; }
-        public int Energy { get; private set; }
+        // gold, stamps and energy live in their own small class; these let the rest of the game read them as before
+        readonly Wallet wallet = new Wallet();
+        public int Gold => wallet.Gold;
+        public int Stamps => wallet.Stamps;
+        public int Energy => wallet.Energy;
         public int Served { get; private set; }
         public int Level { get; private set; } = 1;
         public int Xp { get; private set; }
@@ -259,7 +261,6 @@ namespace KaraPati
         RectTransform goldIcon, stampIcon;
         CanvasGroup toastGroup;
         Button actionBtn;
-        float energyTimer;
         bool dirty;
         float saveTimer;
         Coroutine toastCo;
@@ -313,24 +314,9 @@ namespace KaraPati
         {
             UpdateScalerMatch();
 
-            if (Energy < MaxEnergy)
-            {
-                energyTimer += Time.deltaTime;
-                if (energyTimer >= EnergyRegenSec)
-                {
-                    energyTimer -= EnergyRegenSec;
-                    Energy++;
-                    RefreshHud();
-                    MarkDirty();
-                }
-                int left = Mathf.CeilToInt(EnergyRegenSec - energyTimer);
-                energyTimerText.text = Energy < MaxEnergy ? (left / 60) + ":" + (left % 60).ToString("00") : L.T("dolu");   // m:ss
-            }
-            else
-            {
-                energyTimer = 0f;
-                energyTimerText.text = L.T("dolu");
-            }
+            if (wallet.Regen(Time.deltaTime, MaxEnergy, EnergyRegenSec) > 0) { RefreshHud(); MarkDirty(); }
+            int left = wallet.SecondsToNext(EnergyRegenSec);
+            energyTimerText.text = Energy < MaxEnergy ? (left / 60) + ":" + (left % 60).ToString("00") : L.T("dolu");   // m:ss
 
 
             eventTick -= Time.unscaledDeltaTime;
@@ -854,7 +840,7 @@ namespace KaraPati
             switch (m.type)
             {
                 case "gold": AddGold(m.amount); break;
-                case "energy": Energy += m.amount; RefreshHud(); break;
+                case "energy": AddEnergy(m.amount); break;
                 case "stamps": AddStamps(m.amount); break;
                 default:
                     AddGold(m.amount);
@@ -1035,7 +1021,7 @@ namespace KaraPati
             if (!GiftReady(chapter, gift)) return;
             chapterGifts.Add(ChapterGifts.Id(chapter, gift));
             AddGold(ChapterGifts.Gold(chapter, gift));
-            if (ChapterGifts.Energy(chapter, gift) > 0) { Energy += ChapterGifts.Energy(chapter, gift); RefreshHud(); }
+            AddEnergy(ChapterGifts.Energy(chapter, gift));
             if (ChapterGifts.Stamps(chapter, gift) > 0) AddStamps(ChapterGifts.Stamps(chapter, gift));
             if (ChapterGifts.Sticker(chapter, gift) && !GiveRandomMissingAny()) AddGold(50);
             Toast(L.F("Sandık açıldı: {0}", ChapterGifts.Text(chapter, gift)), UIKit.Orange, 4f);
@@ -1152,8 +1138,7 @@ namespace KaraPati
                 MarkDirty();
                 return true;
             }
-            if (Energy < MiniGames.EnergyCost) return false;
-            Energy -= MiniGames.EnergyCost;
+            if (!wallet.SpendEnergy(MiniGames.EnergyCost)) return false;
             paid = true;
             RefreshHud();
             MarkDirty();
@@ -1282,7 +1267,7 @@ namespace KaraPati
         public void AddEnergy(int amount)
         {
             if (amount <= 0) return;
-            Energy += amount;
+            wallet.AddEnergy(amount);
             RefreshHud();
             MarkDirty();
         }
@@ -1435,7 +1420,7 @@ namespace KaraPati
                 return;
             }
             int chapter = Story.CurrentChapter(idx);
-            Stamps -= task.cost;
+            wallet.SpendStamps(task.cost);
             TasksDone++;
             Sfx.Play("stamp");
             Sfx.Play("ready", 1f, 0.6f);
@@ -1529,8 +1514,8 @@ namespace KaraPati
         {
             if (!AllStickersCollected || IsGrandClaimed) return false;
             claimedSets.Add(Stickers.GrandId);
-            Gold += Stickers.GrandGold;
-            Energy += Stickers.GrandEnergy;
+            wallet.AddGold(Stickers.GrandGold);
+            wallet.AddEnergy(Stickers.GrandEnergy);
             AddStamps(Stickers.GrandStamps);
             Toast(L.F("Büyük ödül! +{0} altın, +{1} mühür, +{2} enerji", Stickers.GrandGold, Stickers.GrandStamps, Stickers.GrandEnergy), UIKit.Orange, 4.5f);
             Save();
@@ -1595,7 +1580,7 @@ namespace KaraPati
             for (int st = before + 1; st <= after; st++)
             {
                 int en = Customers.StageEnergy(st), sp = Customers.StageStamps(c, st);
-                Energy += en;
+                wallet.AddEnergy(en);
                 AddStamps(sp);
                 string title = Customers.StageName(c, st);
                 string extra = st >= c.MaxStage ? " " + L.T("Siparişleri artık +1 Pati Mührü verir!") : "";
@@ -1898,10 +1883,10 @@ namespace KaraPati
                 Level++;
                 ups++;
                 int g = Levels.GoldReward(Level);
-                Gold += g;
+                wallet.AddGold(g);
                 Sfx.Play("levelup");
-                Stamps += 1;
-                Energy = Mathf.Max(Energy, MaxEnergy);
+                wallet.AddStamps(1);
+                wallet.FillEnergy(MaxEnergy);
                 ShowDialog(L.F("Seviye {0}!", Level),
                     L.F("Tebrikler! Ödül: +{0} altın, +1 Pati Mührü ve enerjin doldu. Maksimum enerji artık {1}, depoda {2} yer var.", g, MaxEnergy, StorageSlots) +
                     (Level == MiniGames.UnlockLevel ? "\n\n" + L.T("Yeni: Oyun Odası açıldı! Ana ekrandaki yumak düğmesine dokun.") : "") +
@@ -2007,7 +1992,7 @@ namespace KaraPati
             switch (m.type)
             {
                 case "gold": AddGold(m.amount); break;
-                case "energy": Energy += m.amount; RefreshHud(); break;
+                case "energy": AddEnergy(m.amount); break;
                 case "stamps": AddStamps(m.amount); break;
                 default:
                     if (!GiveRandomMissingAny()) AddGold(50);
@@ -2035,7 +2020,7 @@ namespace KaraPati
         // ------------------------------------------------------------------ economy
         public void AddGold(int amount)
         {
-            Gold += amount;
+            wallet.AddGold(amount);
             RefreshHud();
             if (goldIcon) Tween.Punch(goldIcon, 0.25f, 0.3f);
             MarkDirty();
@@ -2043,13 +2028,12 @@ namespace KaraPati
 
         public bool TrySpendGold(int amount)
         {
-            if (Gold < amount)
+            if (!wallet.SpendGold(amount))
             {
                 Toast(L.F("{0} altın gerekiyor.", amount), new Color(1f, 0.6f, 0.5f));
                 Sfx.Play("error");
                 return false;
             }
-            Gold -= amount;
             RefreshHud();
             MarkDirty();
             return true;
@@ -2057,7 +2041,7 @@ namespace KaraPati
 
         public void AddStamps(int amount)
         {
-            Stamps += amount;
+            wallet.AddStamps(amount);
             RefreshHud();
             if (stampIcon) Tween.Punch(stampIcon, 0.3f, 0.35f);
             MarkDirty();
@@ -2099,13 +2083,12 @@ namespace KaraPati
 
         public bool TrySpendEnergy(int amount)
         {
-            if (Energy < amount)
+            if (!wallet.SpendEnergy(amount))
             {
                 Toast(L.T("Enerjin bitti! Biraz bekle ya da altınla al (+)."), new Color(1f, 0.6f, 0.5f));
                 Sfx.Play("error");
                 return false;
             }
-            Energy -= amount;
             RefreshHud();
             MarkDirty();
             return true;
@@ -2113,13 +2096,12 @@ namespace KaraPati
 
         void BuyEnergy()
         {
-            if (Gold < EnergyPackCost)
+            if (!wallet.SpendGold(EnergyPackCost))
             {
                 Toast(L.F("{0} enerji için {1} altın gerekiyor.", EnergyPackAmount, EnergyPackCost), new Color(1f, 0.6f, 0.5f));
                 return;
             }
-            Gold -= EnergyPackCost;
-            Energy += EnergyPackAmount;
+            wallet.AddEnergy(EnergyPackAmount);
             RefreshHud();
             Toast(L.F("+{0} enerji! Kazan fokurduyor.", EnergyPackAmount));
             MarkDirty();
@@ -2183,8 +2165,6 @@ namespace KaraPati
         // ------------------------------------------------------------------ save / load
         void NewGame()
         {
-            Gold = 20;
-            Stamps = 1;
             Level = 1;
             Xp = 0;
             Storage.Clear();
@@ -2193,8 +2173,7 @@ namespace KaraPati
             DailyIndex = 0;
             lastDailyDay = -1;
             eventStart = DateTime.UtcNow.Ticks;
-            Energy = MaxEnergy;
-            energyTimer = 0f;
+            wallet.Load(20, 1, MaxEnergy, 0f);   // a new game: 20 gold, 1 stamp, full energy
             Served = 0;
             TasksDone = 0;
             KittenHintShown = false;
@@ -2268,7 +2247,7 @@ namespace KaraPati
             {
                 gold = Gold,
                 energy = Energy,
-                energyTimer = energyTimer,
+                energyTimer = wallet.RegenTimer,
                 stamp = DateTime.UtcNow.Ticks,
                 served = Served,
                 kittenHint = KittenHintShown,
@@ -2358,10 +2337,8 @@ namespace KaraPati
                 // this one is good: keep a copy
                 PlayerPrefs.SetString(BackupKey, json);
                 PlayerPrefs.Save();
-                Gold = s.gold;
                 Served = s.served;
                 KittenHintShown = s.kittenHint;
-                Stamps = s.stamps;
                 TasksDone = Mathf.Clamp(s.tasksDone, 0, Story.TotalTasks);
                 clues.Clear();
                 if (s.clues != null) foreach (var id in s.clues) clues.Add(id);
@@ -2419,14 +2396,12 @@ namespace KaraPati
                 if (s.storage != null)
                     foreach (var it in s.storage)
                         if (!string.IsNullOrEmpty(it.chain)) Storage.Add(new ItemData(it.chain, it.level));
-                Energy = s.energy;
-                energyTimer = s.energyTimer;
-                if (Energy < MaxEnergy && s.stamp > 0)
+                wallet.Load(s.gold, s.stamps, s.energy, s.energyTimer);
+                if (s.stamp > 0)
                 {
-                    float elapsed = (float)TimeSpan.FromTicks(Math.Max(0, DateTime.UtcNow.Ticks - s.stamp)).TotalSeconds + energyTimer;
-                    int gain = Mathf.FloorToInt(elapsed / EnergyRegenSec);
-                    Energy = Mathf.Min(MaxEnergy, Energy + gain);
-                    energyTimer = Energy < MaxEnergy ? elapsed % EnergyRegenSec : 0f;
+                    // the energy that refilled while the game was closed
+                    float away = (float)TimeSpan.FromTicks(Math.Max(0, DateTime.UtcNow.Ticks - s.stamp)).TotalSeconds;
+                    wallet.Regen(away, MaxEnergy, EnergyRegenSec);
                 }
                 Board.ReadSave(s.cells);
                 Board.EnsurePot();
