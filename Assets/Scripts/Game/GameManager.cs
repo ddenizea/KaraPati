@@ -544,7 +544,7 @@ namespace KaraPati
             levelRing.fillClockwise = true;
             var lvIn = UIKit.Img("Inner", lvBg.transform, ProcArt.Circle, new Color(1f, 0.96f, 0.88f));
             lvIn.rectTransform.sizeDelta = new Vector2(66f, 66f);
-            levelText = UIKit.Txt("N", lvBg.transform, "1", 40, UIKit.Cream);
+            levelText = UIKit.TxtRaw("N", lvBg.transform, "1", 40, new Color(0.35f, 0.22f, 0.13f), TextAnchor.MiddleCenter, false);   // dark on the cream disc in every theme
             levelText.fontStyle = FontStyle.Bold;
             UIKit.Stretch(levelText.rectTransform);
             var lvBtn = lvBg.gameObject.AddComponent<Button>();

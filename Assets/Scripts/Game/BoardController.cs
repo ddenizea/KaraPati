@@ -338,6 +338,7 @@ namespace KaraPati
             data[c.x, c.y] = null; views[c.x, c.y] = null;
             if (Selected == c) Select(new Vector2Int(-1, -1));
             if (!v) return;
+            v.Retire(0.45f);
             var rt = v.rt;
             rt.SetParent(GM.Root, true);
             Vector3 from = rt.position;
@@ -357,6 +358,7 @@ namespace KaraPati
             var v = views[c.x, c.y];
             data[c.x, c.y] = null; views[c.x, c.y] = null;
             if (!v) return;
+            v.Retire(0.2f);
             var tr = v.rt;
             Tween.Run(0.2f, t => { if (tr) tr.localScale = Vector3.one * (1f - t); }, () => { if (tr) Destroy(tr.gameObject); }, Tween.Key(tr, "s"));
         }
@@ -595,6 +597,7 @@ namespace KaraPati
             data[from.x, from.y] = null; views[from.x, from.y] = null;
             if (Selected == from) HideSelector();
             if (!v) return;
+            v.Retire(0.22f);
             var tr = v.rt;
             tr.SetParent(itemsLayer, true);
             Tween.Move(tr, CellPos(pot) + new Vector2(0f, 20f), 0.18f);

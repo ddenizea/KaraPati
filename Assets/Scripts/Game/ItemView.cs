@@ -246,8 +246,25 @@ namespace KaraPati
             }
         }
 
+        bool retired;
+
+        /// <summary>
+        /// The item has left the table and this view only plays its going-away animation. It takes no more taps or
+        /// drags, and it is destroyed after <paramref name="seconds"/> even if something stops that animation (a drag
+        /// started on it used to stop the shrink and leave the old picture standing in the cell for good).
+        /// </summary>
+        public void Retire(float seconds)
+        {
+            if (retired) return;
+            retired = true;
+            IsPressed = false;
+            if (cg) cg.blocksRaycasts = false;
+            Destroy(gameObject, seconds + 0.05f);
+        }
+
         public void OnPointerDown(PointerEventData e)
         {
+            if (retired) return;
             IsPressed = true;
             board.Select(cell);
         }
@@ -256,7 +273,7 @@ namespace KaraPati
 
         public void OnBeginDrag(PointerEventData e)
         {
-            if (data == null || (data.Locked && !BoardController.CanMoveBubble(data)) || Chains.IsStation(data.chain) || Chains.IsHouse(data.chain)) return;   // the counter pieces stay put
+            if (retired || data == null || (data.Locked && !BoardController.CanMoveBubble(data)) || Chains.IsStation(data.chain) || Chains.IsHouse(data.chain)) return;   // the counter pieces stay put
             IsDragging = true;
             cg.blocksRaycasts = false;
             // lift the item above every UI layer while it is being dragged
@@ -291,7 +308,7 @@ namespace KaraPati
 
         public void OnPointerClick(PointerEventData e)
         {
-            if (e.dragging) return;
+            if (e.dragging || retired) return;
             board.OnItemClicked(this);
         }
     }
