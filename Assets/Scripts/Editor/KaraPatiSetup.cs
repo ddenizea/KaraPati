@@ -192,6 +192,13 @@ namespace KaraPati.EditorTools
             else Debug.Log("KaraPati: önce Play'e bas.");
         }
 
+        [MenuItem("KaraPati/Test/Kelebekli Yavru Çağır (Play modunda)")]
+        static void ButterflyKittenTest()
+        {
+            if (Application.isPlaying && GameManager.I != null) GameManager.I.Cats.DebugStarKitten(true);
+            else Debug.Log("KaraPati: önce Play'e bas.");
+        }
+
         [MenuItem("KaraPati/Test/Oyun Odası (kilitsiz, haklar yenilenir) (Play modunda)")]
         static void GameRoomTest()
         {

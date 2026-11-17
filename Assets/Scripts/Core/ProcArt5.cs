@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace KaraPati
@@ -21,6 +22,40 @@ namespace KaraPati
         /// <summary>Flat pale shape of the customer, for the fog before you have met.</summary>
         public static Sprite CustomerSilhouette(string id) =>
             Make("cust_" + id + "_s", PortraitSize, p => { DrawCustomer(p, id, false); p.Silhouette(new Color(0.6f, 0.52f, 0.8f, 1f)); });
+
+        /// <summary>A little butterfly seen from above (the butterfly kitten's companion). The drawn picture
+        /// Resources/Icons/butterfly.png is used; this plain sky-blue one is only the fallback.
+        /// It flaps by being squashed sideways.</summary>
+        public static Sprite Butterfly => Make("butterfly", 64, p =>
+        {
+            var wing = new Color(0.55f, 0.8f, 1f);
+            var body = new Color(0.29f, 0.17f, 0.1f);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                float x = s;
+                p.FillOutlined(q => S.U(S.Ellipse(q, new Vector2(0.42f * x, 0.22f), new Vector2(0.42f, 0.4f)),
+                                        S.Ellipse(q, new Vector2(0.3f * x, -0.36f), new Vector2(0.3f, 0.3f))), wing, 0.07f);
+            }
+            p.Fill(q => S.Seg(q, new Vector2(0f, -0.5f), new Vector2(0f, 0.45f), 0.09f), body);
+        });
+
+        public enum CustAnim { Walk, Idle, Happy }
+        static readonly string[] custAnimNames = { "walk", "idle", "happy" };
+        static readonly int[] custAnimFrames = { 4, 2, 2 };
+        static readonly HashSet<string> noCustFrame = new HashSet<string>();
+
+        /// <summary>A drawn animation frame of a customer from Resources/Customers (side view, facing left), or null
+        /// when that customer has no drawn frames yet. frame wraps around the cycle.</summary>
+        public static Sprite CustomerFrame(string id, CustAnim anim, int frame)
+        {
+            int n = custAnimFrames[(int)anim];
+            string key = "cust_" + id + "_" + custAnimNames[(int)anim] + "_" + ((frame % n) + n) % n;
+            if (cache.TryGetValue(key, out var have) && have) return have;
+            if (noCustFrame.Contains(key)) return null;   // looked once: no picture, don't hit Resources every frame
+            var s = LoadArt("Customers/" + key, key);
+            if (!s) noCustFrame.Add(key);
+            return s;
+        }
 
         /// <summary>Soft drifting fog puffs laid over a customer who is still a stranger.</summary>
         public static Sprite Fog => Make("ui_fog", Size, p =>

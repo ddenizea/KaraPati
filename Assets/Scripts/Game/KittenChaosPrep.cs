@@ -52,6 +52,9 @@ namespace KaraPati
         /// <summary>A star Mini Apprentice is on the table (orders get "Hazırla").</summary>
         public bool HasStarMini { get { var m = Mini(); return m && m.star; } }
 
+        /// <summary>"Yıldızlı Minik Çırak" or "Kelebekli Minik Çırak": the one on the table now.</summary>
+        string MiniName { get { var m = Mini(); return RareMiniName(m && m.butterfly); } }
+
         /// <summary>The pot is boiling or holds a finished potion: no new brew now.</summary>
         public bool PotBusy => B != null && B.FindFirst(d => d.chain == Chains.Simya, out var pc) && B.Get(pc).brew > 0;
 
@@ -61,7 +64,7 @@ namespace KaraPati
         /// <summary>Why a new job can't start now (toast text).</summary>
         public string BrewBusyReason()
         {
-            if (plan != null) return plan.order ? L.T("Yıldızlı Minik Çırak şu an bir sipariş hazırlıyor.") : L.T("Minik Çırak şu an başka bir tarif için koşturuyor.");
+            if (plan != null) return plan.order ? L.F("{0} şu an bir sipariş hazırlıyor.", MiniName) : L.T("Minik Çırak şu an başka bir tarif için koşturuyor.");
             if (B != null && B.FindFirst(d => d.chain == Chains.Simya, out var pc))
             {
                 var pot = B.Get(pc);
@@ -202,13 +205,13 @@ namespace KaraPati
             if (order && potionDue)
             {
                 Say(mini, L.T("Hazır!"), UIKit.Orange);
-                GM.Toast(L.T("Malzemeler hazır! İksir kaynayınca Yıldızlı Minik Çırak onu da masaya çıkaracak."), UIKit.Orange, 4f);
+                GM.Toast(L.F("Malzemeler hazır! İksir kaynayınca {0} onu da masaya çıkaracak.", MiniName), UIKit.Orange, 4f);
             }
             else if (order)
             {
                 Say(mini, L.T("Hazır!"), UIKit.Orange);
                 Sfx.Play("ready", 1.2f);
-                GM.Toast(L.T("Yıldızlı Minik Çırak siparişi hazırladı! Şimdi 'Ver'e bas."), UIKit.Orange, 4f);
+                GM.Toast(L.F("{0} siparişi hazırladı! Şimdi 'Ver'e bas.", MiniName), UIKit.Orange, 4f);
             }
             else Say(mini, L.T("Tamam!"), UIKit.Orange);
             GM.OnBoardChanged();
@@ -276,9 +279,9 @@ namespace KaraPati
                     }
                     // nothing to merge: make more at the machine the ingredient comes from
                     string gen = Chains.SourceOf(s.chain);
-                    if (!B.FindFirst(d => d.chain == gen && !d.Locked, out var g)) { DropPlan(L.T("Yıldızlı Minik Çırak bu malzemeyi çıkaracak bir üretici bulamadı.")); return; }
-                    if (GM.Energy < 1) { DropPlan(L.T("Enerjin bitti, Yıldızlı Minik Çırak durdu.")); return; }
-                    if (!B.NearestEmpty(g, out _)) { DropPlan(L.T("Masa dolu, Yıldızlı Minik Çırak yeni malzeme çıkaramıyor. Biraz yer aç, sonra yine 'Hazırla'ya bas.")); return; }
+                    if (!B.FindFirst(d => d.chain == gen && !d.Locked, out var g)) { DropPlan(L.F("{0} bu malzemeyi çıkaracak bir üretici bulamadı.", MiniName)); return; }
+                    if (GM.Energy < 1) { DropPlan(L.F("Enerjin bitti, {0} durdu.", MiniName)); return; }
+                    if (!B.NearestEmpty(g, out _)) { DropPlan(L.F("Masa dolu, {0} yeni malzeme çıkaramıyor. Biraz yer aç, sonra yine 'Hazırla'ya bas.", MiniName)); return; }
                     plan.target = g;
                     plan.phase = 3;
                     return;
@@ -306,7 +309,7 @@ namespace KaraPati
                 case 3:
                     // to the cauldron or the chest and give it a tap
                     if (!WalkTo(mini, BoardController.CellPos(plan.target) + new Vector2(0f, -40f))) return;
-                    if (!B.BotUseGenerator(plan.target)) { DropPlan(L.T("Yıldızlı Minik Çırak devam edemedi: masa dolu ya da enerji bitti.")); return; }
+                    if (!B.BotUseGenerator(plan.target)) { DropPlan(L.F("{0} devam edemedi: masa dolu ya da enerji bitti.", MiniName)); return; }
                     Tween.Punch(mini.rt, 0.12f, 0.25f);
                     plan.phase = 0;
                     plan.wait = 0.45f;

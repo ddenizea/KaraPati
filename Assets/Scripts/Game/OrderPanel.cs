@@ -5,15 +5,36 @@ using UnityEngine.UI;
 
 namespace KaraPati
 {
-    /// <summary>Three customers (ghosts and fantasy creatures) asking for ingredients; each order makes them a better friend.</summary>
+    /// <summary>Three customers (ghosts and fantasy creatures) asking for ingredients; each order makes them a better friend.
+    /// They stand in a queue: a served customer hops happily and leaves, everyone to its right walks one place left,
+    /// and the new customer walks in from the right edge.</summary>
     public class OrderPanel : MonoBehaviour
     {
         const int SlotCount = 3;
+        const float Spacing = 345f;      // card centre to card centre
+        const float WalkSpeed = 560f;    // px per second while walking to a place in the queue
+        const float HappyTime = 0.9f;    // the served customer's happy hop before the card fades
+        const float FadeTime = 0.25f;
+
+        static float BaseX(int slot) => (slot - 1) * Spacing;
+
+        enum Pose { Idle, Walk, Happy }
 
         class Card
         {
-            public RectTransform root;
+            public string custId;        // null: an old-style ghost without a customer
+            public bool stranger;        // not met yet: a hopping silhouette in the fog
+            public bool fullLook;        // friends enough to wear its signature items: the dressed portrait while standing
+            public Sprite still;         // the portrait shown when there is no drawn frame
+            public float offset;         // x distance still to walk to its place
+            public Pose pose;
+            public float poseTime;
+            public bool served;          // delivered: hopping, then leaves the queue
+            public RectTransform root;   // front layer (in front of the counter): items, buttons, name, badges
             public CanvasGroup group;
+            public RectTransform back;   // back layer (behind the counter): the customer, its glow and fog
+            public CanvasGroup backGroup;
+            public float Alpha { set { group.alpha = value; backGroup.alpha = value; } }
             public Image ghost;
             public Image fog, glow, heart;
             public Text name, heartText;
@@ -35,23 +56,57 @@ namespace KaraPati
         readonly bool[] ready = new bool[SlotCount];
 
         GameManager GM => GameManager.I;
+        RectTransform area;
+        bool flowing;    // the serve -> leave -> walk up coroutine is running
+        bool fading;     // served cards are fading out: no new deliveries until the queue is rebuilt
+
+        // Layout inside the 400-high order area: customers stand behind the shop counter, what they want sits on the
+        // countertop in front of them, "Ver" is on the counter's front panel, name / heart / stamps float above.
+        const float CardW = 330f, CardH = 400f;
+        static readonly Vector2 CounterSize = new Vector2(1060f, 265f);   // drawn 1024x301, squashed a little to fit
+        const float GhostY = -142f;      // customer centre (its feet are hidden behind the countertop at -204)
+        const float GhostSize = 200f;
+        const float FogY = -50f;         // inside the customer
+        const float ReqY = -188f;        // wanted items standing on the countertop
+        const float ReqSize = 84f;
+
+        RectTransform NewLayer(string name, int i)
+        {
+            var rt = UIKit.Rect(name + i, area);
+            return rt.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(BaseX(i), 0f), new Vector2(CardW, CardH));
+        }
 
         public void Build(RectTransform area)
         {
+            this.area = area;
+            // back layers first, then the counter, then the front layers: the customer is behind the counter,
+            // its order in front of it
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var card = new Card();
+                card.back = NewLayer("Customer", i);
+                card.backGroup = card.back.gameObject.AddComponent<CanvasGroup>();
+                cards[i] = card;
+            }
+            var counterArt = ProcArt.Room("order_counter");
+            if (counterArt)
+            {
+                var counter = UIKit.ImgArt("Counter", area, counterArt, Color.white);
+                counter.preserveAspect = false;
+                counter.rectTransform.Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(Vector2.zero, CounterSize);
+            }
             for (int i = 0; i < SlotCount; i++)
             {
                 int slot = i;
-                var card = new Card();
-                var bg = UIKit.Img("Order" + i, area, ProcArt.Rounded, UIKit.Panel, true);
-                card.root = bg.rectTransform;
-                card.root.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2((i - 1) * 345f, 0f), new Vector2(330f, 395f));
-                card.group = bg.gameObject.AddComponent<CanvasGroup>();
+                var card = cards[i];
+                card.root = NewLayer("Order", i);
+                card.group = card.root.gameObject.AddComponent<CanvasGroup>();
 
                 // golden glow behind a best friend
-                card.glow = UIKit.Img("Glow", card.root, ProcArt.Sparkle, new Color(1f, 0.85f, 0.35f, 0.8f));
-                card.glow.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -4f), new Vector2(150f, 150f));
-                card.ghost = UIKit.Img("Ghost", card.root, ProcArt.Ghost(0), Color.white);
-                card.ghost.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -8f), new Vector2(124f, 124f));
+                card.glow = UIKit.Img("Glow", card.back, ProcArt.Sparkle, new Color(1f, 0.85f, 0.35f, 0.8f));
+                card.glow.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, GhostY), new Vector2(230f, 230f));
+                card.ghost = UIKit.Img("Ghost", card.back, ProcArt.Ghost(0), Color.white);
+                card.ghost.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, GhostY), new Vector2(GhostSize, GhostSize));
                 card.ghost.preserveAspect = true;
                 // tap the customer: how good friends you are
                 card.ghost.raycastTarget = true;
@@ -59,21 +114,27 @@ namespace KaraPati
                 cb.transition = Selectable.Transition.None;
                 cb.onClick.AddListener(() => ShowFriendInfo(slot));
                 card.fog = UIKit.Img("Fog", card.ghost.transform, ProcArt.Fog, Color.white);
-                card.fog.rectTransform.At(new Vector2(0f, -34f), new Vector2(150f, 80f));
+                card.fog.rectTransform.At(new Vector2(0f, FogY), new Vector2(220f, 110f));
                 card.fog.raycastTarget = false;
                 // friendship heart, top left
                 card.heart = UIKit.Img("Heart", card.root, ProcArt.Heart, Color.white);
-                card.heart.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(36f, -36f), new Vector2(56f, 56f));
-                card.heartText = UIKit.Txt("N", card.heart.transform, "0", 26, Color.white);
+                card.heart.rectTransform.Anchor(new Vector2(0f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(34f, -30f), new Vector2(52f, 52f));
+                card.heartText = UIKit.Txt("N", card.heart.transform, "0", 24, Color.white);
                 card.heartText.fontStyle = FontStyle.Bold;
-                card.heartText.rectTransform.At(new Vector2(0f, 3f), new Vector2(50f, 34f));
+                card.heartText.rectTransform.At(new Vector2(0f, 3f), new Vector2(48f, 32f));
 
-                card.name = UIKit.Txt("Name", card.root, "", 28, UIKit.Cream);
-                card.name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -126f), new Vector2(320f, 36f));
+                // the name floats over the customer's head, between the heart and the stamps (no card behind it now)
+                card.name = UIKit.TxtRaw("Name", card.root, "", 28, UIKit.Cream);
+                card.name.rectTransform.Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, -30f), new Vector2(214f, 40f));
+                card.name.horizontalOverflow = HorizontalWrapMode.Wrap;
+                card.name.resizeTextForBestFit = true;
+                card.name.resizeTextMinSize = 18;
+                card.name.resizeTextMaxSize = 28;
 
                 for (int k = 0; k < 2; k++)
                 {
-                    var tile = UIKit.Img("Req" + k, card.root, ProcArt.Rounded, UIKit.PanelDark, true);
+                    // invisible tap area around the item standing on the countertop
+                    var tile = UIKit.ImgArt("Req" + k, card.root, null, new Color(1f, 1f, 1f, 0f));
                     card.tiles[k] = tile.rectTransform;
                     // tap what the customer wants: its info sheet opens (chain, where it comes from)
                     tile.raycastTarget = true;
@@ -81,32 +142,33 @@ namespace KaraPati
                     tb.transition = Selectable.Transition.None;
                     int kk = k;
                     tb.onClick.AddListener(() => ShowReqInfo(slot, kk));
-                    card.tiles[k].Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -166f), new Vector2(104f, 104f));
+                    card.tiles[k].Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(0f, ReqY), new Vector2(ReqSize, ReqSize));
                     card.icons[k] = UIKit.Img("Icon", tile.transform, null, Color.white);
-                    card.icons[k].rectTransform.sizeDelta = new Vector2(92f, 92f);
+                    card.icons[k].rectTransform.sizeDelta = new Vector2(ReqSize - 6f, ReqSize - 6f);
                     card.icons[k].preserveAspect = true;
                     card.checks[k] = UIKit.Img("Check", tile.transform, ProcArt.Check, Color.white);
-                    card.checks[k].rectTransform.At(new Vector2(38f, 38f), new Vector2(40f, 40f));
+                    card.checks[k].rectTransform.At(new Vector2(30f, 30f), new Vector2(36f, 36f));
                 }
 
                 var stamp = UIKit.Img("Stamp", card.root, ProcArt.Stamp, Color.white);
-                stamp.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-38f, -38f), new Vector2(58f, 58f));
+                stamp.rectTransform.Anchor(new Vector2(1f, 1f), new Vector2(0.5f, 0.5f)).At(new Vector2(-36f, -30f), new Vector2(54f, 54f));
                 card.stampBadge = stamp.gameObject;
-                card.stampText = UIKit.Txt("N", stamp.transform, "1", 26, UIKit.Cream);
-                card.stampText.rectTransform.At(new Vector2(18f, -18f), new Vector2(40f, 34f));
+                card.stampText = UIKit.Txt("N", stamp.transform, "1", 24, UIKit.Cream);
+                card.stampText.rectTransform.At(new Vector2(17f, -17f), new Vector2(40f, 32f));
 
-                card.make = UIKit.Btn("Make", card.root, L.T("Yaptır"), UIKit.Green, () => MakePotion(slot), 26);
-                ((RectTransform)card.make.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -250f), new Vector2(150f, 54f));
+                // "Yaptır" / "Hazırla" on the front edge of the countertop, right under the wanted items
+                card.make = UIKit.Btn("Make", card.root, L.T("Yaptır"), UIKit.Green, () => MakePotion(slot), 24);
+                ((RectTransform)card.make.transform).Anchor(new Vector2(0.5f, 1f), new Vector2(0.5f, 1f)).At(new Vector2(0f, -230f), new Vector2(150f, 44f));
                 card.makeImg = card.make.GetComponent<Image>();
                 card.makeText = card.make.Label();
                 card.make.gameObject.SetActive(false);
 
-                card.give = UIKit.Btn("Give", card.root, L.T("Ver"), UIKit.Disabled, () => Deliver(slot), 34);
+                // "Ver" sits in the frame of the counter's front panel
+                card.give = UIKit.Btn("Give", card.root, L.T("Ver"), UIKit.Disabled, () => Deliver(slot), 30);
                 card.giveImg = card.give.GetComponent<Image>();
                 card.giveText = card.give.Label();
-                ((RectTransform)card.give.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 14f), new Vector2(296f, 84f));
+                ((RectTransform)card.give.transform).Anchor(new Vector2(0.5f, 0f), new Vector2(0.5f, 0f)).At(new Vector2(0f, 60f), new Vector2(214f, 60f));
 
-                cards[i] = card;
                 ShowCard(i);
             }
         }
@@ -146,15 +208,65 @@ namespace KaraPati
             if (makeTick <= 0f) { makeTick = 0.5f; for (int i = 0; i < SlotCount; i++) RefreshMake(i); CountessIntro(); }
             for (int i = 0; i < SlotCount; i++)
             {
-                var g = cards[i]?.ghost;
-                if (g) g.rectTransform.anchoredPosition = new Vector2(0f, -8f + Mathf.Sin(t * 2f + i * 1.7f) * 6f);
+                if (cards[i] == null) continue;
+                Walk(i);
+                AnimateCustomer(i, t);
                 var f = cards[i]?.fog;
-                if (f && f.gameObject.activeSelf) f.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(t * 0.7f + i) * 8f, -34f);
+                if (f && f.gameObject.activeSelf) f.rectTransform.anchoredPosition = new Vector2(Mathf.Sin(t * 0.7f + i) * 8f, FogY);
                 var gl = cards[i]?.glow;
                 if (gl && gl.gameObject.activeSelf) gl.rectTransform.localRotation = Quaternion.Euler(0f, 0f, t * 20f);
                 if (ready[i] && cards[i].give)
                     cards[i].give.transform.localScale = Vector3.one * (1f + Mathf.Sin(t * 6f) * 0.03f);
             }
+        }
+
+        void SetPose(int i, Pose p)
+        {
+            cards[i].pose = p;
+            cards[i].poseTime = 0f;
+        }
+
+        /// <summary>Moves a walking card toward its place in the queue; it settles with a little bump.</summary>
+        void Walk(int i)
+        {
+            var card = cards[i];
+            card.poseTime += Time.deltaTime;
+            if (card.pose == Pose.Walk)
+            {
+                card.offset = Mathf.MoveTowards(card.offset, 0f, WalkSpeed * Time.deltaTime);
+                if (card.offset <= 0f) { SetPose(i, Pose.Idle); Tween.Punch(card.root, 0.05f, 0.25f); }
+            }
+            card.root.anchoredPosition = card.back.anchoredPosition = new Vector2(BaseX(i) + card.offset, 0f);
+        }
+
+        /// <summary>The customer's picture for this moment: drawn walk / idle / happy frames when it has them,
+        /// otherwise its portrait, hopping while it walks and floating while it waits.</summary>
+        void AnimateCustomer(int i, float t)
+        {
+            var card = cards[i];
+            var g = card.ghost;
+            if (!g || !g.gameObject.activeSelf) return;
+            float y = GhostY, pt = card.poseTime;
+            bool drawn = card.custId != null && !card.stranger;
+            Sprite frame = null;
+            switch (card.pose)
+            {
+                case Pose.Walk:
+                    if (drawn) frame = ProcArt.CustomerFrame(card.custId, ProcArt.CustAnim.Walk, (int)(pt * 8f));
+                    if (!frame) y += Mathf.Abs(Mathf.Sin(pt * 10f)) * 10f;
+                    break;
+                case Pose.Happy:
+                    if (drawn) frame = ProcArt.CustomerFrame(card.custId, ProcArt.CustAnim.Happy, (int)(pt * 5f));
+                    y += Mathf.Abs(Mathf.Sin(pt * Mathf.PI * 2.5f)) * 14f * Mathf.Clamp01(1f - pt / HappyTime);
+                    break;
+                default:
+                    if (drawn && !card.fullLook) frame = ProcArt.CustomerFrame(card.custId, ProcArt.CustAnim.Idle, (int)(pt * 2.5f));
+                    if (!frame) y += Mathf.Sin(t * 2f + i * 1.7f) * 6f;
+                    break;
+            }
+            var want = frame ? frame : card.still;
+            if (want && g.sprite != want) g.sprite = want;
+            g.rectTransform.anchoredPosition = new Vector2(0f, y);
         }
 
         /// <summary>The potion this order wants (recipe), or null for an ingredient order.</summary>
@@ -357,11 +469,39 @@ namespace KaraPati
             return r;
         }
 
+        /// <summary>Closes the gaps in the queue and lets new customers walk in from the right for the empty places.</summary>
         public void FillEmpty()
         {
-            for (int i = 0; i < SlotCount; i++)
-                if (orders[i] == null) { orders[i] = Generate(); ShowCard(i); }
+            if (flowing) return;   // the queue coroutine refills it when it is done
+            Compact();
+        }
+
+        /// <summary>Waiting customers move up to the left (each card starts where it stood and walks to its new place),
+        /// then the empty places at the end get new customers who start beyond the right edge.</summary>
+        void Compact()
+        {
+            var from = new List<int>();
+            for (int j = 0; j < SlotCount; j++) if (orders[j] != null) from.Add(j);
+            var moved = new OrderSave[SlotCount];
+            for (int k = 0; k < from.Count; k++) moved[k] = orders[from[k]];
+            for (int j = 0; j < SlotCount; j++) orders[j] = moved[j];
+            for (int j = from.Count; j < SlotCount; j++) orders[j] = Generate();   // one by one: Generate skips who is already waiting
+
+            // the first newcomer starts just past the right edge of the screen, the next one behind it
+            float edge = Mathf.Max(BaseX(SlotCount - 1) + 420f, (area ? area.rect.width * 0.5f : 540f) + 200f);
+            for (int j = 0; j < SlotCount; j++)
+            {
+                var card = cards[j];
+                float startX = j < from.Count ? BaseX(from[j]) + cards[from[j]].offset : edge + (j - from.Count) * Spacing;
+                card.served = false;
+                card.Alpha = 1f;
+                ShowCard(j);
+                card.offset = startX - BaseX(j);
+                SetPose(j, card.offset > 0.5f ? Pose.Walk : Pose.Idle);
+                if (card.pose == Pose.Idle) card.offset = 0f;
+            }
             Refresh();
+            if (from.Count < SlotCount) GM.MarkDirty();
         }
 
         void ShowCard(int i)
@@ -369,6 +509,8 @@ namespace KaraPati
             var card = cards[i];
             var o = orders[i];
             bool has = o != null;
+            card.custId = null;
+            card.stranger = card.fullLook = false;
             card.ghost.gameObject.SetActive(has);
             card.heart.gameObject.SetActive(has);
             card.glow.gameObject.SetActive(false);
@@ -382,8 +524,8 @@ namespace KaraPati
                 if (!on) continue;
                 var q = o.reqs[k];
                 card.icons[k].sprite = ProcArt.Item(q.chain, q.level);
-                float x = o.reqs.Count == 1 ? 0f : (k == 0 ? -58f : 58f);
-                card.tiles[k].anchoredPosition = new Vector2(x, -166f);
+                float x = o.reqs.Count == 1 ? 0f : (k == 0 ? -ReqSize * 0.53f : ReqSize * 0.53f);
+                card.tiles[k].anchoredPosition = new Vector2(x, ReqY);
             }
             if (has)
             {
@@ -393,6 +535,10 @@ namespace KaraPati
                 if (c == null) card.ghost.sprite = ProcArt.Ghost(o.tint);
                 else if (st == 0) card.ghost.sprite = ProcArt.CustomerSilhouette(c.id);
                 else card.ghost.sprite = ProcArt.Customer(c.id, st >= c.FullLookStage);
+                card.still = card.ghost.sprite;
+                card.custId = c?.id;
+                card.stranger = c != null && st == 0;
+                card.fullLook = c != null && st >= c.FullLookStage;
                 // the fog thins out stage by stage
                 float fog = c == null ? 0f : st == 0 ? 0.6f : st == 1 ? 0.4f : st == 2 && c.MaxStage > 3 ? 0.25f : 0f;
                 card.fog.gameObject.SetActive(fog > 0f);
@@ -435,12 +581,13 @@ namespace KaraPati
         void Deliver(int i)
         {
             var o = orders[i];
-            if (o == null) return;
+            // only a customer standing at its place; not while the served ones are leaving
+            if (o == null || fading || cards[i].pose != Pose.Idle) return;
             var cells = new List<Vector2Int>();
             if (!GM.Board.TryCollect(o.reqs, cells, null)) { Refresh(); return; }
 
             var card = cards[i];
-            Vector3 target = card.root.TransformPoint(new Vector3(0f, -60f, 0f));
+            Vector3 target = card.back.TransformPoint(new Vector3(0f, GhostY, 0f));   // into the customer's paws
             foreach (var c in cells) GM.Board.FlyAway(c, target);
             GM.Tut?.Notify("deliver");
 
@@ -459,25 +606,55 @@ namespace KaraPati
             if (cust != null) GM.AddFriendship(cust.id, FriendPointsOf(o));
             orders[i] = null;
             ready[i] = false;
+            card.served = true;
+            SetPose(i, Pose.Happy);
+            card.give.interactable = false;
+            card.giveImg.color = Theme.Ui(UIKit.Disabled);
+            card.give.transform.localScale = Vector3.one;
             Tween.Punch(card.root, 0.08f, 0.3f);
-            StartCoroutine(NextCustomer(i));
+            if (!flowing) StartCoroutine(Queue());
             GM.OnBoardChanged();
         }
 
-        IEnumerator NextCustomer(int i)
+        bool AnyServed()
         {
-            var card = cards[i];
-            yield return new WaitForSeconds(0.45f);
-            float t = 0f;
-            while (t < 0.25f) { t += Time.deltaTime; card.group.alpha = 1f - t / 0.25f; yield return null; }
-            ShowCard(i);
-            yield return new WaitForSeconds(0.6f);
-            orders[i] = Generate();
-            ShowCard(i);
-            card.group.alpha = 1f;
-            Tween.Pop(card.root, 0.35f);
-            Refresh();
-            GM.MarkDirty();
+            foreach (var c in cards) if (c.served) return true;
+            return false;
+        }
+
+        /// <summary>Served customers hop, their cards fade, the rest of the queue walks up and newcomers walk in.
+        /// Customers served meanwhile (while the others are still hopping or walking) leave in the next round.</summary>
+        IEnumerator Queue()
+        {
+            flowing = true;
+            while (AnyServed())
+            {
+                // everyone served finishes the happy hop (more can be served meanwhile, they join this round)
+                while (true)
+                {
+                    bool hopping = false;
+                    foreach (var c in cards) if (c.served && c.poseTime < HappyTime) hopping = true;
+                    if (!hopping) break;
+                    yield return null;
+                }
+                fading = true;
+                for (float t = 0f; t < FadeTime; t += Time.deltaTime)
+                {
+                    foreach (var c in cards) if (c.served) c.Alpha = 1f - t / FadeTime;
+                    yield return null;
+                }
+                fading = false;
+                Compact();
+                // let them all reach their places before anyone else leaves
+                while (true)
+                {
+                    bool walking = false;
+                    foreach (var c in cards) if (c.pose == Pose.Walk) walking = true;
+                    if (!walking) break;
+                    yield return null;
+                }
+            }
+            flowing = false;
         }
 
         /// <summary>Test helper: the first customer asks for a potion (the first recipe) instead.</summary>
@@ -506,8 +683,23 @@ namespace KaraPati
             foreach (var o in orders) if (o != null) list.Add(o);
         }
 
+        /// <summary>Stops the queue animation: every card at its place, nobody leaving.</summary>
+        void ResetQueue()
+        {
+            StopAllCoroutines();
+            flowing = fading = false;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                cards[i].served = false;
+                cards[i].offset = 0f;
+                SetPose(i, Pose.Idle);
+                cards[i].root.anchoredPosition = cards[i].back.anchoredPosition = new Vector2(BaseX(i), 0f);
+            }
+        }
+
         public void ReadSave(List<OrderSave> list)
         {
+            ResetQueue();
             for (int i = 0; i < SlotCount; i++)
             {
                 orders[i] = (list != null && i < list.Count && list[i].reqs != null && list[i].reqs.Count > 0) ? list[i] : null;
@@ -519,7 +711,7 @@ namespace KaraPati
                     orders[i].cust = c.id;
                     orders[i].ghost = c.name;
                 }
-                cards[i].group.alpha = 1f;
+                cards[i].Alpha = 1f;
                 ShowCard(i);
             }
             FillEmpty();
@@ -527,8 +719,8 @@ namespace KaraPati
 
         public void ClearAll()
         {
-            StopAllCoroutines();
-            for (int i = 0; i < SlotCount; i++) { orders[i] = null; cards[i].group.alpha = 1f; ShowCard(i); }
+            ResetQueue();
+            for (int i = 0; i < SlotCount; i++) { orders[i] = null; cards[i].Alpha = 1f; ShowCard(i); }
         }
     }
 }

@@ -26,6 +26,11 @@ namespace KaraPati
         public const float TrainMinutes = 3f;         // the Master trains a kitten for 3 minutes
         public const float StarChance = 0.03f;        // a new kitten is a rare star kitten
         public const float StarHours = 5f;            // ...and stays this long before it leaves
+        public const float ButterflyChance = 0.03f;   // ...or the butterfly kind: same rules, a butterfly flutters around it
+
+        /// <summary>Names of the rare kitten and the Mini Apprentice it grows into, star or butterfly kind.</summary>
+        public static string RareKittenName(bool butterfly) => butterfly ? L.T("Kelebekli Yavru") : L.T("Yıldızlı Yavru");
+        public static string RareMiniName(bool butterfly) => butterfly ? L.T("Kelebekli Minik Çırak") : L.T("Yıldızlı Minik Çırak");
         const float GraceSeconds = 10f;               // a kitten that just arrived is left alone for a bit
 
         readonly List<KittenAgent> agents = new List<KittenAgent>();
@@ -189,11 +194,15 @@ namespace KaraPati
             var a = Create(1, new Vector2(side * (h.x + 200f), y - 80f), KittenColors.Pick());
             a.JumpIn(a.Pos, new Vector2(side * (h.x - 30f), y));
 
-            if (Random.value < StarChance)
+            float roll = Random.value;
+            if (roll < StarChance + ButterflyChance)
             {
-                a.MakeStar(DateTime.UtcNow.Ticks + TimeSpan.FromHours(StarHours).Ticks);
-                GM.AddStat("star");
-                GM.ShowDialog(L.T("Yıldızlı Yavru"), L.F("Parıl parıl bir yavru geldi! {0} saat kalacak. Usta'nın üstüne bırakırsan Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükleyebilirsin.", (int)StarHours));
+                bool fly = roll >= StarChance;
+                a.MakeStar(DateTime.UtcNow.Ticks + TimeSpan.FromHours(StarHours).Ticks, fly);
+                GM.AddStat(fly ? "butterfly" : "star");
+                GM.ShowDialog(RareKittenName(fly), fly
+                    ? L.F("Peşinde minik bir kelebekle bir yavru geldi! {0} saat kalacak. Usta'nın üstüne bırakırsan Kelebekli Minik Çırak olur. Beklerken topun yanına sürükleyebilirsin.", (int)StarHours)
+                    : L.F("Parıl parıl bir yavru geldi! {0} saat kalacak. Usta'nın üstüne bırakırsan Yıldızlı Minik Çırak olur. Beklerken topun yanına sürükleyebilirsin.", (int)StarHours));
                 Sfx.Play("gift", 1.3f);
                 GM.MarkDirty();
                 return;
@@ -425,7 +434,8 @@ namespace KaraPati
             if (a.state == KittenAgent.State.Napping) WakeItem(a);
             if (Selected == a) { Selected = null; GM.ShowInfo(null); }
             Say(a, L.T("Hoşça kal!"), UIKit.Orange);
-            GM.Toast(L.T("Yıldızlı yavru el salladı ve gitti. Belki bir gün yine gelir..."), UIKit.Orange, 5f);
+            GM.Toast(a.butterfly ? L.T("Kelebekli yavru el salladı, kelebeği de peşinden uçup gitti. Belki bir gün yine gelir...")
+                : L.T("Yıldızlı yavru el salladı ve gitti. Belki bir gün yine gelir..."), UIKit.Orange, 5f);
             a.Leave();
             GM.MarkDirty();
         }
@@ -666,7 +676,7 @@ namespace KaraPati
                     trainUntil = a.trainUntil, carryChain = a.carryChain, carryLevel = a.carryLevel,
                     stir = a.Stirring, stirX = a.stirCell.x, stirY = a.stirCell.y,
                     homeState = a.level == 3 ? (a.homed ? 2 : 1) : (a.level == 4 || a.level == 1) && a.parked ? 2 : 0,
-                    star = a.star, starUntil = a.starUntil
+                    star = a.star, starUntil = a.starUntil, butterfly = a.butterfly
                 });
             }
         }
@@ -682,7 +692,7 @@ namespace KaraPati
                     var a = Create(s.level, Clamp(new Vector2(s.x, s.y)), s.colorPlus > 0 ? s.colorPlus - 1 : KittenColors.Legacy(s.level));
                     a.expires = s.expires;
                     a.cd = s.cd;
-                    if (s.star) a.MakeStar(s.starUntil);
+                    if (s.star) a.MakeStar(s.starUntil, s.butterfly);
                     if (s.level == 1 && s.star && s.homeState == 2) { a.parked = true; a.Pos = StarSeat; }
                     // the Master sits on its cushion (saves from before the cushion: it moves there by itself)
                     if (s.level == 3 && s.homeState != 1) SeatMaster(a);
@@ -754,10 +764,10 @@ namespace KaraPati
             if (m) m.expires = DateTime.UtcNow.Ticks;   // it waves goodbye on the next frame (once it is not busy)
         }
 
-        public void DebugStarKitten()
+        public void DebugStarKitten(bool butterfly = false)
         {
             var a = Create(1, RandomPoint(), KittenColors.Pick());
-            a.MakeStar(DateTime.UtcNow.Ticks + TimeSpan.FromHours(StarHours).Ticks);
+            a.MakeStar(DateTime.UtcNow.Ticks + TimeSpan.FromHours(StarHours).Ticks, butterfly);
             Tween.Pop(a.rt, 0.35f);
         }
 
@@ -965,11 +975,11 @@ namespace KaraPati
             var m = Master();
             // graduation: the Master tosses the little red cap onto the kitten's head
             if (m) Graduation(m.Pos + new Vector2(0f, 60f), pos + new Vector2(0f, 46f));
-            bool star = k.star;
+            bool star = k.star, fly = k.butterfly;
             Release(k);
             var mini = Create(4, pos, col);
             mini.expires = DateTime.UtcNow.Ticks + TimeSpan.FromHours(MiniHours).Ticks;
-            if (star) mini.MakeStar(0);   // a star Mini Apprentice
+            if (star) mini.MakeStar(0, fly);   // a star (or butterfly) Mini Apprentice
             Tween.Pop(mini.rt, 0.4f);
             FX.Burst(B.FxLayer, pos, new Color(0.95f, 0.45f, 0.45f), 12);
             Say(mini, L.T("Artık Minik Çıraksın!"), UIKit.Orange);
@@ -978,14 +988,16 @@ namespace KaraPati
             {
                 // the paw slides from the star Mini Apprentice to an order's "Hazırla" button
                 var btn = GM.Orders.FirstMakeButton();
-                if (btn) GM.Tut?.CatHint(mini, btn, L.T("Bir siparişte 'Hazırla'ya bas, Yıldızlı Minik Çırak işe koyulsun!"), () => !mini || MiniBusy);
+                if (btn) GM.Tut?.CatHint(mini, btn, L.F("Bir siparişte 'Hazırla'ya bas, {0} işe koyulsun!", RareMiniName(fly)), () => !mini || MiniBusy);
             }
             else if (GM.FirstTime("mini_toy"))
                 GM.Tut?.CatHint(mini, B.ToyBall.rectTransform, L.T("Minik Çırak masada gezmesin istersen onu tezgahtaki topuna sürükle."), () => mini && mini.parked);
             if (m && m.state == KittenAgent.State.Sitting) m.Idle(1.5f);
             Sfx.Play("levelup", 1.3f);
-            if (starIntro) GM.ShowDialog(L.T("Yıldızlı Minik Çırak"), L.T("Yıldızlı yavru artık Yıldızlı Minik Çırak! Siparişlerde 'Hazırla'ya bas: siparişi iksiriyle birlikte baştan sona kendisi hazırlar."));
-            else if (star) GM.Toast(L.T("Yıldızlı Minik Çırak hazır! Siparişlerde 'Hazırla'ya bas."), UIKit.Orange, 6f);
+            if (starIntro) GM.ShowDialog(RareMiniName(fly), fly
+                ? L.T("Kelebekli yavru artık Kelebekli Minik Çırak! Siparişlerde 'Hazırla'ya bas: siparişi iksiriyle birlikte baştan sona kendisi hazırlar.")
+                : L.T("Yıldızlı yavru artık Yıldızlı Minik Çırak! Siparişlerde 'Hazırla'ya bas: siparişi iksiriyle birlikte baştan sona kendisi hazırlar."));
+            else if (star) GM.Toast(L.F("{0} hazır! Siparişlerde 'Hazırla'ya bas.", RareMiniName(fly)), UIKit.Orange, 6f);
             else GM.Toast(L.F("{0} Minik Çırak hazır! Tarif Defteri'nde bir iksire 'Yaptır' de, malzemeleri kazana taşısın.", KittenColors.Name(col)), UIKit.Orange, 6f);
             GM.OnBoardChanged();
         }
